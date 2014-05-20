@@ -5,7 +5,7 @@ import h5py
 from scipy import random
 import matplotlib.pyplot as plt
 
-n = 1024 * 64
+n = 1024
 sigma = 4
 amp =  4
 offset = 0
@@ -14,7 +14,7 @@ offset = 0
 
 DTYPE = np.int32
 #DTYPE = np.float32
-SOURCE = 'GEN'
+SOURCE = 'NS'
 
 TRANS = 't'
 
@@ -52,6 +52,10 @@ elif SOURCE == 'NS':
     tmp_data = cross_data[freq, 0, :n]
 elif SOURCE == 'EW':
     tmp_data = cross_data[freq, 2, :n]
+
+# XXX
+#tmp_data *= np.pi
+
 data = np.empty(n, dtype=[('r', DTYPE), ('i', DTYPE)])
 data['r'] = tmp_data.real
 data['i'] = tmp_data.imag
