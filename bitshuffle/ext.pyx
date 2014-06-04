@@ -8,8 +8,8 @@ np.import_array()
 
 
 # Prototypes from bittranspose.c
-cdef extern int no_transpose_copy(void *A, void *B, int size, int elem_size)
-cdef extern int byte_transpose_simple(void *A, void *B, int size, int elem_size)
+cdef extern int shuff_just_copy(void *A, void *B, int size, int elem_size)
+cdef extern int shuff_byte_T_elem_simple(void *A, void *B, int size, int elem_size)
 
 
 def _setup_arr(arr):
@@ -24,8 +24,8 @@ def _setup_arr(arr):
     return out, size, itemsize
 
 
-def memory_copy(np.ndarray arr not None):
-    """Just copies the data.
+def just_copy(np.ndarray arr not None):
+    """Copies the data.
 
     For testing and profiling purposes.
 
@@ -35,14 +35,14 @@ def memory_copy(np.ndarray arr not None):
     out, size, itemsize = _setup_arr(arr)
     cdef void* arr_ptr = <void*> arr.data
     cdef void* out_ptr = <void*> out.data
-    err = no_transpose_copy(arr_ptr, out_ptr, size, itemsize)
+    err = shuff_just_copy(arr_ptr, out_ptr, size, itemsize)
     if err:
         msg = "Failed. Error code %d."
         raise ValueError(msg % err)
     return out
 
 
-def byte_simple(np.ndarray arr not None):
+def byte_T_elem_simple(np.ndarray arr not None):
     """Transpose bytes within words but not bits.
 
     """
@@ -51,7 +51,7 @@ def byte_simple(np.ndarray arr not None):
     out, size, itemsize = _setup_arr(arr)
     cdef void* arr_ptr = <void*> arr.data
     cdef void* out_ptr = <void*> out.data
-    err = byte_transpose_simple(arr_ptr, out_ptr, size, itemsize)
+    err = shuff_byte_T_elem_simple(arr_ptr, out_ptr, size, itemsize)
     if err:
         msg = "Failed. Error code %d."
         raise ValueError(msg % err)

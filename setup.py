@@ -3,8 +3,8 @@ from Cython.Distutils import build_ext
 
 import numpy as np
 
-ext_bt = Extension("bt",
-                   ["ext/bittranspose.c", "ext/bt.pyx"],
+ext_bt = Extension("bitshuffle.ext",
+                   ["src/bitshuffle.c", "bitshuffle/ext.pyx"],
                    libraries = [],
                    include_dirs=[np.get_include()],
                    # '-Wa,-q' is max specific and only there because

@@ -8,7 +8,7 @@
 
 
 // Memory copy for testing and profiling.
-int no_transpose_copy(void* in, void* out, const size_t size,
+int shuff_just_copy(void* in, void* out, const size_t size,
          const size_t elem_size) {
     char* A = (char*) in;
     char* B = (char*) out;
@@ -18,7 +18,7 @@ int no_transpose_copy(void* in, void* out, const size_t size,
 
 
 // Transpose bytes within elements.
-int byte_transpose_simple(void* in, void* out, const size_t size,
+int shuff_byte_T_elem_simple(void* in, void* out, const size_t size,
          const size_t elem_size) {
     char* A = (char*) in;
     char* B = (char*) out;

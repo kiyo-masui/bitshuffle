@@ -5,7 +5,7 @@ import timeit
 import numpy as np
 from numpy import random
 
-import bt
+from bitshuffle import ext
 
 
 # If we are doing timeings and by what factor in increase workload.
@@ -24,22 +24,22 @@ class TestProfile(unittest.TestCase):
 
     def test_copy(self):
         self.case = "memcpy"
-        self.fun = bt.memory_copy
+        self.fun = ext.just_copy
 
     def test_byte_T_32(self):
         self.case = "btye T 32"
         self.data = self.data.astype(np.float32)
-        self.fun = bt.byte_simple
+        self.fun = ext.byte_T_elem_simple
 
     def test_byte_T_64(self):
         self.case = "btye T 64"
         self.data = self.data.astype(np.float64)
-        self.fun = bt.byte_simple
+        self.fun = ext.byte_T_elem_simple
 
     def test_byte_T_16(self):
         self.case = "btye T 16"
         self.data = self.data.astype(np.int16)
-        self.fun = bt.byte_simple
+        self.fun = ext.byte_T_elem_simple
 
     def tearDown(self):
         delta_ts = []
