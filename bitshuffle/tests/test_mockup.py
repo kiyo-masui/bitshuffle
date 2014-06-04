@@ -40,6 +40,52 @@ class TestSSEMock(unittest.TestCase):
         self.assertEqual(b[1], 0)
         self.assertEqual(b[2], 0)
 
+    def test_unpack(self):
+        a = self.m128_0
+        a[:] = np.arange(16)
+        b = self.m128_1
+        b[:] = np.arange(16, 32)
+
+        c = mockup.mm_unpacklo_epi8(a, b)
+        res = np.array([0, 16, 1, 17, 2, 18, 3, 19,
+                        4, 20, 5, 21, 6, 22, 7, 23])
+        self.assertTrue(np.all(c == res))
+        c = mockup.mm_unpackhi_epi8(a, b)
+        res = res + 8
+        self.assertTrue(np.all(c == res))
+
+        c = mockup.mm_unpacklo_epi16(a, b)
+        res = np.array([0, 1, 16, 17, 2, 3, 18, 19,
+                        4, 5, 20, 21, 6, 7, 22, 23])
+        self.assertTrue(np.all(c == res))
+        c = mockup.mm_unpackhi_epi16(a, b)
+        res = res + 8
+        self.assertTrue(np.all(c == res))
+
+        c = mockup.mm_unpacklo_epi32(a, b)
+        res = np.array([0, 1, 2, 3, 16, 17, 18, 19,
+                        4, 5, 6, 7, 20, 21, 22, 23])
+        self.assertTrue(np.all(c == res))
+        c = mockup.mm_unpackhi_epi32(a, b)
+        res = res + 8
+        self.assertTrue(np.all(c == res))
+
+        c = mockup.mm_unpacklo_epi64(a, b)
+        res = np.array([0, 1, 2, 3, 4, 5, 6, 7,
+                        16, 17, 18, 19, 20, 21, 22, 23])
+        self.assertTrue(np.all(c == res))
+        c = mockup.mm_unpackhi_epi64(a, b)
+        res = res + 8
+        self.assertTrue(np.all(c == res))
+
+    def test_shuffle(self):
+        a = self.m128_0
+        a[:] = np.arange(16)
+        b = mockup.mm_shufflehi_epi16(a, 0xe4)
+        self.assertTrue(np.all(a == b))
+        b = mockup.mm_shufflelo_epi16(a, 0xe4)
+        self.assertTrue(np.all(a == b))
+
 
 class TestBitTranspose16(unittest.TestCase):
 
@@ -59,18 +105,68 @@ class TestBitTranspose16(unittest.TestCase):
         self.assertTrue(np.all(out[:-2] == 0))
 
 
+class TestByteTranspose(unittest.TestCase):
+
+    def test_8(self):
+        a = np.arange(128).astype(np.uint8)
+        b = mockup.byte_transpose(a)
+        self.assertTrue(np.all(a == b))
+
+    def test_16(self):
+        a = np.zeros(16, dtype=np.int16)
+        a[:9] = np.arange(1, 10)
+        a = a * 10 + (a * 10 + 1) * 2**8
+        b = mockup.byte_transpose(a)
+        self.assertTrue(np.all(self.byte_transpose(a) == b))
+
+    def test_32(self):
+        a = np.zeros(16, dtype=np.int32)
+        a[:9] = np.arange(1, 10)
+        a = (a * 10 + (a * 10 + 1) * 2**8 + (a * 10 + 2) * 2**16
+             + (a * 10 + 3) * 2**24)
+        b = mockup.byte_transpose(a)
+        self.assertTrue(np.all(self.byte_transpose(a) == b))
+
+    def test_64(self):
+        a = np.zeros(16, dtype=np.int64)
+        a[:9] = np.arange(1, 10)
+        a = (a * 10 + (a * 10 + 1) * 2**8 + (a * 10 + 2) * 2**16
+             + (a * 10 + 3) * 2**24 + (a * 10 + 4) * 2**32
+             + (a * 10 + 5) * 2**40 + (a * 10 + 6) * 2**48
+             + (a * 10 + 7) * 2**56)
+        b = mockup.byte_transpose(a)
+        self.assertTrue(np.all(self.byte_transpose(a) == b))
+
+    def byte_transpose(self, arr):
+        itemsize = arr.dtype.itemsize
+        in_buf = arr.flat[:].view(np.uint8)
+        nelem = in_buf.size // itemsize
+        in_buf.shape = (nelem, itemsize)
+
+        out_buf = np.empty((itemsize, nelem), dtype=np.uint8)
+        for ii in range(nelem):
+            for jj in range(itemsize):
+                out_buf[jj,ii] = in_buf[ii,jj]
+        return out_buf
+
+
+
 class TestBitTranspose(unittest.TestCase):
 
 
     def test_arange(self):
-        arr = np.arange(32, dtype=np.uint16)
+        arr = np.arange(128 * 7, dtype=np.uint16)
         bt_arr = mockup.bit_transpose(arr)
-        print bt_arr
-        print bit_transpose(arr)
+        self.assertTrue(np.all(bt_arr == bit_transpose(arr)))
+
+    def test_random(self):
+        arr = random.randint(-12345, 98877890, 128 * 13).astype(dtype=np.uint64)
+        bt_arr = mockup.bit_transpose(arr)
         self.assertTrue(np.all(bt_arr == bit_transpose(arr)))
 
 
 def bit_transpose(arr):
+    """Simple implementation of bit-transpose for result checking."""
     n = arr.size
     dtype = arr.dtype
     itemsize = dtype.itemsize
@@ -79,8 +175,6 @@ def bit_transpose(arr):
     bits_shuff = (bits.T).copy()
     arr_bt = np.packbits(bits_shuff.flat[:])
     return arr_bt
-
-
 
 class TestAVXMock(unittest.TestCase):
     pass
