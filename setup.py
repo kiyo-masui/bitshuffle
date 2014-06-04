@@ -10,7 +10,7 @@ ext_bt = Extension("bt",
                    # '-Wa,-q' is max specific and only there because
                    # soemthing is wrong with my gcc. It switches to the
                    # clang assembler.
-                   extra_compile_args=['-O3', '-march=native',
+                   extra_compile_args=['-Ofast', '-march=native',
                    '-Wa,-q'],
                    #extra_compile_args=['-fopenmp', '-march=native'],
                    )
