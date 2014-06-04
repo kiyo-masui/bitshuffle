@@ -1,12 +1,29 @@
-from setuptools import setup, find_packages
+from setuptools import setup, find_packages, Extension
+from Cython.Distutils import build_ext
+
+import numpy as np
+
+ext_bt = Extension("bt",
+                   ["ext/bittranspose.c", "ext/bt.pyx"],
+                   libraries = [],
+                   include_dirs=[np.get_include()],
+                   # '-Wa,-q' is max specific and only there because
+                   # soemthing is wrong with my gcc. It switches to the
+                   # clang assembler.
+                   extra_compile_args=['-O3', '-march=native',
+                   '-Wa,-q'],
+                   #extra_compile_args=['-fopenmp', '-march=native'],
+                   )
 
 
 setup(
-    name = 'butshuffle',
-    version = 0.1,
+    name = 'bitshuffle',
+    version = "0.1",
 
     packages = find_packages(),
     scripts=[],
+    ext_modules = [ext_bt],
+    cmdclass = {'build_ext': build_ext},
     requires = ['numpy', 'h5py'],
 
     # metadata for upload to PyPI
