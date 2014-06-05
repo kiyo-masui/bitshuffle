@@ -17,13 +17,6 @@ int shuff_just_copy(void* in, void* out, const size_t size,
 }
 
 
-// Transpose bytes within elements.
-int shuff_byte_T_elem_simple(void* in, void* out, const size_t size,
-         const size_t elem_size) {
-    return shuff_byte_T_elem_remainder(in, out, size, elem_size, 0);
-}
-
-
 // Simple transpose starting a arbitrary location in array.
 int shuff_byte_T_elem_remainder(void* in, void* out, const size_t size,
          const size_t elem_size, const size_t start) {
@@ -35,6 +28,13 @@ int shuff_byte_T_elem_remainder(void* in, void* out, const size_t size,
         }
     }
     return 0;
+}
+
+
+// Transpose bytes within elements.
+int shuff_byte_T_elem_simple(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+    return shuff_byte_T_elem_remainder(in, out, size, elem_size, 0);
 }
 
 
@@ -155,4 +155,597 @@ int shuff_bit_T_byte(void* in, void* out, const size_t size,
     }
     return 0;
 }
+
+
+// Transpose bits within bytes.
+int shuff_bit_T_byte_avx2(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+    char* A = (char*) in;
+    char* B = (char*) out;
+    uint32_t* Bui;
+
+    size_t nbytes = elem_size * size;
+
+    __m256i ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7;
+    int bt0, bt1, bt2, bt3, bt4, bt5, bt6, bt7;
+
+    for (size_t ii = 0; ii < nbytes; ii += 32 * 8) {
+        ymm0 = _mm256_loadu_si256((__m256i *) &A[ii + 0*32]);
+        ymm1 = _mm256_loadu_si256((__m256i *) &A[ii + 1*32]);
+        ymm2 = _mm256_loadu_si256((__m256i *) &A[ii + 2*32]);
+        ymm3 = _mm256_loadu_si256((__m256i *) &A[ii + 3*32]);
+        ymm4 = _mm256_loadu_si256((__m256i *) &A[ii + 4*32]);
+        ymm5 = _mm256_loadu_si256((__m256i *) &A[ii + 5*32]);
+        ymm6 = _mm256_loadu_si256((__m256i *) &A[ii + 6*32]);
+        ymm7 = _mm256_loadu_si256((__m256i *) &A[ii + 7*32]);
+
+        // Bit start.
+        Bui = (uint32_t*) &B[((7 - 0) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        Bui = (uint32_t*) &B[((7 - 1) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        Bui = (uint32_t*) &B[((7 - 2) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        Bui = (uint32_t*) &B[((7 - 3) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        Bui = (uint32_t*) &B[((7 - 4) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        Bui = (uint32_t*) &B[((7 - 5) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        Bui = (uint32_t*) &B[((7 - 6) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        Bui = (uint32_t*) &B[((7 - 7) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+    }
+    return 0;
+}
+
+
+// Transpose bits within bytes.
+int shuff_bit_T_byte_avx(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+    char* A = (char*) in;
+    char* B = (char*) out;
+    uint32_t* Bui;
+
+    size_t nbytes = elem_size * size;
+    size_t kk;
+
+    __m256i ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7;
+    int bt0, bt1, bt2, bt3, bt4, bt5, bt6, bt7;
+
+    for (size_t ii = 0; ii < nbytes; ii += 32 * 8) {
+        ymm0 = _mm256_loadu_si256((__m256i *) &A[ii + 0*32]);
+        ymm1 = _mm256_loadu_si256((__m256i *) &A[ii + 1*32]);
+        ymm2 = _mm256_loadu_si256((__m256i *) &A[ii + 2*32]);
+        ymm3 = _mm256_loadu_si256((__m256i *) &A[ii + 3*32]);
+        ymm4 = _mm256_loadu_si256((__m256i *) &A[ii + 4*32]);
+        ymm5 = _mm256_loadu_si256((__m256i *) &A[ii + 5*32]);
+        ymm6 = _mm256_loadu_si256((__m256i *) &A[ii + 6*32]);
+        ymm7 = _mm256_loadu_si256((__m256i *) &A[ii + 7*32]);
+
+        // Bit start.
+        kk = 0;
+        Bui = (uint32_t*) &B[((7 - kk) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        kk = 1;
+        Bui = (uint32_t*) &B[((7 - kk) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        kk = 2;
+        Bui = (uint32_t*) &B[((7 - kk) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        kk = 3;
+        Bui = (uint32_t*) &B[((7 - kk) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        kk = 4;
+        Bui = (uint32_t*) &B[((7 - kk) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        kk = 5;
+        Bui = (uint32_t*) &B[((7 - kk) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        kk = 6;
+        Bui = (uint32_t*) &B[((7 - kk) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+        // Bit start.
+        kk = 7;
+        Bui = (uint32_t*) &B[((7 - kk) * nbytes + ii) / 8];
+
+        bt0 = _mm256_movemask_epi8(ymm0);
+        bt1 = _mm256_movemask_epi8(ymm1);
+        bt2 = _mm256_movemask_epi8(ymm2);
+        bt3 = _mm256_movemask_epi8(ymm3);
+        bt4 = _mm256_movemask_epi8(ymm4);
+        bt5 = _mm256_movemask_epi8(ymm5);
+        bt6 = _mm256_movemask_epi8(ymm6);
+        bt7 = _mm256_movemask_epi8(ymm7);
+
+        ymm0 = _mm256_slli_epi16(ymm0, 1);
+        ymm1 = _mm256_slli_epi16(ymm1, 1);
+        ymm2 = _mm256_slli_epi16(ymm2, 1);
+        ymm3 = _mm256_slli_epi16(ymm3, 1);
+        ymm4 = _mm256_slli_epi16(ymm4, 1);
+        ymm5 = _mm256_slli_epi16(ymm5, 1);
+        ymm6 = _mm256_slli_epi16(ymm6, 1);
+        ymm7 = _mm256_slli_epi16(ymm7, 1);
+
+        Bui[0] = bt0;
+        Bui[1] = bt1;
+        Bui[2] = bt2;
+        Bui[3] = bt3;
+        Bui[4] = bt4;
+        Bui[5] = bt5;
+        Bui[6] = bt6;
+        Bui[7] = bt7;
+
+    }
+    return 0;
+}
+
+
+// Transpose bits within bytes.
+int shuff_bit_T_byte_avx1(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+    char* A = (char*) in;
+    char* B = (char*) out;
+    uint32_t* Bui;
+
+    size_t nbytes = elem_size * size;
+
+    __m256i ymm;
+    int bt;
+
+    for (size_t ii = 0; ii < nbytes; ii += 32) {
+        ymm = _mm256_loadu_si256((__m256i *) &A[ii]);
+        for (size_t kk = 0; kk < 8; kk++) {
+            bt = _mm256_movemask_epi8(ymm);
+            ymm = _mm256_slli_epi16(ymm, 1);
+            Bui = (uint32_t*) &B[((7 - kk) * nbytes + ii) / 8];
+            *Bui = bt;
+        }
+    }
+    return 0;
+}
+
 

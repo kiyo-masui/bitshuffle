@@ -9,7 +9,7 @@ from bitshuffle import ext
 
 
 # If we are doing timeings and by what factor in increase workload.
-TIME = 9
+TIME = 64
 
 
 class TestProfile(unittest.TestCase):
@@ -55,6 +55,19 @@ class TestProfile(unittest.TestCase):
         self.case = "bit T 32"
         self.data = self.data.astype(np.float32)
         self.fun = ext.bit_T_byte
+        self.assertTrue(np.all(self.fun(self.data) == bit_T_byte(self.data)))
+
+    def test_bit_T_32avx(self):
+        self.case = "bit T 32 AVX"
+        self.data = self.data.astype(np.float32)
+        self.fun = ext.bit_T_byte_avx
+        self.assertTrue(np.all(self.fun(self.data) == bit_T_byte(self.data)))
+
+    def test_bit_T_32avx1(self):
+        self.case = "bit T 32 AVX1"
+        self.data = self.data.astype(np.float32)
+        self.fun = ext.bit_T_byte_avx1
+        self.assertTrue(np.all(self.fun(self.data) == bit_T_byte(self.data)))
 
     def tearDown(self):
         delta_ts = []
@@ -99,6 +112,11 @@ class TestRandNumbers(unittest.TestCase):
     def test_bit_byte_int32(self):
         data = self.data.view(np.int32)
         out = ext.bit_T_byte(data)
+        self.assertTrue(np.all(bit_T_byte(data) == out))
+
+    def test_bit_byte_int32avx(self):
+        data = self.data.view(np.int32)
+        out = ext.bit_T_byte_avx(data)
         self.assertTrue(np.all(bit_T_byte(data) == out))
 
 
