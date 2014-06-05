@@ -9,13 +9,13 @@ from bitshuffle import ext
 
 
 # If we are doing timeings and by what factor in increase workload.
-TIME = 256
+TIME = 9
 
 
 class TestProfile(unittest.TestCase):
 
     def setUp(self):
-        n = 1096
+        n = 1024
         if TIME:
             n *= TIME
         self.data = random.rand(n) * 2**40
@@ -41,6 +41,16 @@ class TestProfile(unittest.TestCase):
         self.data = self.data.astype(np.int16)
         self.fun = ext.byte_T_elem_simple
 
+    def test_byte_T_16f(self):
+        self.case = "btye T 16F"
+        self.data = self.data.astype(np.int16)
+        self.fun = ext.byte_T_elem_fast
+
+    def test_byte_T_32f(self):
+        self.case = "btye T 32F"
+        self.data = self.data.astype(np.int32)
+        self.fun = ext.byte_T_elem_fast
+
     def test_bit_T_32(self):
         self.case = "bit T 32"
         self.data = self.data.astype(np.float32)
@@ -62,13 +72,23 @@ class TestProfile(unittest.TestCase):
 class TestRandNumbers(unittest.TestCase):
 
     def setUp(self):
-        n = 4096 * 8    # bytes
+        n = 1024 * 8    # bytes
         data = random.randint(-2**31, 2**31 - 1, n // 4).astype(np.int32)
         self.data = data.view(np.uint8)
 
     def test_byte_elem_simple_int32(self):
         data = self.data.view(np.int32)
         out = ext.byte_T_elem_simple(data)
+        self.assertTrue(np.all(byte_T_elem(data) == out))
+
+    def test_byte_elem_fast_int16(self):
+        data = self.data.view(np.int16)
+        out = ext.byte_T_elem_fast(data)
+        self.assertTrue(np.all(byte_T_elem(data) == out))
+
+    def test_byte_elem_fast_int32(self):
+        data = self.data.view(np.int32)
+        out = ext.byte_T_elem_fast(data)
         self.assertTrue(np.all(byte_T_elem(data) == out))
 
     def test_byte_elem_simple_float64(self):
@@ -93,7 +113,31 @@ class TestDevCases(unittest.TestCase):
         #print np.reshape(bit_T_byte(d), (8, 16))
         self.assertTrue(np.all(ext.bit_T_byte(d) == bit_T_byte(d)))
 
+    def test_sse_byte_trans(self):
+        d = np.arange(16, dtype = np.uint16)
+        t = ext.byte_T_elem_fast(d)
+        t1 = byte_T_elem(d)
+        #print np.reshape(t.view(np.uint8), (2, 16))
+        #print np.reshape(t1.view(np.uint8), (2, 16))
+        self.assertTrue(np.all(t == t1))
 
+
+class TestOddLengths(unittest.TestCase):
+
+    def setUp(self):
+        n = 1103    # prime
+        data = random.randint(-2**31, 2**31 - 1, n)
+        self.data = data
+
+    def test_byte_elem_int16(self):
+        data = self.data.astype(np.uint16)
+        out = ext.byte_T_elem_fast(data)
+        self.assertTrue(np.all(byte_T_elem(data) == out))
+
+    def test_byte_elem_int32(self):
+        data = self.data.astype(np.uint32)
+        out = ext.byte_T_elem_fast(data)
+        self.assertTrue(np.all(byte_T_elem(data) == out))
 
 # Python implementations for testing.
 
