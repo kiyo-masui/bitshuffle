@@ -46,11 +46,6 @@ class TestProfile(unittest.TestCase):
         self.data = self.data.astype(np.float32)
         self.fun = ext.bit_T_byte
 
-    def test_bit_T1_32(self):
-        self.case = "bit T1 32"
-        self.data = self.data.astype(np.float32)
-        self.fun = ext.bit_T_byte1
-
     def tearDown(self):
         delta_ts = []
         for ii in range(10):
@@ -84,8 +79,6 @@ class TestRandNumbers(unittest.TestCase):
     def test_bit_byte_int32(self):
         data = self.data.view(np.int32)
         out = ext.bit_T_byte(data)
-        self.assertTrue(np.all(bit_T_byte(data) == out))
-        out = ext.bit_T_byte1(data)
         self.assertTrue(np.all(bit_T_byte(data) == out))
 
 

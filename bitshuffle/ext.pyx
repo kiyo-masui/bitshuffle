@@ -10,8 +10,7 @@ np.import_array()
 # Prototypes from bittranspose.c
 cdef extern int shuff_just_copy(void *A, void *B, int size, int elem_size)
 cdef extern int shuff_byte_T_elem_simple(void *A, void *B, int size, int elem_size)
-cdef extern int shuff_bit_T_byte0(void *A, void *B, int size, int elem_size)
-cdef extern int shuff_bit_T_byte1(void *A, void *B, int size, int elem_size)
+cdef extern int shuff_bit_T_byte(void *A, void *B, int size, int elem_size)
 
 
 def _setup_arr(arr):
@@ -68,22 +67,7 @@ def bit_T_byte(np.ndarray arr not None):
     out, size, itemsize = _setup_arr(arr)
     cdef void* arr_ptr = <void*> arr.data
     cdef void* out_ptr = <void*> out.data
-    err = shuff_bit_T_byte0(arr_ptr, out_ptr, size, itemsize)
-    if err:
-        msg = "Failed. Error code %d."
-        raise ValueError(msg % err)
-    return out
-
-def bit_T_byte1(np.ndarray arr not None):
-    """Transpose bits within each byte of an array.
-
-    """
-
-    cdef np.ndarray out
-    out, size, itemsize = _setup_arr(arr)
-    cdef void* arr_ptr = <void*> arr.data
-    cdef void* out_ptr = <void*> out.data
-    err = shuff_bit_T_byte1(arr_ptr, out_ptr, size, itemsize)
+    err = shuff_bit_T_byte(arr_ptr, out_ptr, size, itemsize)
     if err:
         msg = "Failed. Error code %d."
         raise ValueError(msg % err)
