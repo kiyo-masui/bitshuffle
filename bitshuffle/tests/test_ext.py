@@ -9,7 +9,7 @@ from bitshuffle import ext
 
 
 # If we are doing timeings and by what factor in increase workload.
-TIME = 64
+TIME = 8
 
 
 class TestProfile(unittest.TestCase):
@@ -69,6 +69,18 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.bit_T_byte_avx1
         self.assertTrue(np.all(self.fun(self.data) == bit_T_byte(self.data)))
 
+    def test_full_T_32(self):
+        self.case = "full S 32"
+        self.data = self.data.astype(np.float32)
+        self.fun = ext.bit_T_elem
+        self.assertTrue(np.all(self.fun(self.data) == bit_T_byte(self.data)))
+
+    def test_full_T_64(self):
+        self.case = "full S 32"
+        self.data = self.data.astype(np.float64)
+        self.fun = ext.bit_T_elem
+        self.assertTrue(np.all(self.fun(self.data) == bit_T_byte(self.data)))
+
     def tearDown(self):
         delta_ts = []
         for ii in range(10):
@@ -77,7 +89,7 @@ class TestProfile(unittest.TestCase):
             delta_ts.append(time.time() - t0)
         delta_t = min(delta_ts)
         size = self.data.size * self.data.dtype.itemsize
-        speed = round(size / delta_t / 1024**2)   # MB/s
+        speed = round(ext.REPEAT * size / delta_t / 1024**2)   # MB/s
         if TIME:
             print "%s: %5.3f s, %5.0f Mb/s" % (self.case, delta_t, speed)
 
@@ -114,6 +126,11 @@ class TestRandNumbers(unittest.TestCase):
         out = ext.bit_T_byte(data)
         self.assertTrue(np.all(bit_T_byte(data) == out))
 
+    def test_bit_elem_int32(self):
+        data = self.data.view(np.int32)
+        out = ext.bit_T_elem(data)
+        self.assertTrue(np.all(bit_T_elem(data) == out))
+
     def test_bit_byte_int32avx(self):
         data = self.data.view(np.int32)
         out = ext.bit_T_byte_avx(data)
@@ -139,6 +156,20 @@ class TestDevCases(unittest.TestCase):
         #print np.reshape(t1.view(np.uint8), (2, 16))
         self.assertTrue(np.all(t == t1))
 
+    def test_bit_rows_T_byte_rows(self):
+        dtype = np.uint32
+        d = np.arange(16, dtype=dtype)
+        d = d + 2**24 * d
+        t1 = byte_T_elem(d)
+        #print np.reshape(d.view(np.uint8), (16, 4))
+        #print np.reshape(t1.view(np.uint8), (4, 16))
+        tt1 = bit_T_byte(t1)
+        #print np.reshape(tt1.view(np.uint8), (32, 2))
+        ttt1 = ext.bit_rows_T_byte_rows(tt1.view(dtype))
+        #print np.reshape(ttt1.view(np.uint8), (32, 2))
+        ttt2 = bit_T_elem(d)
+        #print np.reshape(ttt2.view(np.uint8), (32, 2))
+        self.assertTrue(np.all(ttt2 == ttt1))
 
 class TestOddLengths(unittest.TestCase):
 
@@ -160,7 +191,8 @@ class TestOddLengths(unittest.TestCase):
 # Python implementations for testing.
 
 def byte_T_elem(arr):
-    itemsize = arr.dtype.itemsize
+    dtype = arr.dtype
+    itemsize = dtype.itemsize
     in_buf = arr.flat[:].view(np.uint8)
     nelem = in_buf.size // itemsize
     in_buf.shape = (nelem, itemsize)
@@ -178,7 +210,7 @@ def bit_T_byte(arr):
     itemsize = dtype.itemsize
     bits = np.unpackbits(arr.view(np.uint8))
     bits.shape = (n * itemsize, 8)
-    # We have to reverse the order of the bits both for unpackin and packing,
+    # We have to reverse the order of the bits both for unpacking and packing,
     # since we want to call the least significant bit the first bit.
     bits = bits[:,::-1]
     bits_shuff = (bits.T).copy()
@@ -186,6 +218,24 @@ def bit_T_byte(arr):
     bits_shuff = bits_shuff[:,::-1]
     arr_bt = np.packbits(bits_shuff.flat[:])
     return arr_bt
+
+
+def bit_T_elem(arr):
+    n = arr.size
+    dtype = arr.dtype
+    itemsize = dtype.itemsize
+    bits = np.unpackbits(arr.view(np.uint8))
+    bits.shape = (n * itemsize, 8)
+    # We have to reverse the order of the bits both for unpacking and packing,
+    # since we want to call the least significant bit the first bit.
+    bits = bits[:,::-1].copy()
+    bits.shape = (n, itemsize * 8)
+    bits_shuff = (bits.T).copy()
+    bits_shuff.shape = (n * itemsize, 8)
+    bits_shuff = bits_shuff[:,::-1]
+    arr_bt = np.packbits(bits_shuff.flat[:])
+    return arr_bt
+
 
 
 
