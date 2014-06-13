@@ -47,185 +47,207 @@ class TestProfileRandData(unittest.TestCase):
             ans = self.check_data.view(np.uint8)
             self.assertTrue(np.all(ans == out.view(np.uint8)))
 
-    def test_copy(self):
+    def test_0_copy(self):
         self.case = "copy"
         self.fun = ext.copy
         self.check = lambda x: x
 
-    def test_trans_byte_elem_simple_32(self):
-        self.case = "byte T elem simp 32"
-        self.data = self.data.view(np.float32)
+    def test_1_trans_byte_elem_simple_64(self):
+        self.case = "byte T elem simp 64"
+        self.data = self.data.view(np.float64)
         self.fun = ext.trans_byte_elem_simple
         self.check = trans_byte_elem
 
-    def test_trans_byte_elem_16(self):
-        self.case = "byte T elem 16"
+    def test_2a_trans_byte_elem_16(self):
+        self.case = "byte T elem SSE 16"
         self.data = self.data.view(np.int16)
-        self.fun = ext.trans_byte_elem
+        self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
-    def test_trans_byte_elem_32(self):
-        self.case = "byte T elem 32"
+    def test_2b_trans_byte_elem_32(self):
+        self.case = "byte T elem SSE 32"
         self.data = self.data.view(np.float32)
-        self.fun = ext.trans_byte_elem
+        self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
-    def test_trans_byte_elem_64(self):
-        self.case = "byte T elem 64"
+    def test_2c_trans_byte_elem_64(self):
+        self.case = "byte T elem SSE 64"
         self.data = self.data.view(np.float64)
-        self.fun = ext.trans_byte_elem
+        self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
-    def test_trans_byte_elem_128(self):
-        self.case = "byte T elem 128"
+    def test_2d_trans_byte_elem_128(self):
+        self.case = "byte T elem SSE 128"
         self.data = self.data.view(np.complex128)
-        self.fun = ext.trans_byte_elem
+        self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
-    def test_trans_bit_byte_SSE(self):
+    def test_2f_trans_byte_elem_96(self):
+        self.case = "byte T elem SSE 96"
+        n = self.data.size // 128 * 96
+        dt = np.dtype([('a', 'i4'), ('b', 'i4'), ('c', 'i4')])
+        self.data = self.data[:n].view(dt)
+        self.fun = ext.trans_byte_elem_SSE
+        self.check = trans_byte_elem
+
+    def test_2g_trans_byte_elem_80(self):
+        self.case = "byte T elem SSE 80"
+        n = self.data.size // 128 * 80
+        dt = np.dtype([('a', 'i2'), ('b', 'i2'), ('c', 'i2'), 
+                       ('d', 'i2'), ('e', 'i2')])
+        self.data = self.data[:n].view(dt)
+        self.fun = ext.trans_byte_elem_SSE
+        self.check = trans_byte_elem
+
+    def test_3a_trans_bit_byte(self):
+        self.case = "bit T byte 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_bit_byte
+        self.check = trans_bit_byte
+
+    def test_3b_trans_bit_byte1(self):
+        self.case = "bit T byte 1 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_bit_byte1
+        self.check = trans_bit_byte
+
+    def test_3d_trans_bit_byte_SSE(self):
         self.case = "bit T byte SSE 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_byte_SSE
         self.check = trans_bit_byte
 
-    def test_trans_bit_byte_AVX(self):
+    def test_3f_trans_bit_byte_AVX(self):
         self.case = "bit T byte AVX 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_byte_AVX
         self.check = trans_bit_byte
 
-    def test_trans_bit_byte_AVX_32(self):
+    def test_3g_trans_bit_byte_AVX_32(self):
         self.case = "bit T byte AVX 32"
         self.data = self.data.view(np.float32)
         self.fun = ext.trans_bit_byte_AVX
         self.check = trans_bit_byte
 
-    def test_trans_bit_byte_AVX1(self):
+    def test_3f_trans_bit_byte_AVX1(self):
         self.case = "bit T byte AVX1 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_byte_AVX1
         self.check = trans_bit_byte
 
-    def test_trans_bit_elem(self):
+    def test_4a_trans_bit_elem_AVX(self):
+        self.case = "bit T elem AVX 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_bit_elem_AVX
+        self.check = trans_bit_elem
+
+    def test_4b_trans_bit_elem_AVX_128(self):
+        self.case = "bit T elem AVX 128"
+        self.data = self.data.view(np.complex128)
+        self.fun = ext.trans_bit_elem_AVX
+        self.check = trans_bit_elem
+
+    def test_4c_trans_bit_elem_AVX_32(self):
+        self.case = "bit T elem AVX 32"
+        self.data = self.data.view(np.float32)
+        self.fun = ext.trans_bit_elem_AVX
+        self.check = trans_bit_elem
+
+    def test_4d_trans_bit_elem_AVX_16(self):
+        self.case = "bit T elem AVX 16"
+        self.data = self.data.view(np.int16)
+        self.fun = ext.trans_bit_elem_AVX
+        self.check = trans_bit_elem
+
+    def test_4e_trans_bit_elem_64(self):
         self.case = "bit T elem 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_elem
         self.check = trans_bit_elem
 
-    def test_trans_bit_elem_128(self):
-        self.case = "bit T elem 128"
-        self.data = self.data.view(np.complex128)
-        self.fun = ext.trans_bit_elem
-        self.check = trans_bit_elem
-
-    def test_trans_bit_elem_32(self):
-        self.case = "bit T elem 32"
-        self.data = self.data.view(np.float32)
-        self.fun = ext.trans_bit_elem
-        self.check = trans_bit_elem
-
-    def test_trans_bit_elem_16(self):
-        self.case = "bit T elem 16"
-        self.data = self.data.view(np.int16)
-        self.fun = ext.trans_bit_elem
-        self.check = trans_bit_elem
-
-    def test_untrans_bit_elem_16(self):
-        self.case = "bit U elem 16"
+    def test_5a_untrans_bit_elem_16(self):
+        self.case = "bit U elem SSE 16"
         pre_trans = self.data.view(np.int16)
         self.data = trans_bit_elem(pre_trans)
-        self.fun = ext.untrans_bit_elem
+        self.fun = ext.untrans_bit_elem_SSE
         self.check_data = pre_trans
 
-    def test_untrans_bit_elem_128(self):
-        self.case = "bit U elem 128"
+    def test_5b_untrans_bit_elem_128(self):
+        self.case = "bit U elem SSE 128"
         pre_trans = self.data.view(np.complex128)
         self.data = trans_bit_elem(pre_trans)
-        self.fun = ext.untrans_bit_elem
+        self.fun = ext.untrans_bit_elem_SSE
         self.check_data = pre_trans
 
-    def test_untrans_bit_elem_32(self):
-        self.case = "bit U elem 32"
+    def test_5c_untrans_bit_elem_32(self):
+        self.case = "bit U elem SSE 32"
         pre_trans = self.data.view(np.float32)
         self.data = trans_bit_elem(pre_trans)
-        self.fun = ext.untrans_bit_elem
+        self.fun = ext.untrans_bit_elem_SSE
         self.check_data = pre_trans
 
-    def test_untrans_bit_elem_64(self):
+    def test_5d_untrans_bit_elem_64(self):
+        self.case = "bit U elem SSE 64"
+        pre_trans = self.data.view(np.float64)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_SSE
+        self.check_data = pre_trans
+
+    def test_5e_untrans_bit_elem_64(self):
         self.case = "bit U elem 64"
         pre_trans = self.data.view(np.float64)
         self.data = trans_bit_elem(pre_trans)
         self.fun = ext.untrans_bit_elem
         self.check_data = pre_trans
 
+    def test_6a_trans_byte_bitrow_64(self):
+        self.case = "byte T row 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_byte_bitrow
 
-class TestRandNumbers(unittest.TestCase):
+    def test_6b_trans_byte_bitrow_SSE_64(self):
+        self.case = "byte T row SSE 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_byte_bitrow_SSE
+        self.check = ext.trans_byte_bitrow
 
-    def setUp(self):
-        n = 1024 * 8    # bytes
-        data = random.randint(-2**31, 2**31 - 1, n // 4).astype(np.int32)
-        self.data = data.view(np.uint8)
-
-    def atest_byte_elem_simple_int32(self):
-        data = self.data.view(np.int32)
-        out = ext.byte_T_elem_simple(data)
-        self.assertTrue(np.all(byte_T_elem(data) == out))
-
-    def atest_byte_elem_fast_int16(self):
-        data = self.data.view(np.int16)
-        out = ext.byte_T_elem_fast(data)
-        self.assertTrue(np.all(byte_T_elem(data) == out))
-
-    def atest_byte_elem_fast_int32(self):
-        data = self.data.view(np.int32)
-        out = ext.byte_T_elem_fast(data)
-        self.assertTrue(np.all(byte_T_elem(data) == out))
-
-    def atest_byte_elem_simple_float64(self):
-        data = self.data.view(np.float64)
-        out = ext.byte_T_elem_simple(data)
-        self.assertTrue(np.all(byte_T_elem(data) == out))
-
-    def atest_bit_byte_int32(self):
-        data = self.data.view(np.int32)
-        out = ext.bit_T_byte(data)
-        self.assertTrue(np.all(bit_T_byte(data) == out))
-
-    def atest_bit_elem_int32(self):
-        data = self.data.view(np.int32)
-        out = ext.bit_T_elem(data)
-        self.assertTrue(np.all(bit_T_elem(data) == out))
-
-    def atest_bit_byte_int32avx(self):
-        data = self.data.view(np.int32)
-        out = ext.bit_T_byte_avx(data)
-        self.assertTrue(np.all(bit_T_byte(data) == out))
-
-    def atest_elem_T_byte_int16(self):
-        data = self.data.view(np.int16)
-        tmp = bit_T_elem(data).view(np.int16)
-        out = ext.elem_T_bit(tmp).view(np.int16)
-        self.assertTrue(np.all(out == data))
-
-    def atest_elem_T_byte_int32(self):
-        data = self.data.view(np.int32)
-        tmp = bit_T_elem(data).view(np.int32)
-        out = ext.elem_T_bit(tmp).view(np.int32)
-        #print out
-        #print data
-        self.assertTrue(np.all(out == data))
-
-    def atest_elem_T_byte_float64(self):
-        data = self.data.view(np.float64)
-        tmp = bit_T_elem(data).view(np.float64)
-        out = ext.elem_T_bit(tmp).view(np.float64)
-        self.assertTrue(np.all(out.view(int) == data.view(int)))
-
-
-
+    def test_7a_shuffle_bit_eight_64(self):
+        self.case = "bit S eight 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.shuffle_bit_eightelem_SSE
 
 
 class TestDevCases(unittest.TestCase):
+
+    def test_trans_bit_byte(self):
+        d = np.arange(16, dtype=np.uint16)
+        t = ext.trans_bit_byte(d)
+        #print t
+        t1 = trans_bit_byte(d)
+        #print t1
+        self.assertTrue(np.all(t == t1))
+
+    def test_trans_byte_bitrow_SSE(self):
+        d = np.arange(256, dtype = np.uint8)
+        t = ext.trans_byte_bitrow(d)
+        #print np.reshape(t, (32, 8))
+        t1 = ext.trans_byte_bitrow_SSE(d)
+        #print np.reshape(t1, (32, 8))
+        self.assertTrue(np.all(t == t1))
+
+    def test_trans_byte_elem_SSE(self):
+        d = np.empty(16, dtype=([('a', 'u4'), ('b', 'u4'), ('c', 'u4')]))
+        d['a'] = np.arange(16) * 1
+        d['b'] = np.arange(16) * 2
+        d['c'] = np.arange(16) * 3
+        #print d.dtype.itemsize
+        #print np.reshape(d.view(np.uint8), (16, 12))
+        t1 = ext.trans_byte_elem_SSE(d)
+        #print np.reshape(t1.view(np.uint8), (12, 16))
+        t0 = trans_byte_elem(d)
+        #print np.reshape(t0.view(np.uint8), (12, 16))
+        self.assertTrue(np.all(t0.view(np.uint8) == t1.view(np.uint8)))
+
 
     def atest_bit_byte(self):
         d = np.arange(128, dtype=np.uint8)

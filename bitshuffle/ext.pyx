@@ -16,14 +16,19 @@ REPEAT = REPEATC
 cdef extern int bshuf_copy(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_elem_simple(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_elem(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_trans_byte_elem_SSE(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_trans_bit_byte(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_trans_bit_byte1(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_byte_SSE(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_byte_AVX(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_byte_AVX1(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bitrow_eight(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_trans_bit_elem_AVX(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_elem(void *A, void *B, int size, int elem_size)
-cdef extern int bshuf_trans_byte_bitrow_sse(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_trans_byte_bitrow_SSE(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_bitrow(void *A, void *B, int size, int elem_size)
-cdef extern int bshuf_shuffle_bit_eightelem(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_shuffle_bit_eightelem_SSE(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_untrans_bit_elem_SSE(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_untrans_bit_elem(void *A, void *B, int size, int elem_size)
 
 
@@ -38,7 +43,8 @@ def _setup_arr(arr):
     size = arr.size
     dtype = arr.dtype
     itemsize = dtype.itemsize
-    out = np.empty(size, dtype=dtype)
+    # XXX For dev only.  Use empty!.
+    out = np.zeros(size, dtype=dtype)
     return out, size, itemsize
 
 
@@ -74,11 +80,19 @@ def trans_byte_elem_simple(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_byte_elem_simple, arr)
 
 
-def trans_byte_elem(np.ndarray arr not None):
+def trans_byte_elem_SSE(np.ndarray arr not None):
     """Transpose bytes within array elements.
 
     """
-    return _wrap_C_fun(&bshuf_trans_byte_elem, arr)
+    return _wrap_C_fun(&bshuf_trans_byte_elem_SSE, arr)
+
+
+def trans_bit_byte(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_trans_bit_byte, arr)
+
+
+def trans_bit_byte1(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_trans_bit_byte1, arr)
 
 
 def trans_bit_byte_SSE(np.ndarray arr not None):
@@ -97,20 +111,28 @@ def trans_bitrow_eight(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_bitrow_eight, arr)
 
 
+def trans_bit_elem_AVX(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_trans_bit_elem_AVX, arr)
+
+
 def trans_bit_elem(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_bit_elem, arr)
 
 
-def trans_byte_bitrow_see(np.ndarray arr not None):
-    return _wrap_C_fun(&bshuf_trans_byte_bitrow_sse, arr)
+def trans_byte_bitrow_SSE(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_trans_byte_bitrow_SSE, arr)
 
 
 def trans_byte_bitrow(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_byte_bitrow, arr)
 
 
-def shuffle_bit_eightelem(np.ndarray arr not None):
-    return _wrap_C_fun(&bshuf_shuffle_bit_eightelem, arr)
+def shuffle_bit_eightelem_SSE(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_shuffle_bit_eightelem_SSE, arr)
+
+
+def untrans_bit_elem_SSE(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_untrans_bit_elem_SSE, arr)
 
 
 def untrans_bit_elem(np.ndarray arr not None):
