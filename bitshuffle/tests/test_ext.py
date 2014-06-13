@@ -9,7 +9,7 @@ from bitshuffle import ext
 
 
 # If we are doing timeings and by what factor in increase workload.
-TIME = 8
+TIME = 32
 
 
 class TestProfileRandData(unittest.TestCase):
