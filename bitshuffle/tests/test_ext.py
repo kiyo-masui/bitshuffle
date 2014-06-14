@@ -52,10 +52,10 @@ class TestProfileRandData(unittest.TestCase):
         self.fun = ext.copy
         self.check = lambda x: x
 
-    def test_1_trans_byte_elem_simple_64(self):
-        self.case = "byte T elem simp 64"
+    def test_1_trans_byte_elem_scal(self):
+        self.case = "byte T elem scal 64"
         self.data = self.data.view(np.float64)
-        self.fun = ext.trans_byte_elem_simple
+        self.fun = ext.trans_byte_elem_scal
         self.check = trans_byte_elem
 
     def test_2a_trans_byte_elem_16(self):
@@ -106,9 +106,9 @@ class TestProfileRandData(unittest.TestCase):
         self.check = trans_bit_byte
 
     def test_3b_trans_bit_byte1(self):
-        self.case = "bit T byte 1 64"
+        self.case = "bit T byte un 64"
         self.data = self.data.view(np.float64)
-        self.fun = ext.trans_bit_byte1
+        self.fun = ext.trans_bit_byte_unrolled
         self.check = trans_bit_byte
 
     def test_3d_trans_bit_byte_SSE(self):
@@ -130,9 +130,9 @@ class TestProfileRandData(unittest.TestCase):
         self.check = trans_bit_byte
 
     def test_3f_trans_bit_byte_AVX1(self):
-        self.case = "bit T byte AVX1 64"
+        self.case = "bit T byte AVX un 64"
         self.data = self.data.view(np.float64)
-        self.fun = ext.trans_bit_byte_AVX1
+        self.fun = ext.trans_bit_byte_AVX_unrolled
         self.check = trans_bit_byte
 
     def test_4a_trans_bit_elem_AVX(self):
@@ -160,9 +160,9 @@ class TestProfileRandData(unittest.TestCase):
         self.check = trans_bit_elem
 
     def test_4e_trans_bit_elem_64(self):
-        self.case = "bit T elem 64"
+        self.case = "bit T elem scal 64"
         self.data = self.data.view(np.float64)
-        self.fun = ext.trans_bit_elem
+        self.fun = ext.trans_bit_elem_scal
         self.check = trans_bit_elem
 
     def test_5a_untrans_bit_elem_16(self):
@@ -194,10 +194,10 @@ class TestProfileRandData(unittest.TestCase):
         self.check_data = pre_trans
 
     def test_5e_untrans_bit_elem_64(self):
-        self.case = "bit U elem 64"
+        self.case = "bit U elem scal 64"
         pre_trans = self.data.view(np.float64)
         self.data = trans_bit_elem(pre_trans)
-        self.fun = ext.untrans_bit_elem
+        self.fun = ext.untrans_bit_elem_scal
         self.check_data = pre_trans
 
     def test_6a_trans_byte_bitrow_64(self):
@@ -211,10 +211,37 @@ class TestProfileRandData(unittest.TestCase):
         self.fun = ext.trans_byte_bitrow_SSE
         self.check = ext.trans_byte_bitrow
 
-    def test_7a_shuffle_bit_eight_64(self):
-        self.case = "bit S eight 64"
+    def test_7a_shuffle_bit_eight_SSE_64(self):
+        self.case = "bit S eight SSE 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.shuffle_bit_eightelem_SSE
+
+    def test_8a_trans_bit_elem_64(self):
+        self.case = "bit T elem 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_bit_elem
+        self.check = trans_bit_elem
+
+    def test_8b_untrans_bit_elem_64(self):
+        self.case = "bit U elem 64"
+        pre_trans = self.data.view(np.float64)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem
+        self.check_data = pre_trans
+
+    def test_9a_bitshuffle_64(self):
+        self.case = "bitshuffle 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.bitshuffle
+
+    def test_9b_bitunshuffle_64(self):
+        self.case = "bitunshuffle 64"
+        pre_trans = self.data.view(np.float64)
+        self.data = ext.bitshuffle(pre_trans)
+        self.fun = ext.bitunshuffle
+        self.check_data = pre_trans
+
+
 
 
 class TestDevCases(unittest.TestCase):
@@ -247,6 +274,14 @@ class TestDevCases(unittest.TestCase):
         t0 = trans_byte_elem(d)
         #print np.reshape(t0.view(np.uint8), (12, 16))
         self.assertTrue(np.all(t0.view(np.uint8) == t1.view(np.uint8)))
+
+    def test_bitshuffle(self):
+        d = np.arange(128, dtype=np.uint16)
+        t1 = ext.bitshuffle(d)
+        #print t1
+        t2 = ext.bitunshuffle(t1)
+        #print t2
+        self.assertTrue(np.all(t2.view(np.uint8) == d.view(np.uint8)))
 
 
     def atest_bit_byte(self):

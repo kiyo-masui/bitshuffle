@@ -3,6 +3,14 @@
  *      12 : Missing AVX
  */
 
+#if defined(__AVX2__) && defined (__SSE2__)
+#define USEAVX2 1
+#endif
+
+#if defined(__SSE2__)
+#define USESSE2 1
+#endif
+
 
 #include <stdio.h>
 #include <assert.h>
@@ -10,10 +18,13 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include "H5PLextern.h"
+#include "hdf5.h"
+
 // Conditional includes for SSE2 and AVX2.
-#if defined __AVX2__
+#ifdef USEAVX2
 #include <immintrin.h>
-#elif defined __SSE2__
+#elif defined USESSE2
 #include <emmintrin.h>
 #endif
 
@@ -39,7 +50,7 @@ int bshuf_trans_byte_elem_remainder(void* in, void* out, const size_t size,
     char* A = (char*) in;
     char* B = (char*) out;
     // ii loop separated into 2 loops so the compiler can unroll the inner one.
-    for (size_t ii = start; ii < size; ii += 8) {
+    for (size_t ii = start; ii + 7 < size; ii += 8) {
         for (size_t jj = 0; jj < elem_size; jj++) {
             for (size_t kk = 0; kk < 8; kk++) {
                 B[jj * size + ii + kk] = A[ii * elem_size + kk * elem_size + jj];
@@ -50,8 +61,8 @@ int bshuf_trans_byte_elem_remainder(void* in, void* out, const size_t size,
 }
 
 
-/* Transpose bytes within elements, simplest algorithm. */
-int bshuf_trans_byte_elem_simple(void* in, void* out, const size_t size,
+/* Transpose bytes within elements, scalar algorithm. */
+int bshuf_trans_byte_elem_scal(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
     return bshuf_trans_byte_elem_remainder(in, out, size, elem_size, 0);
@@ -93,7 +104,7 @@ int bshuf_trans_bit_byte(void* in, void* out, const size_t size,
 
 /* Transpose bits within bytes. Does not use x86 specific instructions.
  * Code from the Hacker's Delight. */
-int bshuf_trans_bit_byte1(void* in, void* out, const size_t size,
+int bshuf_trans_bit_byte_unrolled(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
     uint64_t* A = in;
@@ -104,7 +115,7 @@ int bshuf_trans_bit_byte1(void* in, void* out, const size_t size,
     size_t nbyte = elem_size * size;
     size_t nbyte_bitrow = nbyte / 8;
 
-    for (size_t ii = 0; ii < nbyte_bitrow - 3; ii += 4) {
+    for (size_t ii = 0; ii + 3 < nbyte_bitrow; ii += 4) {
         x0 = A[ii + 0];
         x1 = A[ii + 1];
         x2 = A[ii + 2];
@@ -131,7 +142,7 @@ int bshuf_trans_bit_byte1(void* in, void* out, const size_t size,
 }
 
 
-int bshuf_trans_bit_elem(void* in, void* out, const size_t size,
+int bshuf_trans_bit_elem_scal(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
     char* A = (char*) in;
@@ -156,7 +167,7 @@ int bshuf_trans_bit_elem(void* in, void* out, const size_t size,
 }
 
 
-int bshuf_untrans_bit_elem(void* in, void* out, const size_t size,
+int bshuf_untrans_bit_elem_scal(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
     char* A = (char*) in;
@@ -181,6 +192,7 @@ int bshuf_untrans_bit_elem(void* in, void* out, const size_t size,
 }
 
 
+/* Transpose of an array, optimized for small elements. */
 #define TRANS_ELEM_TYPE(in, out, lda, ldb, type_t) {                        \
         type_t* A = (type_t*) in;                                           \
         type_t* B = (type_t*) out;                                          \
@@ -240,7 +252,7 @@ int bshuf_trans_byte_bitrow(void* in, void* out, const size_t size,
 
 /* ---- Code that requires SSE2. x86 architectures post Pentium 4. ---- */
 
-#ifdef __SSE2__
+#ifdef USESSE2
 
 /* Transpose bytes within elements using SSE for 16 bit elements. */
 int bshuf_trans_byte_elem_SSE_16(void* in, void* out, const size_t size) {
@@ -249,7 +261,7 @@ int bshuf_trans_byte_elem_SSE_16(void* in, void* out, const size_t size) {
     char* B = (char*) out;
     __m128i a0, b0, a1, b1;
 
-    for (size_t ii=0; ii < size - 15; ii += 16) {
+    for (size_t ii=0; ii + 15 < size; ii += 16) {
         a0 = _mm_loadu_si128((__m128i *) &A[2*ii + 0*16]);
         b0 = _mm_loadu_si128((__m128i *) &A[2*ii + 1*16]);
 
@@ -280,7 +292,7 @@ int bshuf_trans_byte_elem_SSE_32(void* in, void* out, const size_t size) {
     char* B = (char*) out;
     __m128i a0, b0, c0, d0, a1, b1, c1, d1;
 
-    for (size_t ii=0; ii < size - 15; ii += 16) {
+    for (size_t ii=0; ii + 15 < size; ii += 16) {
         a0 = _mm_loadu_si128((__m128i *) &A[4*ii + 0*16]);
         b0 = _mm_loadu_si128((__m128i *) &A[4*ii + 1*16]);
         c0 = _mm_loadu_si128((__m128i *) &A[4*ii + 2*16]);
@@ -324,7 +336,7 @@ int bshuf_trans_byte_elem_SSE_64(void* in, void* out, const size_t size) {
     __m128i a0, b0, c0, d0, e0, f0, g0, h0;
     __m128i a1, b1, c1, d1, e1, f1, g1, h1;
 
-    for (size_t ii=0; ii < size - 15; ii += 16) {
+    for (size_t ii=0; ii + 15 < size; ii += 16) {
         a0 = _mm_loadu_si128((__m128i *) &A[8*ii + 0*16]);
         b0 = _mm_loadu_si128((__m128i *) &A[8*ii + 1*16]);
         c0 = _mm_loadu_si128((__m128i *) &A[8*ii + 2*16]);
@@ -409,7 +421,7 @@ int bshuf_trans_byte_elem_SSE(void* in, void* out, const size_t size,
     // Worst case: odd number of bytes. Turns out that this is faster for
     // (odd * 2) byte elements as well (hense % 4).
     if (elem_size % 4) {
-        err = bshuf_trans_byte_elem_simple(in, out, size, elem_size);
+        err = bshuf_trans_byte_elem_scal(in, out, size, elem_size);
         return err;
     }
 
@@ -429,7 +441,7 @@ int bshuf_trans_byte_elem_SSE(void* in, void* out, const size_t size,
             err = bshuf_trans_byte_elem_SSE_32(out, tmp_buf, size * nchunk_elem);
             bshuf_trans_elem(tmp_buf, out, 4, nchunk_elem, size);
         } else {
-            // Not used since simple algorithm is faster.
+            // Not used since scalar algorithm is faster.
             nchunk_elem = elem_size / 2;
             TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int16_t);
             err = bshuf_trans_byte_elem_SSE_16(out, tmp_buf, size * nchunk_elem);
@@ -455,7 +467,7 @@ int bshuf_trans_bit_byte_SSE(void* in, void* out, const size_t size,
     __m128i xmm;
     int bt;
 
-    for (size_t ii = 0; ii < nbyte - 15; ii += 16) {
+    for (size_t ii = 0; ii + 15 < nbyte; ii += 16) {
         xmm = _mm_loadu_si128((__m128i *) &A[ii]);
         for (size_t kk = 0; kk < 8; kk++) {
             bt = _mm_movemask_epi8(xmm);
@@ -483,8 +495,8 @@ int bshuf_trans_byte_bitrow_SSE(void* in, void* out, const size_t size,
     __m128i a1, b1, c1, d1, e1, f1, g1, h1;
     __m128 *as, *bs, *cs, *ds, *es, *fs, *gs, *hs;
 
-    for (int ii = 0; ii < nrows; ii += 8) {
-        for (int jj = 0; jj < nbyte_row - 15; jj += 16) {
+    for (size_t ii = 0; ii + 7 < nrows; ii += 8) {
+        for (size_t jj = 0; jj + 15 < nbyte_row; jj += 16) {
             a0 = _mm_loadu_si128((__m128i *) &A[(ii + 0)*nbyte_row + jj]);
             b0 = _mm_loadu_si128((__m128i *) &A[(ii + 1)*nbyte_row + jj]);
             c0 = _mm_loadu_si128((__m128i *) &A[(ii + 2)*nbyte_row + jj]);
@@ -600,7 +612,7 @@ int bshuf_shuffle_bit_eightelem_SSE(void* in, void* out, const size_t size,
     int bt;
 
     if (elem_size == 1) {
-        for (size_t ii = 0; ii < nbyte - 15; ii += 16) {
+        for (size_t ii = 0; ii + 15 < nbyte; ii += 16) {
             xmm = _mm_loadu_si128((__m128i *) &A[ii]);
             for (size_t kk = 0; kk < 8; kk++) {
                 bt = _mm_movemask_epi8(xmm);
@@ -610,7 +622,7 @@ int bshuf_shuffle_bit_eightelem_SSE(void* in, void* out, const size_t size,
         }
 
         __m128i a0, b0, a1, b1;
-        for (size_t ii = 0; ii < nbyte - 31; ii += 32) {
+        for (size_t ii = 0; ii + 31 < nbyte; ii += 32) {
             a0 = _mm_loadu_si128((__m128i *) &B[ii]);
             b0 = _mm_loadu_si128((__m128i *) &B[ii + 16]);
 
@@ -633,7 +645,7 @@ int bshuf_shuffle_bit_eightelem_SSE(void* in, void* out, const size_t size,
             _mm_storeu_si128((__m128i *) &B[ii + 16], b1);
         }
     } else {
-        for (size_t ii = 0; ii < nbyte - 8 * elem_size + 1; ii += 8 * elem_size) {
+        for (size_t ii = 0; ii + 8 * elem_size - 1 < nbyte; ii += 8 * elem_size) {
             for (size_t jj = 0; jj < 8 * elem_size; jj += 16) {
                 xmm = _mm_loadu_si128((__m128i *) &A[ii + jj]);
                 for (size_t kk = 0; kk < 8; kk++) {
@@ -665,7 +677,7 @@ int bshuf_untrans_bit_elem_SSE(void* in, void* out, const size_t size,
     return err;
 }
 
-#else // #ifdef __SSE2__
+#else // #ifdef USESSE2
 
 
 int bshuf_untrans_bit_elem_SSE(void* in, void* out, const size_t size,
@@ -712,16 +724,16 @@ int bshuf_trans_byte_elem_SSE_16(void* in, void* out, const size_t size) {
     return 11;
 }
 
-#endif // #ifdef __SSE2__
+#endif // #ifdef USESSE2
 
 
 
 /* ---- Code that requires AVX2. Intel Haswell (2013) and later. ---- */
 
-#if defined(__AVX2__) && defined (__SSE2__)
+#ifdef USEAVX2
 
 /* Transpose bits within bytes using AVX. */
-int bshuf_trans_bit_byte_AVX(void* in, void* out, const size_t size,
+int bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
     char* A = (char*) in;
@@ -738,7 +750,7 @@ int bshuf_trans_bit_byte_AVX(void* in, void* out, const size_t size,
     // gives a speed up roughly 70% for some problem sizes.  The compiler will
     // not automatically doublly unroll a loop, but will optimize the
     // order of operations within one long section.
-    for (size_t ii = 0; ii < nbyte - 32 * 8 + 1; ii += 32 * 8) {
+    for (size_t ii = 0; ii + 32 * 8 - 1 < nbyte; ii += 32 * 8) {
         ymm0 = _mm256_loadu_si256((__m256i *) &A[ii + 0*32]);
         ymm1 = _mm256_loadu_si256((__m256i *) &A[ii + 1*32]);
         ymm2 = _mm256_loadu_si256((__m256i *) &A[ii + 2*32]);
@@ -971,7 +983,7 @@ int bshuf_trans_bit_byte_AVX(void* in, void* out, const size_t size,
 
 
 /* Transpose bits within bytes using AVX. Less optimized version. */
-int bshuf_trans_bit_byte_AVX1(void* in, void* out, const size_t size,
+int bshuf_trans_bit_byte_AVX(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
     char* A = (char*) in;
@@ -983,7 +995,7 @@ int bshuf_trans_bit_byte_AVX1(void* in, void* out, const size_t size,
     __m256i ymm;
     int bt;
 
-    for (size_t ii = 0; ii < nbyte - 31; ii += 32) {
+    for (size_t ii = 0; ii + 31 < nbyte; ii += 32) {
         ymm = _mm256_loadu_si256((__m256i *) &A[ii]);
         for (size_t kk = 0; kk < 8; kk++) {
             bt = _mm256_movemask_epi8(ymm);
@@ -1015,7 +1027,7 @@ int bshuf_trans_bit_elem_AVX(void* in, void* out, const size_t size,
     return err;
 }
 
-#else // #ifdef __AVX2__
+#else // #ifdef USEAVX2
 
 int bshuf_trans_bit_byte_AVX(void* in, void* out, const size_t size,
          const size_t elem_size) {
@@ -1034,8 +1046,171 @@ int bshuf_trans_bit_elem_AVX(void* in, void* out, const size_t size,
     return 12;
 }
 
-#endif // #ifdef __AVX2__
+#endif // #ifdef USEAVX2
+
+
+/* ---- Public functions ---- */
+
+int bshuf_trans_bit_elem(void* in, void* out, const size_t size, 
+        const size_t elem_size) {
+
+#ifdef USEAVX2
+    return bshuf_trans_bit_elem_AVX(in, out, size, elem_size);
+#elif defined(USESSE2)
+    return bshuf_trans_bit_elem_SSE(in, out, size, elem_size);
+#else
+    return bshuf_trans_bit_elem_scal(in, out, size, elem_size);
+#endif
+}
+
+
+int bshuf_untrans_bit_elem(void* in, void* out, const size_t size, 
+        const size_t elem_size) {
+
+#ifdef USEAVX2
+    //return bshuf_untrans_bit_elem_AVX(in, out, size, elem_size);
+    return bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
+#elif defined(USESSE2)
+    return bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
+#else
+    return bshuf_untrans_bit_elem_scal(in, out, size, elem_size);
+#endif
+}
+
+#define BSHUF_NELEM_SHUFF 2048
+#define BSHUF_BLOCKED_MULT 128  // Eventuallty 8.
+
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+
+int bshuf_bitshuffle(void* in, void* out, const size_t size, 
+        const size_t elem_size) {
+
+    char* A = (char*) in;
+    char* B = (char*) out;
+
+    int err;
+    size_t block_size;
+    size_t leftover;
+
+    for (size_t ii = 0; ii < size; ii += BSHUF_NELEM_SHUFF) {
+        block_size = MIN(size - ii, BSHUF_NELEM_SHUFF);
+        block_size = block_size - block_size % BSHUF_BLOCKED_MULT;
+        if (block_size) {
+            err = bshuf_trans_bit_elem(&A[ii * elem_size],
+                    &B[ii * elem_size], block_size, elem_size);
+            if (err) return err;
+        }
+    }
+    leftover = size % BSHUF_BLOCKED_MULT;
+    memcpy(&B[(size - leftover) * elem_size], &A[(size - leftover) * elem_size],
+            leftover * elem_size);
+
+    return 0;
+}
+
+int bshuf_bitunshuffle(void* in, void* out, const size_t size, 
+        const size_t elem_size) {
+
+    char* A = (char*) in;
+    char* B = (char*) out;
+
+    int err;
+    size_t block_size;
+    size_t leftover;
+
+    for (size_t ii = 0; ii < size; ii += BSHUF_NELEM_SHUFF) {
+        block_size = MIN(size - ii, BSHUF_NELEM_SHUFF);
+        block_size = block_size - block_size % BSHUF_BLOCKED_MULT;
+        if (block_size) {
+            err = bshuf_untrans_bit_elem(&A[ii * elem_size],
+                    &B[ii * elem_size], block_size, elem_size);
+            if (err) return err;
+        }
+    }
+    leftover = size % BSHUF_BLOCKED_MULT;
+    memcpy(&B[(size - leftover) * elem_size], &A[(size - leftover) * elem_size],
+            leftover * elem_size);
+
+    return 0;
+}
+
+
+#define BSHUF_FILTER 455  // Dev filter ID.
+#define BSHUF_FILTER_VERSION 0
+#define BSHUF_VERSION 0
+
+
+herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
+
+    herr_t r;
+
+    unsigned int elem_size;
+
+    unsigned int flags;
+    size_t nelements = 8;
+    unsigned values[] = {0,0,0,0,0,0,0,0};
+
+    r = H5Pget_filter_by_id2(dcpl, BSHUF_FILTER, &flags, &nelements,
+            values, 0, NULL, NULL);
+    if(r<0) return -1;
+
+    if(nelements < 3) nelements = 3;  /* First 3 slots reserved.  If any higher
+                                      slots are used, preserve the contents. */
+
+    if(values[0]==0) values[0] = BSHUF_FILTER_VERSION;
+    if(values[1]==0) values[1] = BSHUF_VERSION;
+
+    elem_size = H5Tget_size(type);
+    if(elem_size == 0) return -1;
+
+    values[2] = elem_size;
+
+    r = H5Pmodify_filter(dcpl, BSHUF_FILTER, flags, nelements, values);
+    if(r<0) return -1;
+
+    return 1;
+}
+
+
+size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
+           const unsigned int cd_values[], size_t nbytes,
+           size_t *buf_size, void **buf) {
+
+    size_t size, elem_size;
+    int err;
+
+    if (cd_nelmts < 2) return 0;
+    elem_size = cd_values[2];
+    if (nbytes % elem_size) return 0;
+    size = nbytes / elem_size;
+
+    void* out_buf;
+    out_buf = malloc(size * elem_size);
+    if (out_buf == NULL) return 0;
+
+    if (flags & H5Z_FLAG_REVERSE) {
+        // Bit unshuffle.
+        err = bshuf_bitshuffle(*buf, out_buf, size, elem_size);
+    } else {
+        // Bit unshuffle.
+        err = bshuf_bitunshuffle(*buf, out_buf, size, elem_size);
+    }
+
+    if (err) {
+        free(out_buf);
+        return 0;
+    }
+
+    free(*buf);
+    *buf = out_buf;
+    *buf_size = nbytes;
+
+    return nbytes;
+}
 
 
 #undef TRANS_BIT_8X8
 #undef TRANS_ELEM_TYPE
+
+#undef USESSE2
+#undef USEAVX2

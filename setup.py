@@ -7,7 +7,7 @@ ext_bt = Extension("bitshuffle.ext",
                    ["src/bitshuffle.c", "bitshuffle/ext.pyx"],
                    libraries = [],
                    include_dirs=[np.get_include()],
-                   # '-Wa,-q' is max specific and only there because
+                   # '-Wa,-q' is Mac specific and only there because
                    # soemthing is wrong with my gcc. It switches to the
                    # clang assembler.
                    extra_compile_args=['-Ofast', '-march=native',
