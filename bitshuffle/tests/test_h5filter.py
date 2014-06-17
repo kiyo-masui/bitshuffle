@@ -6,7 +6,7 @@ import numpy as np
 import h5py
 from h5py import h5f, h5d, h5z, h5t, h5s, filters
 
-os.environ["HDF5_PLUGIN_PATH"] = "/Users/kiyo/working/bitshuffle/src"
+os.environ["HDF5_PLUGIN_PATH"] = "/Users/kiyo/working/bitshuffle/plugins"
 #os.environ["HDF5_PLUGIN_PATH"] = ("/Users/kiyo/Downloads/BZIP2-plugin/plugins/lib"
 #                                  ":/Users/kiyo/working/bitshuffle/bitshuffle"
 #                                  ":/Users/kiyo/working/bitshuffle/src"

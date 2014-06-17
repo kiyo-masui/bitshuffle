@@ -7,41 +7,26 @@ ext_bshuf = Extension("bitshuffle.ext",
                    ["src/bitshuffle.c", "bitshuffle/ext.pyx"],
                    libraries = ['hdf5'],
                    include_dirs=[np.get_include()],
-                   # '-Wa,-q' is Mac specific and only there because
-                   # soemthing is wrong with my gcc. It switches to the
-                   # clang assembler.
-                   extra_compile_args=['-Ofast', '-march=native',
-                   '-Wa,-q'],
-                   #extra_compile_args=['-fopenmp', '-march=native'],
+                   extra_compile_args=['-Ofast', '-march=native',]
                    )
 
 
-bshuf_h5 = Extension("bitshuffle.h5",
+h5filter = Extension("bitshuffle.h5",
                    ["src/h5filter.c",],
                    libraries = ['hdf5'],
                    include_dirs=[np.get_include()],
-                   # '-Wa,-q' is Mac specific and only there because
-                   # soemthing is wrong with my gcc. It switches to the
-                   # clang assembler.
-                   extra_compile_args=['-Ofast', '-march=native',
-                   '-Wa,-q'],
-                   #extra_compile_args=['-fopenmp', '-march=native'],
+                   extra_compile_args=['-Ofast', '-march=native',]
                    )
 
 
-#filter_plugin = Extension("plugins.libh5filters.so",
-filter_plugin = Extension("src.libh5filters",
-                   ["src/h5filter.c", ],
+filter_plugin = Extension("plugins.libh5bshuf",
+                   ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
+                    "src/bitshuffle.c"],
+                   #["src/bshuf_h5plugin.c"],
                    libraries = ['hdf5'],
                    include_dirs=['src/'],
-                   # '-Wa,-q' is Mac specific and only there because
-                   # soemthing is wrong with my gcc. It switches to the
-                   # clang assembler.
-                   #extra_compile_args=['-Ofast', '-march=native',
-                   #'-Wa,-q'],
-                   #extra_compile_args=['-fopenmp', '-march=native'],
-                   extra_compile_args=['-fPIC', '-g', '-Ofast', '-march=native',
-                                       '-Wa,-q'],
+                   extra_compile_args=['-fPIC', '-g', '-Ofast',
+                                       '-march=native']
                    )
 
 

@@ -1,11 +1,5 @@
-#include "H5PLextern.h"
-#include "hdf5.h"
+#include "bshuf_h5filter.h"
 
-#include "bitshuffle.c"
-
-#define BSHUF_FILTER 32008
-#define BSHUF_FILTER_VERSION 0
-#define BSHUF_VERSION 0
 
 // Only called on compresion, not on reverse.
 herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
@@ -20,7 +14,7 @@ herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
     unsigned values[] = {0,0,0,0,0,0,0,0,0,0,0};
     unsigned tmp_values[] = {0,0,0,0,0,0,0,0};
 
-    r = H5Pget_filter_by_id2(dcpl, BSHUF_FILTER, &flags, &nelements,
+    r = H5Pget_filter_by_id2(dcpl, BSHUF_H5FILTER, &flags, &nelements,
             tmp_values, 0, NULL, NULL);
     if(r<0) return -1;
 
@@ -31,7 +25,7 @@ herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
 
     nelements = 3 + nelements;
 
-    values[0] = BSHUF_FILTER_VERSION;
+    values[0] = BSHUF_H5FILTER_VERSION;
     values[1] = BSHUF_VERSION;
 
     elem_size = H5Tget_size(type);
@@ -39,7 +33,7 @@ herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
 
     values[2] = elem_size;
 
-    r = H5Pmodify_filter(dcpl, BSHUF_FILTER, flags, nelements, values);
+    r = H5Pmodify_filter(dcpl, BSHUF_H5FILTER, flags, nelements, values);
     if(r<0) return -1;
 
     return 1;
@@ -83,9 +77,9 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
 }
 
 
-H5Z_class_t bshuf_h5_bitshuffle[1] = {{
+H5Z_class_t bshuf_H5Filter[1] = {{
     H5Z_CLASS_T_VERS,
-    (H5Z_filter_t)(BSHUF_FILTER),
+    (H5Z_filter_t)(BSHUF_H5FILTER),
     1, 1,
     "bitshuffle filter; see https://github.com/kiyo-masui/bitshuffle",
     NULL,
@@ -94,8 +88,15 @@ H5Z_class_t bshuf_h5_bitshuffle[1] = {{
 }};
 
 
-H5PL_type_t H5PLget_plugin_type(void) {return H5PL_TYPE_FILTER;}
-const void* H5PLget_plugin_info(void) {return bshuf_h5_bitshuffle;}
+int bshuf_register_h5filter(void){
 
+    int retval;
 
+    retval = H5Zregister(bshuf_H5Filter);
+    if(retval<0){
+        H5Epush1(__FILE__, "bshuf_register_h5filter", __LINE__, H5E_PLINE,
+                 H5E_CANTREGISTER, "Can't register bitshuffle filter");
+    }
+    return retval;
+}
 
