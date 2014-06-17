@@ -18,9 +18,6 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include "H5PLextern.h"
-#include "hdf5.h"
-
 // Conditional includes for SSE2 and AVX2.
 #ifdef USEAVX2
 #include <immintrin.h>
@@ -596,6 +593,26 @@ int bshuf_trans_byte_bitrow_SSE(void* in, void* out, const size_t size,
 }
 
 
+/* Tranpose bits within elements. */
+int bshuf_trans_bit_elem_SSE(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    int err;
+
+    void* tmp_buf = malloc(size * elem_size);
+    if (tmp_buf == NULL) return 1;
+
+    // Should acctually check errors individually.
+    err = bshuf_trans_byte_elem_SSE(in, out, size, elem_size);
+    err += bshuf_trans_bit_byte_SSE(out, tmp_buf, size, elem_size);
+    err += bshuf_trans_bitrow_eight(tmp_buf, out, size, elem_size);
+
+    free(tmp_buf);
+
+    return err;
+}
+
+
 /* Shuffle bits within the bytes of eight element blocks. */
 int bshuf_shuffle_bit_eightelem_SSE(void* in, void* out, const size_t size,
          const size_t elem_size) {
@@ -1108,6 +1125,7 @@ int bshuf_bitshuffle(void* in, void* out, const size_t size,
     return 0;
 }
 
+
 int bshuf_bitunshuffle(void* in, void* out, const size_t size, 
         const size_t elem_size) {
 
@@ -1135,78 +1153,7 @@ int bshuf_bitunshuffle(void* in, void* out, const size_t size,
 }
 
 
-#define BSHUF_FILTER 455  // Dev filter ID.
-#define BSHUF_FILTER_VERSION 0
-#define BSHUF_VERSION 0
 
-
-herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
-
-    herr_t r;
-
-    unsigned int elem_size;
-
-    unsigned int flags;
-    size_t nelements = 8;
-    unsigned values[] = {0,0,0,0,0,0,0,0};
-
-    r = H5Pget_filter_by_id2(dcpl, BSHUF_FILTER, &flags, &nelements,
-            values, 0, NULL, NULL);
-    if(r<0) return -1;
-
-    if(nelements < 3) nelements = 3;  /* First 3 slots reserved.  If any higher
-                                      slots are used, preserve the contents. */
-
-    if(values[0]==0) values[0] = BSHUF_FILTER_VERSION;
-    if(values[1]==0) values[1] = BSHUF_VERSION;
-
-    elem_size = H5Tget_size(type);
-    if(elem_size == 0) return -1;
-
-    values[2] = elem_size;
-
-    r = H5Pmodify_filter(dcpl, BSHUF_FILTER, flags, nelements, values);
-    if(r<0) return -1;
-
-    return 1;
-}
-
-
-size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
-           const unsigned int cd_values[], size_t nbytes,
-           size_t *buf_size, void **buf) {
-
-    size_t size, elem_size;
-    int err;
-
-    if (cd_nelmts < 2) return 0;
-    elem_size = cd_values[2];
-    if (nbytes % elem_size) return 0;
-    size = nbytes / elem_size;
-
-    void* out_buf;
-    out_buf = malloc(size * elem_size);
-    if (out_buf == NULL) return 0;
-
-    if (flags & H5Z_FLAG_REVERSE) {
-        // Bit unshuffle.
-        err = bshuf_bitshuffle(*buf, out_buf, size, elem_size);
-    } else {
-        // Bit unshuffle.
-        err = bshuf_bitunshuffle(*buf, out_buf, size, elem_size);
-    }
-
-    if (err) {
-        free(out_buf);
-        return 0;
-    }
-
-    free(*buf);
-    *buf = out_buf;
-    *buf_size = nbytes;
-
-    return nbytes;
-}
 
 
 #undef TRANS_BIT_8X8
