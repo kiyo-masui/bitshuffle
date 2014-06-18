@@ -13,6 +13,8 @@ REPEAT = REPEATC
 
 
 # Prototypes from bitshuffle.c
+cdef extern int bshuf_using_SSE2()
+cdef extern int bshuf_using_AVX2()
 cdef extern int bshuf_copy(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_elem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_elem_SSE(void *A, void *B, int size, int elem_size)
@@ -37,6 +39,20 @@ cdef extern int bshuf_bitunshuffle(void *A, void *B, int size, int elem_size)
 
 
 ctypedef int (*Cfptr) (void *A, void *B, int size, int elem_size)
+
+
+def using_SSE2():
+    if bshuf_using_SSE2():
+        return True
+    else:
+        return False
+
+
+def using_AVX2():
+    if bshuf_using_AVX2():
+        return True
+    else:
+        return False
 
 
 def _setup_arr(arr):
@@ -64,7 +80,8 @@ cdef _wrap_C_fun(Cfptr fun, np.ndarray arr):
         err = fun(arr_ptr, out_ptr, size, itemsize)
     if err:
         msg = "Failed. Error code %d."
-        raise ValueError(msg % err)
+        excp = RuntimeError(msg % err, err)
+        raise excp
     return out
 
 

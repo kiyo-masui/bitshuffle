@@ -35,10 +35,18 @@ class TestProfile(unittest.TestCase):
         else:
             reps = 1
         delta_ts = []
-        for ii in range(reps):
-            t0 = time.time()
-            out = self.fun(self.data)
-            delta_ts.append(time.time() - t0)
+        try:
+            for ii in range(reps):
+                t0 = time.time()
+                out = self.fun(self.data)
+                delta_ts.append(time.time() - t0)
+        except RuntimeError as err:
+            if (err.args[1] == 11) and not ext.using_SSE2():
+                return
+            if (err.args[1] == 12) and not ext.using_AVX2():
+                return
+            else:
+                raise
         delta_t = min(delta_ts)
         size = self.data.size * self.data.dtype.itemsize
         speed = (ext.REPEAT * size / delta_t / 1024**3)   # GB/s
@@ -248,7 +256,7 @@ class TestProfile(unittest.TestCase):
 
 class TestDevCases(unittest.TestCase):
 
-    def test_trans_bit_byte(self):
+    def deactivated_test_trans_bit_byte(self):
         d = np.arange(16, dtype=np.uint16)
         t = ext.trans_bit_byte_scal(d)
         #print t
@@ -256,7 +264,7 @@ class TestDevCases(unittest.TestCase):
         #print t1
         self.assertTrue(np.all(t == t1))
 
-    def test_trans_byte_bitrow_SSE(self):
+    def deactivated_test_trans_byte_bitrow_SSE(self):
         d = np.arange(256, dtype = np.uint8)
         t = ext.trans_byte_bitrow(d)
         #print np.reshape(t, (32, 8))
@@ -264,7 +272,7 @@ class TestDevCases(unittest.TestCase):
         #print np.reshape(t1, (32, 8))
         self.assertTrue(np.all(t == t1))
 
-    def test_trans_byte_elem_SSE(self):
+    def deactivated_test_trans_byte_elem_SSE(self):
         d = np.empty(16, dtype=([('a', 'u4'), ('b', 'u4'), ('c', 'u4')]))
         d['a'] = np.arange(16) * 1
         d['b'] = np.arange(16) * 2
@@ -277,7 +285,7 @@ class TestDevCases(unittest.TestCase):
         #print np.reshape(t0.view(np.uint8), (12, 16))
         self.assertTrue(np.all(t0.view(np.uint8) == t1.view(np.uint8)))
 
-    def test_bitshuffle(self):
+    def deactivated_test_bitshuffle(self):
         d = np.arange(128, dtype=np.uint16)
         t1 = ext.bitshuffle(d)
         #print t1
@@ -324,17 +332,25 @@ class TestOddLengths(unittest.TestCase):
         self.check = trans_byte_elem
 
     def tearDown(self):
-        for dtype in TEST_DTYPES:
-            itemsize = np.dtype(dtype).itemsize
-            nbyte_max = self.nmax * itemsize
-            dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
-            dbuf = dbuf.view(dtype)
-            for ii in range(self.reps):
-                n = random.randint(0, self.nmax / 8, 1) * 8
-                data = dbuf[:n]
-                out = self.fun(data).view(np.uint8)
-                ans = self.check(data).view(np.uint8)
-                self.assertTrue(np.all(out == ans))
+        try:
+            for dtype in TEST_DTYPES:
+                itemsize = np.dtype(dtype).itemsize
+                nbyte_max = self.nmax * itemsize
+                dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
+                dbuf = dbuf.view(dtype)
+                for ii in range(self.reps):
+                    n = random.randint(0, self.nmax / 8, 1) * 8
+                    data = dbuf[:n]
+                    out = self.fun(data).view(np.uint8)
+                    ans = self.check(data).view(np.uint8)
+                    self.assertTrue(np.all(out == ans))
+        except RuntimeError as err:
+            if (err.args[1] == 11) and not ext.using_SSE2():
+                return
+            if (err.args[1] == 12) and not ext.using_AVX2():
+                return
+            else:
+                raise
 
 
 class TestBitShuffleCircle(unittest.TestCase):

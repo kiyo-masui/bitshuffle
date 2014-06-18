@@ -4,6 +4,25 @@
 #define CHECK_MULT_EIGHT(n) if (n % 8) return 80;
 
 
+/* Functions giving telling what instructions set used at compile time. */
+int bshuf_using_SSE2(void) {
+#ifdef USESSE2
+    return 1;
+#else
+    return 0;
+#endif
+}
+
+
+int bshuf_using_AVX2(void) {
+#ifdef USEAVX2
+    return 1;
+#else
+    return 0;
+#endif
+}
+
+
 /* ---- Code that should compile on any machine. ---- */
 
 /* Memory copy with bshuf call signature. For testing and profiling. */
@@ -779,7 +798,7 @@ int bshuf_untrans_bit_elem_SSE(void* in, void* out, const size_t size,
 }
 
 
-int bshuf_trans_byte_bitrow_SSE(void* in, void* out, const size_t size,
+int bshuf_trans_bit_elem_SSE(void* in, void* out, const size_t size,
          const size_t elem_size) {
     return 11;
 }
@@ -816,6 +835,13 @@ int bshuf_trans_byte_elem_SSE_32(void* in, void* out, const size_t size) {
 int bshuf_trans_byte_elem_SSE_16(void* in, void* out, const size_t size) {
     return 11;
 }
+
+
+int bshuf_shuffle_bit_eightelem_SSE(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+    return 11;
+}
+
 
 #endif // #ifdef USESSE2
 
