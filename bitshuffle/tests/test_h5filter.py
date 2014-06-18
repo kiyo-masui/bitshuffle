@@ -32,7 +32,7 @@ class TestBZIP2(unittest.TestCase):
         #dcpl.set_filter(h5z.FILTER_SHUFFLE)
         dcpl.set_filter(32008, h5z.FLAG_MANDATORY)
         #dcpl.set_filter(32008)
-        dcpl.set_filter(307)
+        dcpl.set_filter(32000)
 
         dset_id = h5d.create(f.id, "stuff", tid, sid, dcpl=dcpl)
         dset_id.write(h5s.ALL, h5s.ALL, data)
@@ -50,6 +50,7 @@ class TestBZIP2(unittest.TestCase):
     def tearDown(self):
         files = glob.glob("tmp_test_*")
         for f in files:
+            #pass #XXX
             os.remove(f)
 
 

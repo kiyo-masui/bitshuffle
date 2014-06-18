@@ -29,6 +29,15 @@ filter_plugin = Extension("plugins.libh5bshuf",
                                        '-march=native']
                    )
 
+lzf_plugin = Extension("plugins.libh5LZF",
+                   ["src/lzf_h5plugin.c", "lzf/lzf_filter.c",
+                    "lzf/lzf/lzf_c.c", "lzf/lzf/lzf_d.c"],
+                   #["src/bshuf_h5plugin.c"],
+                   libraries = ['hdf5'],
+                   include_dirs=['src/', 'lzf/', 'lzf/lzf/'],
+                   extra_compile_args=['-fPIC', '-g', '-Ofast',
+                                       '-march=native']
+                   )
 
 
 setup(
@@ -37,7 +46,7 @@ setup(
 
     packages = find_packages(),
     scripts=[],
-    ext_modules = [ext_bshuf, filter_plugin],
+    ext_modules = [ext_bshuf, filter_plugin, lzf_plugin],
     cmdclass = {'build_ext': build_ext},
     requires = ['numpy', 'h5py'],
 

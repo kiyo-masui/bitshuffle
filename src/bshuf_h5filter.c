@@ -81,7 +81,7 @@ H5Z_class_t bshuf_H5Filter[1] = {{
     H5Z_CLASS_T_VERS,
     (H5Z_filter_t)(BSHUF_H5FILTER),
     1, 1,
-    "bitshuffle filter; see https://github.com/kiyo-masui/bitshuffle",
+    "bitshuffle; see https://github.com/kiyo-masui/bitshuffle",
     NULL,
     (H5Z_set_local_func_t)(bshuf_h5_set_local),
     (H5Z_func_t)(bshuf_h5_filter)
