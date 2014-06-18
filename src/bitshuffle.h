@@ -1,6 +1,7 @@
 /* Error codes:
  *      11 : Missing SSE
  *      12 : Missing AVX
+ *      20 : Input not a multiple of 8.
  */
 
 
