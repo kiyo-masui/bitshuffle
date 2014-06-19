@@ -7,13 +7,12 @@ import h5py
 from h5py import h5f, h5d, h5z, h5t, h5s, filters
 from subprocess import Popen, PIPE, STDOUT
 
-from bitshuffle import h5
+
+# TODO: Plugin path discovery.
+os.environ["HDF5_PLUGIN_PATH"] = "/Users/kiyo/working/bitshuffle/plugins"
 
 
-os.environ["HDF5_PLUGIN_PATH"] = ""
-
-
-class TestFilter(unittest.TestCase):
+class TestFilterPlugins(unittest.TestCase):
 
     def test_plugins(self):
         shape = (32 * 1024,)
@@ -32,10 +31,24 @@ class TestFilter(unittest.TestCase):
         dset_id.write(h5s.ALL, h5s.ALL, data)
         f.close()
 
+        # Make sure the filters are working outside of h5py by calling h5dump
+        h5dump = Popen(['h5dump', fname],
+                       stdout=PIPE, stderr=STDOUT)
+        stdout, nothing = h5dump.communicate()
+        err = h5dump.returncode
+        self.assertEqual(err, 0)
+
         f = h5py.File(fname, 'r')
         d = f['range'][:]
         self.assertTrue(np.all(d == data))
         f.close()
+
+    def deactivated_test_h5py_hl(self):
+        # Does not appear to be supported by h5py.
+        fname = "tmp_test_h5py_hl.h5"
+        f = h5py.File(fname)
+        f.create_dataset("range", np.arange(1024, dtype=np.int64),
+                compression=32008)
 
     def tearDown(self):
         files = glob.glob("tmp_test_*")

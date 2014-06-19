@@ -3,16 +3,20 @@ from Cython.Distutils import build_ext
 
 import numpy as np
 
+
+# TODO Add dependancies on .h files.
+
 ext_bshuf = Extension("bitshuffle.ext",
                    ["src/bitshuffle.c", "bitshuffle/ext.pyx"],
-                   libraries = ['hdf5'],
+                   #libraries = ['hdf5'],
                    include_dirs=[np.get_include()],
                    extra_compile_args=['-Ofast', '-march=native',]
                    )
 
 
 h5filter = Extension("bitshuffle.h5",
-                   ["src/h5filter.c",],
+                   ["bitshuffle/h5.pyx", "src/bshuf_h5plugin.c", 
+                    "src/bshuf_h5filter.c", "src/bitshuffle.c"],
                    libraries = ['hdf5'],
                    include_dirs=[np.get_include()],
                    extra_compile_args=['-Ofast', '-march=native',]
@@ -24,7 +28,7 @@ filter_plugin = Extension("plugins.libh5bshuf",
                     "src/bitshuffle.c"],
                    #["src/bshuf_h5plugin.c"],
                    libraries = ['hdf5'],
-                   include_dirs=['src/'],
+                   #include_dirs=['src/'],
                    extra_compile_args=['-fPIC', '-g', '-Ofast',
                                        '-march=native']
                    )
@@ -34,7 +38,7 @@ lzf_plugin = Extension("plugins.libh5LZF",
                     "lzf/lzf/lzf_c.c", "lzf/lzf/lzf_d.c"],
                    #["src/bshuf_h5plugin.c"],
                    libraries = ['hdf5'],
-                   include_dirs=['src/', 'lzf/', 'lzf/lzf/'],
+                   #include_dirs=['src/', 'lzf/', 'lzf/lzf/'],
                    extra_compile_args=['-fPIC', '-g', '-Ofast',
                                        '-march=native']
                    )
@@ -46,7 +50,7 @@ setup(
 
     packages = find_packages(),
     scripts=[],
-    ext_modules = [ext_bshuf, filter_plugin, lzf_plugin],
+    ext_modules = [ext_bshuf, h5filter, filter_plugin, lzf_plugin],
     cmdclass = {'build_ext': build_ext},
     requires = ['numpy', 'h5py'],
 
