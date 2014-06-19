@@ -45,7 +45,9 @@ lzf_plugin = Extension("plugins.libh5LZF",
                    )
 
 
-setup(
+# TODO hdf5 support should be an "extra". Figure out how to set this up.
+
+err = setup(
     name = 'bitshuffle',
     version = "0.1",
 
@@ -54,6 +56,7 @@ setup(
     ext_modules = [ext_bshuf, h5filter, filter_plugin, lzf_plugin],
     cmdclass = {'build_ext': build_ext},
     requires = ['numpy', 'h5py'],
+    #extras_require = {'H5':  ["h5py"]},
 
     # metadata for upload to PyPI
     author = "Kiyoshi Wesley Masui",
@@ -62,3 +65,13 @@ setup(
     license = "GPL v2.0",
     url = "http://github.com/kiyo-masui/bitshuffle"
 )
+
+
+# TODO: after success installation, print message suggesting setting
+# "HDF5_PLUGIN_PATH"
+
+#try:
+#    import bitshuffle
+#except:
+#    pass
+
