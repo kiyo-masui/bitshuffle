@@ -4,43 +4,43 @@ from Cython.Distutils import build_ext
 import numpy as np
 
 
-# TODO Add dependancies on .h files.
+
+COMPILE_FLAGS = ['-Ofast', '-march=native',]
+
 
 ext_bshuf = Extension("bitshuffle.ext",
                    ["src/bitshuffle.c", "bitshuffle/ext.pyx"],
-                   #libraries = ['hdf5'],
                    include_dirs=[np.get_include()],
-                   extra_compile_args=['-Ofast', '-march=native',]
+                   depends=["src/bitshuffle.h"],
+                   extra_compile_args=COMPILE_FLAGS,
                    )
 
 
 h5filter = Extension("bitshuffle.h5",
-                   ["bitshuffle/h5.pyx", "src/bshuf_h5plugin.c", 
-                    "src/bshuf_h5filter.c", "src/bitshuffle.c"],
+                   ["bitshuffle/h5.pyx", "src/bshuf_h5filter.c",
+                    "src/bitshuffle.c"],
+                   depends=["src/bitshuffle.h", 'src/bshuf_h5filter.h'],
                    libraries = ['hdf5'],
-                   include_dirs=[np.get_include()],
-                   extra_compile_args=['-Ofast', '-march=native',]
+                   extra_compile_args=COMPILE_FLAGS,
                    )
 
 
 filter_plugin = Extension("plugins.libh5bshuf",
                    ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
                     "src/bitshuffle.c"],
-                   #["src/bshuf_h5plugin.c"],
+                   depends=["src/bitshuffle.h", 'src/bshuf_h5filter.h'],
                    libraries = ['hdf5'],
-                   #include_dirs=['src/'],
-                   extra_compile_args=['-fPIC', '-g', '-Ofast',
-                                       '-march=native']
+                   extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
                    )
 
 lzf_plugin = Extension("plugins.libh5LZF",
                    ["src/lzf_h5plugin.c", "lzf/lzf_filter.c",
                     "lzf/lzf/lzf_c.c", "lzf/lzf/lzf_d.c"],
-                   #["src/bshuf_h5plugin.c"],
+                   depends=["src/bitshuffle.h", "lzf/lzf_filter.h",
+                            "lzf/lzf/lzf.h", "lzf/lzf/lzfP.h"],
+                   include_dirs = ["lzf/", "lzf/lzf/"],
                    libraries = ['hdf5'],
-                   #include_dirs=['src/', 'lzf/', 'lzf/lzf/'],
-                   extra_compile_args=['-fPIC', '-g', '-Ofast',
-                                       '-march=native']
+                   extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
                    )
 
 

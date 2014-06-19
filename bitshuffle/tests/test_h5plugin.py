@@ -43,12 +43,12 @@ class TestFilterPlugins(unittest.TestCase):
         self.assertTrue(np.all(d == data))
         f.close()
 
-    def deactivated_test_h5py_hl(self):
-        # Does not appear to be supported by h5py.
-        fname = "tmp_test_h5py_hl.h5"
-        f = h5py.File(fname)
-        f.create_dataset("range", np.arange(1024, dtype=np.int64),
-                compression=32008)
+    #def test_h5py_hl(self):
+    #    # Does not appear to be supported by h5py.
+    #    fname = "tmp_test_h5py_hl.h5"
+    #    f = h5py.File(fname)
+    #    f.create_dataset("range", np.arange(1024, dtype=np.int64),
+    #            compression=32008)
 
     def tearDown(self):
         files = glob.glob("tmp_test_*")
