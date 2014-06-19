@@ -33,6 +33,7 @@ filter_plugin = Extension("plugins.libh5bshuf",
                    extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
                    )
 
+
 lzf_plugin = Extension("plugins.libh5LZF",
                    ["src/lzf_h5plugin.c", "lzf/lzf_filter.c",
                     "lzf/lzf/lzf_c.c", "lzf/lzf/lzf_d.c"],

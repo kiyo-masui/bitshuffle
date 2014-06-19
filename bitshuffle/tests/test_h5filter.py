@@ -22,15 +22,14 @@ class TestFilter(unittest.TestCase):
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname)
-        tid = h5t.py_create(dtype, logical=1)
-        sid = h5s.create_simple(shape, shape)
-        dcpl = filters.generate_dcpl(shape, dtype, chunks, None, None,
-                  None, None, None, None)
-        dcpl.set_filter(32008, h5z.FLAG_MANDATORY)
-        dcpl.set_filter(32000, h5z.FLAG_MANDATORY)
-        dset_id = h5d.create(f.id, "range", tid, sid, dcpl=dcpl)
-        dset_id.write(h5s.ALL, h5s.ALL, data)
+        h5.create_dataset(f, "range", shape, dtype, chunks,
+                filter_pipeline=(32008, 32000),
+                filter_flags=(h5z.FLAG_MANDATORY, h5z.FLAG_MANDATORY),
+                filter_opts=None)
+        f["range"][:] = data
+
         f.close()
+        #os.system('h5dump -H -p tmp_test_filters.h5')
 
         f = h5py.File(fname, 'r')
         d = f['range'][:]
