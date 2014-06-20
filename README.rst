@@ -5,7 +5,7 @@ Bitshuffle
 Filter for improving compression of typed binary data.
 
 Bitshuffle is an algorithm for rearranging typed, binary data for improving
-for improving compression, as well as a C/python package that implements this
+for improving compression, as well as a python/C package that implements this
 algorithm within the Numpy framework.
 
 The library can be used along side HDF5 to compress and decompress datasets and
@@ -54,9 +54,9 @@ Installation
 Installation requires HDF5 1.8 or later, HDF5 for python, Numpy and Cython.
 To use the dynamically loaded HDF5 filter requires HDF5 1.8.11 or later.
 
-To install:
+To install::
 
-    python setup.py install [--h5plugin --h5plugin-dir=foo]
+    python setup.py install [--h5plugin [--h5plugin-dir=spam]]
 
 If using the dynamically loaded HDF5 filter, set the environment variable
 ``HDF5_PLUGIN_PATH`` to the value of ``--h5plugin-dir`` or use HDF5's default
@@ -66,17 +66,17 @@ search location of ``/usr/local/hdf5/lib/plugin``.
 Usage
 -----
 
-The :mod:`bitshuffle` module contains routines for shuffling and unshuffling
+The `bitshuffle` module contains routines for shuffling and unshuffling
 Numpy arrays.
 
 If installed with the dynamically loaded filter plugins, Bitshuffle can be used
 in conjunction with HDF5 both inside and outside of python, in the same way as
 any other filter; simply by specifying the filter number ``32008``. Otherwise
 the filter will be available only within python and only after importing
-:mod:`bitshuffle.h5`. Reading Bitshuffle encoded datasets will be transparent.
-The filter can added to new datasets either through the :mod:`h5py` low level
+`bitshuffle.h5`. Reading Bitshuffle encoded datasets will be transparent.
+The filter can added to new datasets either through the `h5py` low level
 interface or through the convenience functions provided in
-:mod:`bitshuffle.h5`. See the tests for examples.
+`bitshuffle.h5`. See the tests for examples.
 
 
 Usage from C
