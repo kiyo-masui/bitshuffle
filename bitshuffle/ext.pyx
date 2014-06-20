@@ -11,10 +11,13 @@ np.import_array()
 cdef int REPEATC = 1
 REPEAT = REPEATC
 
+cdef extern from "bshuf_h5filter.h":
+    int bshuf_using_SSE2()
+    int bshuf_using_AVX2()
+    int bshuf_bitshuffle(void *A, void *B, int size, int elem_size)
+    int bshuf_bitunshuffle(void *A, void *B, int size, int elem_size)
 
 # Prototypes from bitshuffle.c
-cdef extern int bshuf_using_SSE2()
-cdef extern int bshuf_using_AVX2()
 cdef extern int bshuf_copy(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_elem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_elem_SSE(void *A, void *B, int size, int elem_size)
@@ -34,8 +37,6 @@ cdef extern int bshuf_untrans_bit_elem_SSE(void *A, void *B, int size, int elem_
 cdef extern int bshuf_untrans_bit_elem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_elem(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_untrans_bit_elem(void *A, void *B, int size, int elem_size)
-cdef extern int bshuf_bitshuffle(void *A, void *B, int size, int elem_size)
-cdef extern int bshuf_bitunshuffle(void *A, void *B, int size, int elem_size)
 
 
 ctypedef int (*Cfptr) (void *A, void *B, int size, int elem_size)

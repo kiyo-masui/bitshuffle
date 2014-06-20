@@ -5,7 +5,11 @@ from h5py import h5d, h5s, h5t, filters
 cimport cython
 
 
-cdef extern int bshuf_register_h5filter()
+cdef extern from "bshuf_h5filter.h":
+    int bshuf_register_h5filter()
+    int BSHUF_H5FILTER
+
+cdef int LZF_FILTER = 32000
 
 
 def register_h5_filter():
@@ -18,8 +22,8 @@ register_h5_filter()
 
 
 def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
-                   filter_pipeline=(), filter_flags=None, filter_opts=None,
-                   fillvalue=None, track_times=None):
+                   fillvalue=None, track_times=None,
+                   filter_pipeline=(), filter_flags=None, filter_opts=None):
     """Create a dataset with an arbitrary filter pipeline.
 
     Return a new low-level dataset identifier.
@@ -84,9 +88,21 @@ def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
         dcpl.set_filter(this_filter, this_flags, this_opts)
 
     if maxshape is not None:
-        maxshape = tuple(m if m is not None else h5s.UNLIMITED for m in maxshape)
+        maxshape = tuple(m if m is not None else h5s.UNLIMITED
+                         for m in maxshape)
     sid = h5s.create_simple(shape, maxshape)
 
     dset_id = h5d.create(parent.id, name, tid, sid, dcpl=dcpl)
 
     return dset_id
+
+
+def create_bitshuffle_lzf_dataset(parent, name, shape, dtype, chunks=None,
+                                  maxshape=None, fillvalue=None,
+                                  track_times=None):
+    filter_pipeline = (BSHUF_H5FILTER, LZF_FILTER)
+    dset_id = create_dataset(parent, name, shape, dtype, chunks=chunks,
+                             filter_pipeline=filter_pipeline, maxshape=maxshape,
+                             fillvalue=fillvalue, track_times=track_times)
+    return dset_id
+
