@@ -9,6 +9,7 @@ for improving compression as well as a C/python package that implements this
 algorithm within the Numpy framework. The library can be used along side
 HDF5 to compress and decompress datasets and write them to disk, and is
 integrated into HDF5 through the `dynamically loaded filters`_ framework.
+Bitshuffle is HDF5 filter number ``32008``.
 
 Algorithmically, Bitshuffle is closely related to HDF5's shuffle filter
 except it operates at the bit level instead of the byte level. Arranging a
@@ -49,9 +50,22 @@ used outside of python and in command line utilities such as ``h5dump``.
 Installation
 ------------
 
-Installation requires HDF5 later than 1.8.11, `h5py`, Numpy and Cython.  To
-use the HDF5 filter outside of python set the environment variable
-``HDF5_PLUGIN_PATH`` to the ``plugins/`` directory within the Bitshuffle
-installation.
+Installation requires HDF5 1.8 or later, HDF5 for python, Numpy and Cython.
+To us the HDF5 filter outside of python requires HDF5 1.8.11 or later and
+setting the environment variable ``HDF5_PLUGIN_PATH`` to the ``plugins/``
+directory within the Bitshuffle installation.
+
+
+Usage
+-----
+
+If the ``HDF5_PLUGIN_PATH`` environment variable is set as described above, the
+Bitshuffle filter should be accessible both inside and outside of python. The
+filter can be used in the normal way by specifying filter number ``32008``.  If
+the variable is not set, the filter will be available only within python and
+only after importing :mod:`bitshuffle.h5`. Reading Bitshuffle encoded datasets
+will be transparent The filter can added to new datasets either through
+the :mod:`h5py` low level interface or through the convenience functions
+provided in :mod:`bitshuffle.h5`. See the tests for examples.
 
 
