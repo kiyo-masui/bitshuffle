@@ -3,7 +3,6 @@
 #ifndef BSHUF_H5FILTER_H
 #define BSHUF_H5FILTER_H
 
-#include "H5PLextern.h"
 #include "hdf5.h"
 
 #include "bitshuffle.h"

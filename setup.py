@@ -2,6 +2,9 @@ from setuptools import setup, find_packages, Extension
 from setuptools.command.install import install as install_
 from Cython.Distutils import build_ext
 import numpy as np
+# XXX h5py needs to be present to run setup.py. Can't be installed
+# automatically?
+import h5py
 import os
 import sys
 from os import path
@@ -26,7 +29,6 @@ if sys.platform == 'darwin':
 elif sys.platform.startswith('freebsd'):
     INCLUDE_DIRS += ['/usr/local/include'] # homebrew
     LIBRARY_DIRS += ['/usr/local/lib']     # homebrew
-
 
 
 ext_bshuf = Extension("bitshuffle.ext",
@@ -70,6 +72,15 @@ lzf_plugin = Extension("plugin.libh5LZF",
                    libraries = ['hdf5'],
                    extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
                    )
+
+
+H5VERSION = h5py.h5.get_libversion()
+if H5VERSION[0] < 1 or H5VERSION[1] < 8 or H5VERSION[2] < 11:
+    print "HDF5 version < 1.8.11, not including filter plugins."
+    EXTENSIONS = [ext_bshuf, h5filter]
+else:
+    print "Including HDF5 filter plugins."
+    EXTENSIONS = [ext_bshuf, h5filter, filter_plugin, lzf_plugin]
 
 
 # Custom installation to include installing dynamic filters.
@@ -116,7 +127,7 @@ setup(
 
     packages = find_packages(),
     scripts=[],
-    ext_modules = [ext_bshuf, h5filter, filter_plugin, lzf_plugin],
+    ext_modules = EXTENSIONS,
     cmdclass = {'build_ext': build_ext, 'install': install},
     requires = ['numpy', 'h5py'],
     #extras_require = {'H5':  ["h5py"]},

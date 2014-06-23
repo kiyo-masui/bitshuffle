@@ -11,7 +11,7 @@ np.import_array()
 cdef int REPEATC = 1
 REPEAT = REPEATC
 
-cdef extern from "bshuf_h5filter.h":
+cdef extern from "bitshuffle.h":
     int bshuf_using_SSE2()
     int bshuf_using_AVX2()
     int bshuf_bitshuffle(void *A, void *B, int size, int elem_size)
