@@ -3,18 +3,36 @@ from setuptools.command.install import install as install_
 from Cython.Distutils import build_ext
 import numpy as np
 import os
+import sys
 from os import path
 import shutil
 import glob
 
 
-COMPILE_FLAGS = ['-Ofast', '-march=native',]
+COMPILE_FLAGS = ['-Ofast', '-march=native', '-std=c99']
 H5PLUGINS_DEFAULT = '/usr/local/hdf5/lib/plugin'
+
+# Copied from h5py.
+# TODO, figure out what the canonacal way to do this should be.
+INCLUDE_DIRS = []
+LIBRARY_DIRS = []
+if sys.platform == 'darwin':
+    # putting here both macports and homebrew paths will generate
+    # "ld: warning: dir not found" at the linking phase 
+    INCLUDE_DIRS += ['/opt/local/include'] # macports
+    LIBRARY_DIRS += ['/opt/local/lib']     # macports
+    INCLUDE_DIRS += ['/usr/local/include'] # homebrew
+    LIBRARY_DIRS += ['/usr/local/lib']     # homebrew
+elif sys.platform.startswith('freebsd'):
+    INCLUDE_DIRS += ['/usr/local/include'] # homebrew
+    LIBRARY_DIRS += ['/usr/local/lib']     # homebrew
+
 
 
 ext_bshuf = Extension("bitshuffle.ext",
                    ["src/bitshuffle.c", "bitshuffle/ext.pyx"],
-                   include_dirs=[np.get_include(), "src/"],
+                   include_dirs=INCLUDE_DIRS + [np.get_include(), "src/"],
+                   library_dirs = LIBRARY_DIRS,
                    depends=["src/bitshuffle.h"],
                    extra_compile_args=COMPILE_FLAGS,
                    )
@@ -23,7 +41,8 @@ ext_bshuf = Extension("bitshuffle.ext",
 h5filter = Extension("bitshuffle.h5",
                    ["bitshuffle/h5.pyx", "src/bshuf_h5filter.c",
                     "src/bitshuffle.c"],
-                   include_dirs=["src/"],
+                   include_dirs=INCLUDE_DIRS + ["src/"],
+                   library_dirs = LIBRARY_DIRS,
                    depends=["src/bitshuffle.h", 'src/bshuf_h5filter.h'],
                    libraries = ['hdf5'],
                    extra_compile_args=COMPILE_FLAGS,
@@ -33,6 +52,8 @@ h5filter = Extension("bitshuffle.h5",
 filter_plugin = Extension("plugin.libh5bshuf",
                    ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
                     "src/bitshuffle.c"],
+                   include_dirs=INCLUDE_DIRS,
+                   library_dirs = LIBRARY_DIRS,
                    depends=["src/bitshuffle.h", 'src/bshuf_h5filter.h'],
                    libraries = ['hdf5'],
                    extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
@@ -44,7 +65,8 @@ lzf_plugin = Extension("plugin.libh5LZF",
                     "lzf/lzf/lzf_c.c", "lzf/lzf/lzf_d.c"],
                    depends=["src/bitshuffle.h", "lzf/lzf_filter.h",
                             "lzf/lzf/lzf.h", "lzf/lzf/lzfP.h"],
-                   include_dirs = ["lzf/", "lzf/lzf/"],
+                   include_dirs = INCLUDE_DIRS + ["lzf/", "lzf/lzf/"],
+                   library_dirs = LIBRARY_DIRS,
                    libraries = ['hdf5'],
                    extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
                    )
@@ -68,6 +90,8 @@ class install(install_):
     def run(self):
         install_.run(self)
         if self.h5plugin:
+            #from h5py import h5
+            #h5version = h5.get_libversion()
             plugin_build = path.join(self.build_lib, "plugins")
             try:
                 os.makedirs(self.h5plugin_dir)
