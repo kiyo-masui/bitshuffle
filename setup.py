@@ -3,6 +3,7 @@ from setuptools.command.install import install as install_
 from Cython.Distutils import build_ext
 import numpy as np
 import os
+import sys
 from os import path
 import shutil
 import glob
