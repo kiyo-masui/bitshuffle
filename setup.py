@@ -129,7 +129,7 @@ setup(
     scripts=[],
     ext_modules = EXTENSIONS,
     cmdclass = {'build_ext': build_ext, 'install': install},
-    requires = ['numpy', 'h5py'],
+    install_requires = ['numpy', 'h5py', 'Cython'],
     #extras_require = {'H5':  ["h5py"]},
 
     # metadata for upload to PyPI
