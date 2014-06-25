@@ -47,6 +47,7 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
     size_t size, elem_size;
     int err;
 
+
     if (cd_nelmts < 3) return 0;
     elem_size = cd_values[2];
     if (nbytes % elem_size) return 0;
@@ -58,10 +59,10 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
 
     if (flags & H5Z_FLAG_REVERSE) {
         // Bit unshuffle.
-        err = bshuf_bitshuffle(*buf, out_buf, size, elem_size);
+        err = bshuf_bitunshuffle(*buf, out_buf, size, elem_size);
     } else {
         // Bit unshuffle.
-        err = bshuf_bitunshuffle(*buf, out_buf, size, elem_size);
+        err = bshuf_bitshuffle(*buf, out_buf, size, elem_size);
     }
 
     if (err) {

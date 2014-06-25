@@ -1219,6 +1219,7 @@ int bshuf_bitshuffle(void* in, void* out, const size_t size,
     size_t block_size;
     size_t leftover;
 
+
     for (size_t ii = 0; ii < size; ii += BSHUF_NELEM_SHUFF) {
         block_size = MIN(size - ii, BSHUF_NELEM_SHUFF);
         block_size = block_size - block_size % BSHUF_BLOCKED_MULT;
@@ -1229,6 +1230,7 @@ int bshuf_bitshuffle(void* in, void* out, const size_t size,
         }
     }
     leftover = size % BSHUF_BLOCKED_MULT;
+
     memcpy(&B[(size - leftover) * elem_size], &A[(size - leftover) * elem_size],
             leftover * elem_size);
 
