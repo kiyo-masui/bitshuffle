@@ -4,15 +4,15 @@ Bitshuffle
 
 Filter for improving compression of typed binary data.
 
-Bitshuffle is an algorithm for rearranging typed, binary data for improving
-for improving compression, as well as a python/C package that implements this
-algorithm within the Numpy framework.
+Bitshuffle is an algorithm that rearranges typed, binary data for improving
+compression, as well as a python/C package that implements this algorithm
+within the Numpy framework.
 
 The library can be used along side HDF5 to compress and decompress datasets and
 is integrated through the `dynamically loaded filters`_ framework. Bitshuffle
 is HDF5 filter number ``32008``.
 
-Algorithmically, Bitshuffle is closely related to HDF5's shuffle filter
+Algorithmically, Bitshuffle is closely related to HDF5's `Shuffle filter`_
 except it operates at the bit level instead of the byte level. Arranging a
 typed data array in to a matrix with the elements as the rows and the bits
 within the elements as the columns, Bitshuffle "transposes" the matrix,
@@ -24,7 +24,7 @@ compression. To perform the actual compression you will need a compression
 library.  Bitshuffle has been designed to be well matched Marc Lehmann's
 LZF_. Note that because Bitshuffle modifies the data at the bit level,
 sophisticated entropy reducing compression libraries such as GZIP and BZIP are
-unlikely to achieve significantly better compression than a simpler and faster
+unlikely to achieve significantly better compression than simpler and faster
 duplicate-string-elimination algorithms such as LZF.
 
 The Bitshuffle algorithm relies on neighbouring elements of a dataset being
@@ -36,16 +36,51 @@ time required for Bitshuffle+LZF well below the time required to read or write
 the compressed data to disk. Because it is able to exploit the SSE and AVX
 instruction sets present on modern Intel and AMD processors, on these machines
 compression is only marginally slower than an out-of-cache memory copy.
+On modern x86 processors you can expect Bitshuffle to have a throughput of
+roughly 1 byte per clock cycle, and on the Haswell generation of
+Intel processors (2013) and later, you can expect up to 2 bytes per clock
+cycle.
 
 As a bonus, Bitshuffle ships with a dynamically loaded version of
 `h5py`'s LZF compression filter, such that the filter can be transparently
 used outside of python and in command line utilities such as ``h5dump``.
 
-.. _[1]: Chosen to be well matched to the 8kB window of the LZF compression library.
+.. [1] Chosen to be well matched to the 8kB window of the LZF compression library.
 
 .. _`dynamically loaded filters`: http://www.hdfgroup.org/HDF5/doc/Advanced/DynamicallyLoadedFilters/HDF5DynamicallyLoadedFilters.pdf
 
+.. _`Shuffle filter`: http://www.hdfgroup.org/HDF5/doc_resource/H5Shuffle_Perf.pdf
+
 .. _LZF: http://oldhome.schmorp.de/marc/liblzf.html
+
+
+Applications
+------------
+
+Bitshuffle(+LZF) might be right for your application if:
+
+- You need to compress typed binary data.
+- Your data is arranged such that adjacent elements over the fastest varying
+  index of your dataset are similar (highly correlated).
+- A special case of the previous point is if you are only exercising a subset
+  of the bits in your data-type, as is often true of integer data.
+- You need both high compression ratios and high performance.
+
+
+Comparing Bitshuffle(+LZF) to other compression algorithms and HDF5 filters:
+
+- Bitshuffle+LZF is less general than many other compression algorithms.
+  To achieve good compression ratios, consecutive elements of your data must
+  be highly correlated.
+- For the right datasets, Bitshuffle+LZF is one of the few compression
+  algorithms that promises both high throughput and high compression ratios.
+- Bitshuffle+LZF should have roughly the same throughput as Shuffle+LZF, but
+  may obtain higher compression ratios.
+- The MAFISC_ filter actually includes something similar to Bitshuffle as one of
+  its prefilters,  However, MAFICS's emphasis is on obtaining high compression
+  ratios at all costs, sacrificing throughput.
+
+.. _MAFISC: http://wr.informatik.uni-hamburg.de/research/projects/icomex/mafisc
 
 
 Installation
