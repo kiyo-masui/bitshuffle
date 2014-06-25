@@ -1,3 +1,4 @@
+#define H5Z_class_t_vers 2
 #include "lzf_filter.h"
 #include "H5PLextern.h"
 
