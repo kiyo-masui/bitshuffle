@@ -9,7 +9,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 # TODO: Plugin path discovery.
-os.environ["HDF5_PLUGIN_PATH"] = "/Users/kiyo/working/bitshuffle/plugins"
+os.environ["HDF5_PLUGIN_PATH"] = "/Users/kiyo/working/bitshuffle/plugin"
 
 
 class TestFilterPlugins(unittest.TestCase):
@@ -35,6 +35,7 @@ class TestFilterPlugins(unittest.TestCase):
         h5dump = Popen(['h5dump', fname],
                        stdout=PIPE, stderr=STDOUT)
         stdout, nothing = h5dump.communicate()
+        #print stdout
         err = h5dump.returncode
         self.assertEqual(err, 0)
 
