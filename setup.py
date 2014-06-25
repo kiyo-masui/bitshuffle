@@ -75,11 +75,12 @@ lzf_plugin = Extension("plugin.libh5LZF",
 
 
 H5VERSION = h5py.h5.get_libversion()
-if H5VERSION[0] < 1 or H5VERSION[1] < 8 or H5VERSION[2] < 11:
-    print "HDF5 version < 1.8.11, not including filter plugins."
+if (H5VERSION[0] < 1 or (H5VERSION[0] == 1
+    and (H5VERSION[1] < 8 or (H5VERSION[1] == 8 and H5VERSION[2] < 11)))):
+    H51811P = False
     EXTENSIONS = [ext_bshuf, h5filter]
 else:
-    print "Including HDF5 filter plugins."
+    H51811P = True
     EXTENSIONS = [ext_bshuf, h5filter, filter_plugin, lzf_plugin]
 
 
@@ -101,6 +102,11 @@ class install(install_):
     def run(self):
         install_.run(self)
         if self.h5plugin:
+            if H51811P:
+                pass
+            else:
+                print "HDF5 < 1.8.11, not installing filter plugins."
+                return
             #from h5py import h5
             #h5version = h5.get_libversion()
             plugin_build = path.join(self.build_lib, "plugins")
