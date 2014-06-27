@@ -15,9 +15,9 @@ os.environ["HDF5_PLUGIN_PATH"] = ""
 
 class TestFilter(unittest.TestCase):
 
-    def test_plugins(self):
-        shape = (32 * 1024,)
-        chunks = (4 * 1024,)
+    def test_filter(self):
+        shape = (32 * 1024 + 783,)
+        chunks = (4 * 1024 + 23,)
         dtype = np.int64
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
@@ -29,12 +29,35 @@ class TestFilter(unittest.TestCase):
         f["range"][:] = data
 
         f.close()
+
+        f = h5py.File(fname, 'r')
+        d = f['range'][:]
+        self.assertTrue(np.all(d == data))
+        f.close()
+
+    def test_with_block_size(self):
+        shape = (32 * 1024 + 783,)
+        chunks = (4 * 1024 + 23,)
+        dtype = np.int64
+        data = np.arange(shape[0])
+        fname = "tmp_test_filters.h5"
+        f = h5py.File(fname)
+        h5.create_dataset(f, "range", shape, dtype, chunks,
+                filter_pipeline=(32008, 32000),
+                filter_flags=(h5z.FLAG_MANDATORY, h5z.FLAG_MANDATORY),
+                filter_opts=((680,), ()),
+                )
+        f["range"][:] = data
+
+        f.close()
         #os.system('h5dump -H -p tmp_test_filters.h5')
 
         f = h5py.File(fname, 'r')
         d = f['range'][:]
         self.assertTrue(np.all(d == data))
         f.close()
+
+
 
     def tearDown(self):
         files = glob.glob("tmp_test_*")

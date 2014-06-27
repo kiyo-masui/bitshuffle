@@ -17,7 +17,7 @@ except it operates at the bit level instead of the byte level. Arranging a
 typed data array in to a matrix with the elements as the rows and the bits
 within the elements as the columns, Bitshuffle "transposes" the matrix,
 such that all the least-significant-bits are in a row, etc.  This transpose
-is performed within blocks of data of length 2048 elements long [1]_.
+is performed within blocks of data roughly 8kB long [1]_.
 
 This does not in itself compress data, only rearranges it for more efficient
 compression. To perform the actual compression you will need a compression
@@ -45,7 +45,7 @@ As a bonus, Bitshuffle ships with a dynamically loaded version of
 `h5py`'s LZF compression filter, such that the filter can be transparently
 used outside of python and in command line utilities such as ``h5dump``.
 
-.. [1] Chosen to be well matched to the 8kB window of the LZF compression library.
+.. [1] Chosen to fit comfortably within L1 cache as well as be well matched window of the LZF compression library.
 
 .. _`dynamically loaded filters`: http://www.hdfgroup.org/HDF5/doc/Advanced/DynamicallyLoadedFilters/HDF5DynamicallyLoadedFilters.pdf
 

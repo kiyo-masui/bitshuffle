@@ -14,8 +14,10 @@ REPEAT = REPEATC
 cdef extern from "bitshuffle.h":
     int bshuf_using_SSE2()
     int bshuf_using_AVX2()
-    int bshuf_bitshuffle(void *A, void *B, int size, int elem_size)
-    int bshuf_bitunshuffle(void *A, void *B, int size, int elem_size)
+    int bshuf_bitshuffle(void *A, void *B, int size, int elem_size,
+            int block_size)
+    int bshuf_bitunshuffle(void *A, void *B, int size, int elem_size,
+            int block_size)
 
 # Prototypes from bitshuffle.c
 cdef extern int bshuf_copy(void *A, void *B, int size, int elem_size)
@@ -173,11 +175,36 @@ def untrans_bit_elem(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_untrans_bit_elem, arr)
 
 
-def bitshuffle(np.ndarray arr not None):
-    return _wrap_C_fun(&bshuf_bitshuffle, arr)
+def bitshuffle(np.ndarray arr not None, int block_size=0):
+
+    cdef int ii, size, itemsize, err
+    cdef np.ndarray out
+    out, size, itemsize = _setup_arr(arr)
+    cdef void* arr_ptr = <void*> arr.data
+    cdef void* out_ptr = <void*> out.data
+    for ii in range(REPEATC):
+        err = bshuf_bitshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
+    if err:
+        msg = "Failed. Error code %d."
+        excp = RuntimeError(msg % err, err)
+        raise excp
+    return out
 
 
-def bitunshuffle(np.ndarray arr not None):
-    return _wrap_C_fun(&bshuf_bitunshuffle, arr)
+
+def bitunshuffle(np.ndarray arr not None, int block_size=0):
+
+    cdef int ii, size, itemsize, err
+    cdef np.ndarray out
+    out, size, itemsize = _setup_arr(arr)
+    cdef void* arr_ptr = <void*> arr.data
+    cdef void* out_ptr = <void*> out.data
+    for ii in range(REPEATC):
+        err = bshuf_bitunshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
+    if err:
+        msg = "Failed. Error code %d."
+        excp = RuntimeError(msg % err, err)
+        raise excp
+    return out
 
 

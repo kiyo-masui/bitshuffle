@@ -1,7 +1,8 @@
 /* Error codes:
- *      11 : Missing SSE
- *      12 : Missing AVX
- *      80 : Input not a multiple of 8.
+ *      -11 : Missing SSE
+ *      -12 : Missing AVX
+ *      -80 : Input size not a multiple of 8.
+ *      -81 : block_size not multiple of 8.
  */
 
 
@@ -41,12 +42,15 @@ int bshuf_using_SSE2(void);
 int bshuf_using_AVX2(void);
 
 
-int bshuf_bitshuffle(void* in, void* out, const size_t size, 
-        const size_t elem_size);
+size_t bshuf_recommend_block_size(const size_t elem_size);
 
 
-int bshuf_bitunshuffle(void* in, void* out, const size_t size, 
-        const size_t elem_size);
+int bshuf_bitshuffle(void* in, void* out, const size_t size,
+        const size_t elem_size, size_t block_size);
 
 
-#endif  // BITSHUFFLE
+int bshuf_bitunshuffle(void* in, void* out, const size_t size,
+        const size_t elem_size, size_t block_size);
+
+
+#endif  // BITSHUFFLE_H
