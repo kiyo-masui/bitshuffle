@@ -1,6 +1,11 @@
 #include "bshuf_h5filter.h"
 
 
+#define PUSH_ERR(func, minor, str)                                      \
+    H5Epush1(__FILE__, func, __LINE__, H5E_PLINE, minor, str)
+
+
+
 // Only called on compresion, not on reverse.
 herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
 
@@ -13,6 +18,7 @@ herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
     size_t nelem_max = 11;
     unsigned values[] = {0,0,0,0,0,0,0,0,0,0,0};
     unsigned tmp_values[] = {0,0,0,0,0,0,0,0};
+    char msg[80];
 
     r = H5Pget_filter_by_id2(dcpl, BSHUF_H5FILTER, &flags, &nelements,
             tmp_values, 0, NULL, NULL);
@@ -29,9 +35,23 @@ herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
     values[1] = BSHUF_VERSION;
 
     elem_size = H5Tget_size(type);
-    if(elem_size == 0) return -1;
+    if(elem_size <= 0) {
+        PUSH_ERR("bshuf_h5_set_local", H5E_CALLBACK, 
+                "Invalid element size.");
+        return -1;
+    }
 
     values[2] = elem_size;
+
+    // Validate user supplied arguments.
+    if (nelements > 3) {
+        if (values[3] % 8 || values[3] < 0) {
+            sprintf(msg, "Error in bitshuffle. Invalid block size: %d.",
+                    values[3]);
+            PUSH_ERR("bshuf_h5_set_local", H5E_CALLBACK, msg);
+            return -1;
+        }
+    }
 
     r = H5Pmodify_filter(dcpl, BSHUF_H5FILTER, flags, nelements, values);
     if(r<0) return -1;
@@ -46,35 +66,54 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
 
     size_t size, elem_size;
     int err;
+    char msg[80];
+    size_t block_size = 0;
 
-
-    if (cd_nelmts < 3) return 0;
+    if (cd_nelmts < 3) {
+        PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
+                "Not enough parameters.");
+        return 0;
+    }
     elem_size = cd_values[2];
-    if (nbytes % elem_size) return 0;
+    // TODO, make this safe by memcopying the extra.
+    if (nbytes % elem_size) {
+        PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
+                "Non integer number of elements.");
+        return 0;
+    }
     size = nbytes / elem_size;
+
+    // User specified block size.
+    if (cd_nelmts > 3) block_size = cd_values[3];
 
     void* out_buf;
     out_buf = malloc(size * elem_size);
-    if (out_buf == NULL) return 0;
-
-    if (flags & H5Z_FLAG_REVERSE) {
-        // Bit unshuffle.
-        err = bshuf_bitunshuffle(*buf, out_buf, size, elem_size);
-    } else {
-        // Bit unshuffle.
-        err = bshuf_bitshuffle(*buf, out_buf, size, elem_size);
-    }
-
-    if (err) {
-        free(out_buf);
+    if (out_buf == NULL) {
+        PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
+                "Could not allocate output buffer.");
         return 0;
     }
 
-    free(*buf);
-    *buf = out_buf;
-    *buf_size = nbytes;
+    if (flags & H5Z_FLAG_REVERSE) {
+        // Bit unshuffle.
+        err = bshuf_bitunshuffle(*buf, out_buf, size, elem_size, block_size);
+    } else {
+        // Bit unshuffle.
+        err = bshuf_bitshuffle(*buf, out_buf, size, elem_size, block_size);
+    }
 
-    return nbytes;
+    if (err) {
+        sprintf(msg, "Error in bitshuffle with error code %d.", err);
+        PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, msg);
+        free(out_buf);
+        return 0;
+    } else {
+        free(*buf);
+        *buf = out_buf;
+        *buf_size = nbytes;
+
+        return nbytes;
+    }
 }
 
 
@@ -95,7 +134,7 @@ int bshuf_register_h5filter(void){
 
     retval = H5Zregister(bshuf_H5Filter);
     if(retval<0){
-        H5Epush1(__FILE__, "bshuf_register_h5filter", __LINE__, H5E_PLINE,
+        PUSH_ERR("bshuf_register_h5filter",
                  H5E_CANTREGISTER, "Can't register bitshuffle filter");
     }
     return retval;

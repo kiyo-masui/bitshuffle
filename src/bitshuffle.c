@@ -1,8 +1,14 @@
 #include "bitshuffle.h"
 
 
-#define CHECK_MULT_EIGHT(n) if (n % 8) return 80;
 
+#define BSHUF_MIN_RECOMMEND_BLOCK 128
+#define BSHUF_BLOCKED_MULT 8    // Block sizes must be multiple of this.
+#define BSHUF_TARGET_BLOCK_SIZE_B 8192
+
+#define CHECK_MULT_EIGHT(n) if (n % 8) return -80;
+#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+#define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
 /* Functions giving telling what instructions set used at compile time. */
 int bshuf_using_SSE2(void) {
@@ -21,6 +27,11 @@ int bshuf_using_AVX2(void) {
     return 0;
 #endif
 }
+
+
+// Function definition for worker functions.
+typedef int (*bshufFunDef)(void* in, void* out, const size_t size,
+         const size_t elem_size);
 
 
 /* ---- Code that should compile on any machine. ---- */
@@ -778,7 +789,7 @@ int bshuf_untrans_bit_elem_SSE(void* in, void* out, const size_t size,
     CHECK_MULT_EIGHT(size);
 
     void* tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return 1;
+    if (tmp_buf == NULL) return -1;
 
     // Should acctually check errors individually.
     err = bshuf_trans_byte_bitrow_SSE(in, tmp_buf, size, elem_size);
@@ -794,52 +805,52 @@ int bshuf_untrans_bit_elem_SSE(void* in, void* out, const size_t size,
 
 int bshuf_untrans_bit_elem_SSE(void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return 11;
+    return -11;
 }
 
 
 int bshuf_trans_bit_elem_SSE(void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return 11;
+    return -11;
 }
 
 
 int bshuf_trans_byte_bitrow_SSE(void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return 11;
+    return -11;
 }
 
 
 int bshuf_trans_bit_byte_SSE(void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return 11;
+    return -11;
 }
 
 
 int bshuf_trans_byte_elem_SSE(void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return 11;
+    return -11;
 }
 
 
 int bshuf_trans_byte_elem_SSE_64(void* in, void* out, const size_t size) {
-    return 11;
+    return -11;
 }
 
 
 int bshuf_trans_byte_elem_SSE_32(void* in, void* out, const size_t size) {
-    return 11;
+    return -11;
 }
 
 
 int bshuf_trans_byte_elem_SSE_16(void* in, void* out, const size_t size) {
-    return 11;
+    return -11;
 }
 
 
 int bshuf_shuffle_bit_eightelem_SSE(void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return 11;
+    return -11;
 }
 
 
@@ -1158,19 +1169,19 @@ int bshuf_trans_bit_elem_AVX(void* in, void* out, const size_t size,
 
 int bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return 12;
+    return -12;
 }
 
 
 int bshuf_trans_bit_byte_AVX(void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return 12;
+    return -12;
 }
 
 
 int bshuf_trans_bit_elem_AVX(void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return 12;
+    return -12;
 }
 
 #endif // #ifdef USEAVX2
@@ -1204,28 +1215,38 @@ int bshuf_untrans_bit_elem(void* in, void* out, const size_t size,
 #endif
 }
 
-#define BSHUF_NELEM_SHUFF 2048
-#define BSHUF_BLOCKED_MULT 8
 
-#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+size_t bshuf_recommend_block_size(const size_t elem_size) {
+    // This function needs to be absolutly stable between versions.
+    // Otherwise encoded data will not be decodeable.
 
-int bshuf_bitshuffle(void* in, void* out, const size_t size, 
-        const size_t elem_size) {
+    size_t block_size = BSHUF_TARGET_BLOCK_SIZE_B / elem_size;
+    // Ensure it is a required multiple.
+    block_size = (block_size / BSHUF_BLOCKED_MULT) * BSHUF_BLOCKED_MULT;
+    return MAX(block_size, BSHUF_MIN_RECOMMEND_BLOCK);
+}
 
+
+int bshuf_blocked_wrap_fun(bshufFunDef fun, void* in, void* out, const size_t size,
+        const size_t elem_size, size_t block_size) {
     char* A = (char*) in;
     char* B = (char*) out;
 
     int err;
-    size_t block_size;
+    size_t this_block_size;
     size_t leftover;
 
+    if (block_size == 0) {
+        block_size = bshuf_recommend_block_size(elem_size);
+    }
+    if (block_size < 0 || block_size % BSHUF_BLOCKED_MULT) return -81;
 
-    for (size_t ii = 0; ii < size; ii += BSHUF_NELEM_SHUFF) {
-        block_size = MIN(size - ii, BSHUF_NELEM_SHUFF);
-        block_size = block_size - block_size % BSHUF_BLOCKED_MULT;
-        if (block_size) {
-            err = bshuf_trans_bit_elem(&A[ii * elem_size],
-                    &B[ii * elem_size], block_size, elem_size);
+    for (size_t ii = 0; ii < size; ii += block_size) {
+        this_block_size = MIN(size - ii, block_size);
+        this_block_size = this_block_size - this_block_size % BSHUF_BLOCKED_MULT;
+        if (this_block_size) {
+            err = fun(&A[ii * elem_size],
+                    &B[ii * elem_size], this_block_size, elem_size);
             if (err) return err;
         }
     }
@@ -1238,35 +1259,26 @@ int bshuf_bitshuffle(void* in, void* out, const size_t size,
 }
 
 
-int bshuf_bitunshuffle(void* in, void* out, const size_t size, 
-        const size_t elem_size) {
+int bshuf_bitshuffle(void* in, void* out, const size_t size,
+        const size_t elem_size, size_t block_size) {
 
-    char* A = (char*) in;
-    char* B = (char*) out;
+    return bshuf_blocked_wrap_fun(&bshuf_trans_bit_elem, in, out, size,
+            elem_size, block_size);
+}
 
-    int err;
-    size_t block_size;
-    size_t leftover;
 
-    for (size_t ii = 0; ii < size; ii += BSHUF_NELEM_SHUFF) {
-        block_size = MIN(size - ii, BSHUF_NELEM_SHUFF);
-        block_size = block_size - block_size % BSHUF_BLOCKED_MULT;
-        if (block_size) {
-            err = bshuf_untrans_bit_elem(&A[ii * elem_size],
-                    &B[ii * elem_size], block_size, elem_size);
-            if (err) return err;
-        }
-    }
-    leftover = size % BSHUF_BLOCKED_MULT;
-    memcpy(&B[(size - leftover) * elem_size], &A[(size - leftover) * elem_size],
-            leftover * elem_size);
+int bshuf_bitunshuffle(void* in, void* out, const size_t size,
+        const size_t elem_size, size_t block_size) {
 
-    return 0;
+    return bshuf_blocked_wrap_fun(&bshuf_untrans_bit_elem, in, out, size,
+            elem_size, block_size);
 }
 
 
 #undef TRANS_BIT_8X8
 #undef TRANS_ELEM_TYPE
+#undef MIN
+#undef CHECK_MULT_EIGHT
 
-#undef USESSE2
-#undef USEAVX2
+//#undef USESSE2
+//#undef USEAVX2
