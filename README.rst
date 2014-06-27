@@ -45,7 +45,7 @@ As a bonus, Bitshuffle ships with a dynamically loaded version of
 `h5py`'s LZF compression filter, such that the filter can be transparently
 used outside of python and in command line utilities such as ``h5dump``.
 
-.. [1] Chosen to be well matched to the 8kB window of the LZF compression library.
+.. [1] Chosen to fit comfortably within L1 cache as well as be well matched window of the LZF compression library.
 
 .. _`dynamically loaded filters`: http://www.hdfgroup.org/HDF5/doc/Advanced/DynamicallyLoadedFilters/HDF5DynamicallyLoadedFilters.pdf
 
