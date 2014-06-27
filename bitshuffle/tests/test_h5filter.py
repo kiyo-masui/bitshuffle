@@ -36,7 +36,7 @@ class TestFilter(unittest.TestCase):
         f.close()
 
     def test_with_block_size(self):
-        shape = (32 * 1024 + 783,)
+        shape = (128 * 1024 + 783,)
         chunks = (4 * 1024 + 23,)
         dtype = np.int64
         data = np.arange(shape[0])
@@ -56,6 +56,29 @@ class TestFilter(unittest.TestCase):
         d = f['range'][:]
         self.assertTrue(np.all(d == data))
         f.close()
+
+    def test_with_compression(self):
+        shape = (128 * 1024 + 783,)
+        chunks = (4 * 1024 + 23,)
+        dtype = np.int64
+        data = np.arange(shape[0])
+        fname = "tmp_test_filters.h5"
+        f = h5py.File(fname)
+        h5.create_dataset(f, "range", shape, dtype, chunks,
+                filter_pipeline=(32008,),
+                filter_flags=(h5z.FLAG_MANDATORY,),
+                filter_opts=((0, h5.H5_COMPRESS_LZ4),),
+                )
+        f["range"][:] = data
+
+        f.close()
+        os.system('h5dump -H -p tmp_test_filters.h5')
+
+        f = h5py.File(fname, 'r')
+        d = f['range'][:]
+        self.assertTrue(np.all(d == data))
+        f.close()
+
 
 
 

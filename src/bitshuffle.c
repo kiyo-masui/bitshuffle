@@ -545,7 +545,7 @@ int bshuf_trans_bit_elem_SSE(void* in, void* out, const size_t size,
     CHECK_MULT_EIGHT(size);
 
     void* tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return 1;
+    if (tmp_buf == NULL) return -1;
 
     // Should acctually check errors individually.
     err = bshuf_trans_byte_elem_SSE(in, out, size, elem_size);
@@ -1227,8 +1227,8 @@ size_t bshuf_recommend_block_size(const size_t elem_size) {
 }
 
 
-int bshuf_blocked_wrap_fun(bshufFunDef fun, void* in, void* out, const size_t size,
-        const size_t elem_size, size_t block_size) {
+int bshuf_blocked_wrap_fun(bshufFunDef fun, void* in, void* out,
+        const size_t size, const size_t elem_size, size_t block_size) {
     char* A = (char*) in;
     char* B = (char*) out;
 
@@ -1272,6 +1272,72 @@ int bshuf_bitunshuffle(void* in, void* out, const size_t size,
 
     return bshuf_blocked_wrap_fun(&bshuf_untrans_bit_elem, in, out, size,
             elem_size, block_size);
+}
+
+
+int bshuf_compress_lz4_bound(const size_t size,
+        const size_t elem_size, size_t block_size) {
+
+    size_t bound, leftover;
+
+    if (block_size == 0) {
+        block_size = bshuf_recommend_block_size(elem_size);
+    }
+    if (block_size < 0 || block_size % BSHUF_BLOCKED_MULT) return -81;
+
+    bound = LZ4_compressBound(block_size * elem_size) * (size / block_size);
+    leftover = ((size % block_size) / BSHUF_BLOCKED_MULT) * BSHUF_BLOCKED_MULT;
+    bound += LZ4_compressBound(leftover * elem_size);
+    bound += (size % BSHUF_BLOCKED_MULT) * elem_size;
+    return bound;
+}
+
+
+int bshuf_compress_lz4_block(void* in, void* out, const size_t size,
+        const size_t elem_size) {
+
+    int nbytes, err;
+
+    void* tmp_buf = malloc(size * elem_size);
+    if (tmp_buf == NULL) return -1;
+
+    err = bshuf_trans_bit_elem(in, tmp_buf, size, elem_size);
+    if (err < 0) return err;
+    nbytes = LZ4_compress(tmp_buf, out, size*elem_size);
+
+    free(tmp_buf);
+    return nbytes;
+}
+
+
+int bshuf_decompress_lz4_block(void* in, void* out, const size_t size,
+        const size_t elem_size) {
+
+    int nbytes, err;
+
+    void* tmp_buf = malloc(size * elem_size);
+    if (tmp_buf == NULL) return -1;
+
+    nbytes = LZ4_decompress_fast(in, tmp_buf, size*elem_size);
+    err = bshuf_untrans_bit_elem(tmp_buf, out, size, elem_size);
+    if (err < 0) return err;
+
+    free(tmp_buf);
+    return nbytes;
+}
+
+
+int bshuf_compress_lz4(void* in, void* out, const size_t size,
+        const size_t elem_size, size_t block_size) {
+    bshuf_bitshuffle(in, out, size, elem_size, block_size);
+    return elem_size * size;
+}
+
+
+int bshuf_decompress_lz4(void* in, void* out, const size_t size,
+        const size_t elem_size, size_t block_size) {
+    bshuf_bitunshuffle(in, out, size, elem_size, block_size);
+    return elem_size * size;
 }
 
 

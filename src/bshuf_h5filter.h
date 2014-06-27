@@ -15,6 +15,9 @@
 #define BSHUF_H5FILTER_VERSION 0
 
 
+#define BSHUF_H5_COMPRESS_LZ4 2
+
+
 H5Z_class_t bshuf_H5Filter[1];
 
 

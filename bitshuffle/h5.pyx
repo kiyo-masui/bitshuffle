@@ -8,8 +8,11 @@ cimport cython
 cdef extern from "bshuf_h5filter.h":
     int bshuf_register_h5filter()
     int BSHUF_H5FILTER
+    int BSHUF_H5_COMPRESS_LZ4
 
 cdef int LZF_FILTER = 32000
+
+H5_COMPRESS_LZ4 = BSHUF_H5_COMPRESS_LZ4
 
 
 def register_h5_filter():

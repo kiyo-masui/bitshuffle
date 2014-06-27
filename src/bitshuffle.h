@@ -25,6 +25,8 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include "lz4.h"
+
 // Conditional includes for SSE2 and AVX2.
 #ifdef USEAVX2
 #include <immintrin.h>
@@ -50,6 +52,18 @@ int bshuf_bitshuffle(void* in, void* out, const size_t size,
 
 
 int bshuf_bitunshuffle(void* in, void* out, const size_t size,
+        const size_t elem_size, size_t block_size);
+
+
+int bshuf_compress_lz4_bound(const size_t size,
+        const size_t elem_size, size_t block_size);
+
+
+int bshuf_compress_lz4(void* in, void* out, const size_t size,
+        const size_t elem_size, size_t block_size);
+
+
+int bshuf_decompress_lz4(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size);
 
 
