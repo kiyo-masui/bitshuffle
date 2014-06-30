@@ -25,7 +25,9 @@ library.  Bitshuffle has been designed to be well matched Marc Lehmann's
 LZF_ as well as LZ4_. Note that because Bitshuffle modifies the data at the bit
 level, sophisticated entropy reducing compression libraries such as GZIP and
 BZIP are unlikely to achieve significantly better compression than simpler and
-faster duplicate-string-elimination algorithms such as LZF and LZ4.
+faster duplicate-string-elimination algorithms such as LZF and LZ4. Bitshuffle
+thus includes routines (and HDF5 filter options) to apply LZ4 compression to
+each block after shuffling.
 
 The Bitshuffle algorithm relies on neighbouring elements of a dataset being
 highly correlated to improve data compression. Any correlations that span at
