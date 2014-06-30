@@ -79,9 +79,6 @@ class TestFilter(unittest.TestCase):
         self.assertTrue(np.all(d == data))
         f.close()
 
-
-
-
     def tearDown(self):
         files = glob.glob("tmp_test_*")
         for f in files:

@@ -1,3 +1,19 @@
+/*
+ * Bitshuffle HDF5 filter
+ * Header File
+ *
+ * Filter Options
+ * --------------
+ *  block_size (option slot 0) : interger (optional)
+ *      What block size to use (in elements not bytes). Default is 0,
+ *      for which bitshuffle will pick a block size with a target of 8kb.
+ *  Compression (option slot 1) : 0 or BSHUF_H5_COMPRESS_LZ4
+ *      Whether to apply LZ4 compression to the data after bitshuffling.
+ *      This is much faster than applying compression as a second filter
+ *      because it is done when the small block of data is already in the
+ *      L1 cache.
+ *
+ */
 
 
 #ifndef BSHUF_H5FILTER_H
@@ -21,6 +37,14 @@
 H5Z_class_t bshuf_H5Filter[1];
 
 
+/* ---- bshuf_bitunshuffle ----
+ *
+ * Register the bitshuffle HDF5 filter within the HDF5 library.
+ *
+ * Call this before using the bitshuffle HDF5 filter from C unless
+ * using dynamically loaded filters.
+ *
+ */
 int bshuf_register_h5filter(void);
 
 

@@ -18,6 +18,11 @@ cdef extern from "bitshuffle.h":
             int block_size)
     int bshuf_bitunshuffle(void *A, void *B, int size, int elem_size,
             int block_size)
+    int bshuf_compress_lz4_bound(int size, int elem_size, int block_size)
+    int bshuf_compress_lz4(void *A, void *B, int size, int elem_size,
+            int block_size)
+    int bshuf_decompress_lz4(void *A, void *B, int size, int elem_size,
+            int block_size)
 
 # Prototypes from bitshuffle.c
 cdef extern int bshuf_copy(void *A, void *B, int size, int elem_size)
@@ -59,31 +64,30 @@ def using_AVX2():
 
 
 def _setup_arr(arr):
-    shape = arr.shape
+    shape = tuple(arr.shape)
     if not arr.flags['C_CONTIGUOUS']:
         msg = "Input array must be C-contiguouse."
         raise ValueError(msg)
     size = arr.size
     dtype = arr.dtype
     itemsize = dtype.itemsize
-    # XXX For dev only.  Use empty!.
-    out = np.zeros(size, dtype=dtype)
+    out = np.empty(shape, dtype=dtype)
     return out, size, itemsize
 
 
 cdef _wrap_C_fun(Cfptr fun, np.ndarray arr):
     """Wrap a C function with standard call signature."""
 
-    cdef int ii, size, itemsize, err
+    cdef int ii, size, itemsize, count
     cdef np.ndarray out
     out, size, itemsize = _setup_arr(arr)
     cdef void* arr_ptr = <void*> arr.data
     cdef void* out_ptr = <void*> out.data
     for ii in range(REPEATC):
-        err = fun(arr_ptr, out_ptr, size, itemsize)
-    if err < 0:
+        count = fun(arr_ptr, out_ptr, size, itemsize)
+    if count < 0:
         msg = "Failed. Error code %d."
-        excp = RuntimeError(msg % err, err)
+        excp = RuntimeError(msg % count, count)
         raise excp
     return out
 
@@ -176,35 +180,121 @@ def untrans_bit_elem(np.ndarray arr not None):
 
 
 def bitshuffle(np.ndarray arr not None, int block_size=0):
+    """Bitshuffle an array.
 
-    cdef int ii, size, itemsize, err
+    Output array is the same shape and datatype as input array but underlying
+    buffer has been bitshuffled.
+
+    """
+
+    cdef int ii, size, itemsize, count
     cdef np.ndarray out
     out, size, itemsize = _setup_arr(arr)
     cdef void* arr_ptr = <void*> arr.data
     cdef void* out_ptr = <void*> out.data
     for ii in range(REPEATC):
-        err = bshuf_bitshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
-    if err:
+        count = bshuf_bitshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
+    if count < 0:
         msg = "Failed. Error code %d."
-        excp = RuntimeError(msg % err, err)
+        excp = RuntimeError(msg % count, count)
         raise excp
     return out
 
 
-
 def bitunshuffle(np.ndarray arr not None, int block_size=0):
+    """Bitshuffle an array.
 
-    cdef int ii, size, itemsize, err
+    Output array is the same shape and datatype as input array but underlying
+    buffer has been un-bitshuffled.
+
+    """
+
+    cdef int ii, size, itemsize, count
     cdef np.ndarray out
     out, size, itemsize = _setup_arr(arr)
     cdef void* arr_ptr = <void*> arr.data
     cdef void* out_ptr = <void*> out.data
     for ii in range(REPEATC):
-        err = bshuf_bitunshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
-    if err:
+        count = bshuf_bitunshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
+    if count < 0:
         msg = "Failed. Error code %d."
-        excp = RuntimeError(msg % err, err)
+        excp = RuntimeError(msg % count, count)
         raise excp
+    return out
+
+
+def compress_lz4(np.ndarray arr not None, int block_size=0):
+    """Bitshuffle then compress an array using LZ4.
+
+    Returns
+    -------
+    out : array with np.uint8 datatype
+        Buffer holding compressed data.
+
+    """
+
+    cdef int ii, size, itemsize, count
+    shape = (arr.shape[i] for i in range(arr.ndim))
+    if not arr.flags['C_CONTIGUOUS']:
+        msg = "Input array must be C-contiguouse."
+        raise ValueError(msg)
+    size = arr.size
+    dtype = arr.dtype
+    itemsize = dtype.itemsize
+
+    max_out_size = bshuf_compress_lz4_bound(size, itemsize, block_size)
+
+    cdef np.ndarray out
+    out = np.empty(max_out_size, dtype=np.uint8)
+
+    cdef void* arr_ptr = <void*> arr.data
+    cdef void* out_ptr = <void*> out.data
+    for ii in range(REPEATC):
+        count = bshuf_compress_lz4(arr_ptr, out_ptr, size, itemsize, block_size)
+    if count < 0:
+        msg = "Failed. Error code %d."
+        excp = RuntimeError(msg % count, count)
+        raise excp
+    return out[:count]
+
+
+def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
+    """Domcompress a buffer using LZ4 then bitunshuffle it yeilding an array.
+
+    Parameters
+    ----------
+    buf : buffer
+        Input data to be decompressed.
+    shape : tuple of integers
+        Shape of the output (decompressed array).
+    dtype : numpy dtype
+        Datatype of the output array
+
+    """
+
+    cdef int ii, size, itemsize, count
+    if not arr.flags['C_CONTIGUOUS']:
+        msg = "Input array must be C-contiguouse."
+        raise ValueError(msg)
+    size = np.prod(shape)
+    itemsize = dtype.itemsize
+
+    cdef np.ndarray out
+    out = np.empty(tuple(shape), dtype=dtype)
+
+    cdef void* arr_ptr = <void*> arr.data
+    cdef void* out_ptr = <void*> out.data
+    for ii in range(REPEATC):
+        count = bshuf_decompress_lz4(arr_ptr, out_ptr, size, itemsize,
+                                     block_size)
+    if count < 0:
+        msg = "Failed. Error code %d."
+        excp = RuntimeError(msg % count, count)
+        raise excp
+    if count != arr.size:
+        msg = "Decompressed different number of bytes than input buffer size."
+        msg += "Input buffer %d, decompressed %d." % (arr.size, count)
+        raise RuntimeError(msg)
     return out
 
 
