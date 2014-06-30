@@ -72,7 +72,7 @@ class TestFilter(unittest.TestCase):
         f["range"][:] = data
 
         f.close()
-        os.system('h5dump -H -p tmp_test_filters.h5')
+        #os.system('h5dump -H -p tmp_test_filters.h5')
 
         f = h5py.File(fname, 'r')
         d = f['range'][:]

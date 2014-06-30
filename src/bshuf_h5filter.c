@@ -100,6 +100,7 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
             nbytes_uncomp = *(size_t *) in_buf;    // XXX
             in_buf += 8;
             buf_size_out = nbytes_uncomp;
+            nbytes_out = nbytes_uncomp;
         } else {
             nbytes_uncomp = nbytes;
             buf_size_out = bshuf_compress_lz4_bound(nbytes_uncomp / elem_size, 
@@ -112,12 +113,12 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
     }
 
     // TODO, make this safe by memcopying the extra.
-    if (nbytes % elem_size) {
+    if (nbytes_uncomp % elem_size) {
         PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
                 "Non integer number of elements.");
         return 0;
     }
-    size = nbytes / elem_size;
+    size = nbytes_uncomp / elem_size;
 
     void* out_buf;
     out_buf = malloc(buf_size_out);
@@ -131,7 +132,6 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
         if (flags & H5Z_FLAG_REVERSE) {
             // Bit unshuffle/decompress.
             err = bshuf_decompress_lz4(in_buf, out_buf, size, elem_size, block_size);
-            nbytes_out = err;
         } else {
             // Bit shuffle/compress.
             *(size_t*) out_buf = nbytes_uncomp;
@@ -147,7 +147,8 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
             err = bshuf_bitshuffle(in_buf, out_buf, size, elem_size, block_size);
         }
     }
-    printf("%d, %d, %d, %d\n", nbytes, nbytes_uncomp, nbytes_out, buf_size_out);
+    //printf("nb_in %d, nb_uncomp %d, nb_out %d, buf_out %d\n", nbytes,
+    //       nbytes_uncomp, nbytes_out, buf_size_out);
 
     if (err < 0) {
         sprintf(msg, "Error in bitshuffle with error code %d.", err);

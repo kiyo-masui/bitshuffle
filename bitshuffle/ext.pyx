@@ -81,7 +81,7 @@ cdef _wrap_C_fun(Cfptr fun, np.ndarray arr):
     cdef void* out_ptr = <void*> out.data
     for ii in range(REPEATC):
         err = fun(arr_ptr, out_ptr, size, itemsize)
-    if err:
+    if err < 0:
         msg = "Failed. Error code %d."
         excp = RuntimeError(msg % err, err)
         raise excp

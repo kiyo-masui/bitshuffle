@@ -30,7 +30,7 @@ int bshuf_using_AVX2(void) {
 
 
 // Function definition for worker functions.
-typedef int (*bshufFunDef)(void* in, void* out, const size_t size,
+typedef int (*bshufFunDef)(void** in, void** out, const size_t size,
          const size_t elem_size);
 
 
@@ -1192,27 +1192,31 @@ int bshuf_trans_bit_elem_AVX(void* in, void* out, const size_t size,
 int bshuf_trans_bit_elem(void* in, void* out, const size_t size, 
         const size_t elem_size) {
 
+    int err;
 #ifdef USEAVX2
-    return bshuf_trans_bit_elem_AVX(in, out, size, elem_size);
+    err = bshuf_trans_bit_elem_AVX(in, out, size, elem_size);
 #elif defined(USESSE2)
-    return bshuf_trans_bit_elem_SSE(in, out, size, elem_size);
+    err = bshuf_trans_bit_elem_SSE(in, out, size, elem_size);
 #else
-    return bshuf_trans_bit_elem_scal(in, out, size, elem_size);
+    err = bshuf_trans_bit_elem_scal(in, out, size, elem_size);
 #endif
+    return size * elem_size;
 }
 
 
 int bshuf_untrans_bit_elem(void* in, void* out, const size_t size, 
         const size_t elem_size) {
 
+    int err;
 #ifdef USEAVX2
     //return bshuf_untrans_bit_elem_AVX(in, out, size, elem_size);
-    return bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
+    err = bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
 #elif defined(USESSE2)
-    return bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
+    err = bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
 #else
-    return bshuf_untrans_bit_elem_scal(in, out, size, elem_size);
+    err = bshuf_untrans_bit_elem_scal(in, out, size, elem_size);
 #endif
+    return size * elem_size;
 }
 
 
@@ -1229,10 +1233,10 @@ size_t bshuf_recommend_block_size(const size_t elem_size) {
 
 int bshuf_blocked_wrap_fun(bshufFunDef fun, void* in, void* out,
         const size_t size, const size_t elem_size, size_t block_size) {
-    char* A = (char*) in;
-    char* B = (char*) out;
+    void* A = in;
+    void* B = out;
 
-    int err;
+    int err, cum_err = 0;
     size_t this_block_size;
     size_t leftover;
 
@@ -1245,24 +1249,43 @@ int bshuf_blocked_wrap_fun(bshufFunDef fun, void* in, void* out,
         this_block_size = MIN(size - ii, block_size);
         this_block_size = this_block_size - this_block_size % BSHUF_BLOCKED_MULT;
         if (this_block_size) {
-            err = fun(&A[ii * elem_size],
-                    &B[ii * elem_size], this_block_size, elem_size);
-            if (err) return err;
+            err = fun(&A, &B, this_block_size, elem_size);
+            if (err < 0) return err;
+            cum_err += err;
         }
     }
     leftover = size % BSHUF_BLOCKED_MULT;
 
-    memcpy(&B[(size - leftover) * elem_size], &A[(size - leftover) * elem_size],
-            leftover * elem_size);
+    memcpy(B, A, leftover * elem_size);
 
-    return 0;
+    return cum_err + leftover * elem_size;
+}
+
+
+int bshuf_bitshuffle_block(void** in, void** out, const size_t size,
+        const size_t elem_size) {
+
+    int err = bshuf_trans_bit_elem(*in, *out, size, elem_size);
+    *in = (void*) (((char*) *in) + size * elem_size);
+    *out = (void*) (((char*) *out) + size * elem_size);
+    return err;
+}
+
+
+int bshuf_bitunshuffle_block(void** in, void** out, const size_t size,
+        const size_t elem_size) {
+
+    int err = bshuf_untrans_bit_elem(*in, *out, size, elem_size);
+    *in = (void*) (((char*) *in) + size * elem_size);
+    *out = (void*) (((char*) *out) + size * elem_size);
+    return err;
 }
 
 
 int bshuf_bitshuffle(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
-    return bshuf_blocked_wrap_fun(&bshuf_trans_bit_elem, in, out, size,
+    return bshuf_blocked_wrap_fun(&bshuf_bitshuffle_block, in, out, size,
             elem_size, block_size);
 }
 
@@ -1270,7 +1293,7 @@ int bshuf_bitshuffle(void* in, void* out, const size_t size,
 int bshuf_bitunshuffle(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
-    return bshuf_blocked_wrap_fun(&bshuf_untrans_bit_elem, in, out, size,
+    return bshuf_blocked_wrap_fun(&bshuf_bitunshuffle_block, in, out, size,
             elem_size, block_size);
 }
 
@@ -1293,7 +1316,7 @@ int bshuf_compress_lz4_bound(const size_t size,
 }
 
 
-int bshuf_compress_lz4_block(void* in, void* out, const size_t size,
+int bshuf_compress_lz4_block(void** in, void** out, const size_t size,
         const size_t elem_size) {
 
     int nbytes, err;
@@ -1301,16 +1324,18 @@ int bshuf_compress_lz4_block(void* in, void* out, const size_t size,
     void* tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return -1;
 
-    err = bshuf_trans_bit_elem(in, tmp_buf, size, elem_size);
+    err = bshuf_trans_bit_elem(*in, tmp_buf, size, elem_size);
     if (err < 0) return err;
-    nbytes = LZ4_compress(tmp_buf, out, size*elem_size);
+    nbytes = LZ4_compress(tmp_buf, *out, size * elem_size);
+    *in = (void*) (((char*) *in) + size * elem_size);
+    *out = (void*) (((char*) *out) + nbytes);
 
     free(tmp_buf);
     return nbytes;
 }
 
 
-int bshuf_decompress_lz4_block(void* in, void* out, const size_t size,
+int bshuf_decompress_lz4_block(void** in, void** out, const size_t size,
         const size_t elem_size) {
 
     int nbytes, err;
@@ -1318,9 +1343,11 @@ int bshuf_decompress_lz4_block(void* in, void* out, const size_t size,
     void* tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return -1;
 
-    nbytes = LZ4_decompress_fast(in, tmp_buf, size*elem_size);
-    err = bshuf_untrans_bit_elem(tmp_buf, out, size, elem_size);
+    nbytes = LZ4_decompress_fast(*in, tmp_buf, size * elem_size);
+    err = bshuf_untrans_bit_elem(tmp_buf, *out, size, elem_size);
     if (err < 0) return err;
+    *in = (void*) (((char*) *in) + nbytes);
+    *out = (void*) (((char*) *out) + size * elem_size);
 
     free(tmp_buf);
     return nbytes;
@@ -1329,15 +1356,19 @@ int bshuf_decompress_lz4_block(void* in, void* out, const size_t size,
 
 int bshuf_compress_lz4(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
-    bshuf_bitshuffle(in, out, size, elem_size, block_size);
-    return elem_size * size;
+    //bshuf_bitshuffle(in, out, size, elem_size, block_size);
+    //return elem_size * size;
+    return bshuf_blocked_wrap_fun(&bshuf_compress_lz4_block, in, out, size,
+            elem_size, block_size);
 }
 
 
 int bshuf_decompress_lz4(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
-    bshuf_bitunshuffle(in, out, size, elem_size, block_size);
-    return elem_size * size;
+    //bshuf_bitunshuffle(in, out, size, elem_size, block_size);
+    //return elem_size * size;
+    return bshuf_blocked_wrap_fun(&bshuf_decompress_lz4_block, in, out, size,
+            elem_size, block_size);
 }
 
 
