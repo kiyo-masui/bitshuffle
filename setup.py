@@ -32,20 +32,22 @@ elif sys.platform.startswith('freebsd'):
 
 
 ext_bshuf = Extension("bitshuffle.ext",
-                   ["src/bitshuffle.c", "bitshuffle/ext.pyx"],
-                   include_dirs=INCLUDE_DIRS + [np.get_include(), "src/"],
+                   ["src/bitshuffle.c", "bitshuffle/ext.pyx", "lz4/lz4.c"],
+                   include_dirs=INCLUDE_DIRS + [np.get_include(), "src/",
+                                                "lz4/"],
                    library_dirs = LIBRARY_DIRS,
-                   depends=["src/bitshuffle.h"],
+                   depends=["src/bitshuffle.h", "lz4/lz4.h"],
                    extra_compile_args=COMPILE_FLAGS,
                    )
 
 
 h5filter = Extension("bitshuffle.h5",
                    ["bitshuffle/h5.pyx", "src/bshuf_h5filter.c",
-                    "src/bitshuffle.c"],
-                   include_dirs=INCLUDE_DIRS + ["src/"],
+                    "src/bitshuffle.c", "lz4/lz4.c"],
+                   include_dirs=INCLUDE_DIRS + ["src/", "lz4/"],
                    library_dirs = LIBRARY_DIRS,
-                   depends=["src/bitshuffle.h", 'src/bshuf_h5filter.h'],
+                   depends=["src/bitshuffle.h", 'src/bshuf_h5filter.h', 
+                            "lz4/lz4.h"],
                    libraries = ['hdf5'],
                    extra_compile_args=COMPILE_FLAGS,
                    )
@@ -53,10 +55,11 @@ h5filter = Extension("bitshuffle.h5",
 
 filter_plugin = Extension("plugin.libh5bshuf",
                    ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
-                    "src/bitshuffle.c"],
-                   include_dirs=INCLUDE_DIRS,
+                    "src/bitshuffle.c", "lz4/lz4.c"],
+                   include_dirs=INCLUDE_DIRS +["src/", "lz4/"] ,
                    library_dirs = LIBRARY_DIRS,
-                   depends=["src/bitshuffle.h", 'src/bshuf_h5filter.h'],
+                   depends=["src/bitshuffle.h", 'src/bshuf_h5filter.h',
+                            "lz4/lz4.h"],
                    libraries = ['hdf5'],
                    extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
                    )

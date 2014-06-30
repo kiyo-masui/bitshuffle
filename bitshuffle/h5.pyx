@@ -8,8 +8,12 @@ cimport cython
 cdef extern from "bshuf_h5filter.h":
     int bshuf_register_h5filter()
     int BSHUF_H5FILTER
+    int BSHUF_H5_COMPRESS_LZ4
 
 cdef int LZF_FILTER = 32000
+
+H5FILTER = BSHUF_H5FILTER
+H5_COMPRESS_LZ4 = BSHUF_H5_COMPRESS_LZ4
 
 
 def register_h5_filter():
@@ -100,9 +104,26 @@ def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
 def create_bitshuffle_lzf_dataset(parent, name, shape, dtype, chunks=None,
                                   maxshape=None, fillvalue=None,
                                   track_times=None):
-    filter_pipeline = (BSHUF_H5FILTER, LZF_FILTER)
+    """Create dataset with a filter pipeline includind bitshuffle and LZF"""
+
+    filter_pipeline = [BSHUF_H5FILTER, LZF_FILTER]
     dset_id = create_dataset(parent, name, shape, dtype, chunks=chunks,
                              filter_pipeline=filter_pipeline, maxshape=maxshape,
                              fillvalue=fillvalue, track_times=track_times)
     return dset_id
+
+
+def create_bitshuffle_comressed_dataset(parent, name, shape, dtype, chunks=None,
+                                  maxshape=None, fillvalue=None,
+                                  track_times=None):
+    """Create dataset with bitshuffle+internal LZ4 compression."""
+
+    filter_pipeline = [BSHUF_H5FILTER,]
+    filter_opts = [(0, H5_COMPRESS_LZ4)]
+    dset_id = create_dataset(parent, name, shape, dtype, chunks=chunks,
+                             filter_pipeline=filter_pipeline,
+                             filter_opts=filter_opts, maxshape=maxshape,
+                             fillvalue=fillvalue, track_times=track_times)
+    return dset_id
+
 

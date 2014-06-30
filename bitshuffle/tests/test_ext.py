@@ -22,7 +22,9 @@ class TestProfile(unittest.TestCase):
         n = 1024  # bytes.
         if TIME:
             n *= TIME
-        self.data = random.randint(0, 8, n).astype(np.uint8)  # Random bits.
+        # Almost random bits, but now quite. All bits exercised (to fully test
+        # transpose) but still slightly compresible.
+        self.data = random.randint(0, 6, n).astype(np.uint8)
         self.fun = ext.copy
         self.check = None
         self.check_data = None
@@ -252,6 +254,20 @@ class TestProfile(unittest.TestCase):
         self.data = ext.bitshuffle(pre_trans)
         self.fun = ext.bitunshuffle
         self.check_data = pre_trans
+
+    def test_9c_compress_64(self):
+        self.case = "compress 64"
+        self.data = self.data.view(np.float64)
+        self.fun = lambda x:ext.compress_lz4(x)
+
+    def test_9d_decompress_64(self):
+        self.case = "decompress 64"
+        pre_trans = self.data.view(np.float64)
+        self.data = ext.compress_lz4(pre_trans)
+        self.fun = lambda x: ext.decompress_lz4(x, pre_trans.shape,
+                                                pre_trans.dtype)
+        self.check_data = pre_trans
+
 
 
 class TestDevCases(unittest.TestCase):

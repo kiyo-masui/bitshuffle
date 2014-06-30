@@ -22,17 +22,19 @@ is performed within blocks of data roughly 8kB long [1]_.
 This does not in itself compress data, only rearranges it for more efficient
 compression. To perform the actual compression you will need a compression
 library.  Bitshuffle has been designed to be well matched Marc Lehmann's
-LZF_. Note that because Bitshuffle modifies the data at the bit level,
-sophisticated entropy reducing compression libraries such as GZIP and BZIP are
-unlikely to achieve significantly better compression than simpler and faster
-duplicate-string-elimination algorithms such as LZF.
+LZF_ as well as LZ4_. Note that because Bitshuffle modifies the data at the bit
+level, sophisticated entropy reducing compression libraries such as GZIP and
+BZIP are unlikely to achieve significantly better compression than simpler and
+faster duplicate-string-elimination algorithms such as LZF and LZ4. Bitshuffle
+thus includes routines (and HDF5 filter options) to apply LZ4 compression to
+each block after shuffling.
 
 The Bitshuffle algorithm relies on neighbouring elements of a dataset being
 highly correlated to improve data compression. Any correlations that span at
 least 24 elements of the dataset may be exploited to improve compression.
 
 Bitshuffle was designed with performance in mind. On most machines the
-time required for Bitshuffle+LZF well below the time required to read or write
+time required for Bitshuffle+LZ4 well below the time required to read or write
 the compressed data to disk. Because it is able to exploit the SSE and AVX
 instruction sets present on modern Intel and AMD processors, on these machines
 compression is only marginally slower than an out-of-cache memory copy.
@@ -53,11 +55,13 @@ used outside of python and in command line utilities such as ``h5dump``.
 
 .. _LZF: http://oldhome.schmorp.de/marc/liblzf.html
 
+.. _LZ4: https://code.google.com/p/lz4/
+
 
 Applications
 ------------
 
-Bitshuffle(+LZF) might be right for your application if:
+Bitshuffle might be right for your application if:
 
 - You need to compress typed binary data.
 - Your data is arranged such that adjacent elements over the fastest varying
@@ -67,14 +71,14 @@ Bitshuffle(+LZF) might be right for your application if:
 - You need both high compression ratios and high performance.
 
 
-Comparing Bitshuffle(+LZF) to other compression algorithms and HDF5 filters:
+Comparing Bitshuffle to other compression algorithms and HDF5 filters:
 
-- Bitshuffle+LZF is less general than many other compression algorithms.
+- Bitshuffle is less general than many other compression algorithms.
   To achieve good compression ratios, consecutive elements of your data must
   be highly correlated.
-- For the right datasets, Bitshuffle+LZF is one of the few compression
+- For the right datasets, Bitshuffle is one of the few compression
   algorithms that promises both high throughput and high compression ratios.
-- Bitshuffle+LZF should have roughly the same throughput as Shuffle+LZF, but
+- Bitshuffle should have roughly the same throughput as Shuffle, but
   may obtain higher compression ratios.
 - The MAFISC_ filter actually includes something similar to Bitshuffle as one of
   its prefilters,  However, MAFICS's emphasis is on obtaining high compression

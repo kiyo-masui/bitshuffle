@@ -52,11 +52,45 @@ herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
             return -1;
         }
     }
+    if (nelements > 4) {
+        switch (values[4]) {
+            case 0:
+                break;
+            case BSHUF_H5_COMPRESS_LZ4:
+                break;
+            default:
+                PUSH_ERR("bshuf_h5_set_local", H5E_CALLBACK, 
+                         "Invalid bitshuffle compression.");
+        }
+    }
 
     r = H5Pmodify_filter(dcpl, BSHUF_H5FILTER, flags, nelements, values);
     if(r<0) return -1;
 
     return 1;
+}
+
+
+/* Write a 64 bit unsigned integer to a buffer in little endian order. */
+void write_uint64_LE(uint64_t num, void* buf) {
+    uint8_t* b = buf;
+    uint64_t pow28 = 1 << 8;
+    for (int ii; ii < 8; ii++) {
+        b[ii] = num % pow28;
+        num = num / pow28;
+    }
+}
+
+
+/* Read a 64 bit unsigned integer from a buffer little endian order. */
+uint64_t read_uint64_LE(void* buf) {
+    uint8_t* b = buf;
+    uint64_t num = 0, pow28 = 1 << 8, cp = 1;
+    for (int ii; ii < 8; ii++) {
+        num += b[ii] * cp;
+        cp *= pow28;
+    }
+    return num;
 }
 
 
@@ -68,6 +102,8 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
     int err;
     char msg[80];
     size_t block_size = 0;
+    size_t buf_size_out, nbytes_uncomp, nbytes_out;
+    char* in_buf = *buf;
 
     if (cd_nelmts < 3) {
         PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
@@ -75,34 +111,69 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
         return 0;
     }
     elem_size = cd_values[2];
-    // TODO, make this safe by memcopying the extra.
-    if (nbytes % elem_size) {
-        PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
-                "Non integer number of elements.");
-        return 0;
-    }
-    size = nbytes / elem_size;
 
     // User specified block size.
     if (cd_nelmts > 3) block_size = cd_values[3];
 
+    // Compression in addition to bitshiffle.
+    if (cd_nelmts > 4 && cd_values[4] == BSHUF_H5_COMPRESS_LZ4) {
+        if (flags & H5Z_FLAG_REVERSE) {
+            // First eight bytes is the number of bytes in the output buffer,
+            // little endian.
+            nbytes_uncomp = read_uint64_LE(in_buf);
+            in_buf += 8;
+            buf_size_out = nbytes_uncomp;
+            nbytes_out = nbytes_uncomp;
+        } else {
+            nbytes_uncomp = nbytes;
+            buf_size_out = bshuf_compress_lz4_bound(nbytes_uncomp / elem_size, 
+                    elem_size, block_size) + 8;
+        }
+    } else {
+        nbytes_uncomp = nbytes;
+        buf_size_out = nbytes;
+        nbytes_out = nbytes;
+    }
+
+    // TODO, remove this restriction by memcopying the extra.
+    if (nbytes_uncomp % elem_size) {
+        PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
+                "Non integer number of elements.");
+        return 0;
+    }
+    size = nbytes_uncomp / elem_size;
+
     void* out_buf;
-    out_buf = malloc(size * elem_size);
+    out_buf = malloc(buf_size_out);
     if (out_buf == NULL) {
         PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
                 "Could not allocate output buffer.");
         return 0;
     }
 
-    if (flags & H5Z_FLAG_REVERSE) {
-        // Bit unshuffle.
-        err = bshuf_bitunshuffle(*buf, out_buf, size, elem_size, block_size);
+    if (cd_nelmts > 4 && cd_values[4] == BSHUF_H5_COMPRESS_LZ4) {
+        if (flags & H5Z_FLAG_REVERSE) {
+            // Bit unshuffle/decompress.
+            err = bshuf_decompress_lz4(in_buf, out_buf, size, elem_size, block_size);
+        } else {
+            // Bit shuffle/compress.
+            write_uint64_LE(nbytes_uncomp, out_buf);
+            err = bshuf_compress_lz4(in_buf, (char*) out_buf + 8, size, elem_size, block_size);
+            nbytes_out = err + 8;
+        }
     } else {
-        // Bit unshuffle.
-        err = bshuf_bitshuffle(*buf, out_buf, size, elem_size, block_size);
+        if (flags & H5Z_FLAG_REVERSE) {
+            // Bit unshuffle.
+            err = bshuf_bitunshuffle(in_buf, out_buf, size, elem_size, block_size);
+        } else {
+            // Bit shuffle.
+            err = bshuf_bitshuffle(in_buf, out_buf, size, elem_size, block_size);
+        }
     }
+    //printf("nb_in %d, nb_uncomp %d, nb_out %d, buf_out %d\n", nbytes,
+    //       nbytes_uncomp, nbytes_out, buf_size_out);
 
-    if (err) {
+    if (err < 0) {
         sprintf(msg, "Error in bitshuffle with error code %d.", err);
         PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, msg);
         free(out_buf);
@@ -110,11 +181,12 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
     } else {
         free(*buf);
         *buf = out_buf;
-        *buf_size = nbytes;
+        *buf_size = buf_size_out;
 
-        return nbytes;
+        return nbytes_out;
     }
 }
+
 
 
 H5Z_class_t bshuf_H5Filter[1] = {{
