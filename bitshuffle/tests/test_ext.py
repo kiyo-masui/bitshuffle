@@ -45,9 +45,12 @@ class TestProfile(unittest.TestCase):
                 out = self.fun(self.data)
                 delta_ts.append(time.time() - t0)
         except RuntimeError as err:
-            if (err.args[1] == 11) and not ext.using_SSE2():
+
+            if (len(err.args) > 1 and (err.args[1] == 11)
+                and not ext.using_SSE2()):
                 return
-            if (err.args[1] == 12) and not ext.using_AVX2():
+            if (len(err.args) > 1 and (err.args[1] == 12)
+                and not ext.using_AVX2()):
                 return
             else:
                 raise

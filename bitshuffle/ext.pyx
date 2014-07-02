@@ -294,7 +294,7 @@ def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
     if count != arr.size:
         msg = "Decompressed different number of bytes than input buffer size."
         msg += "Input buffer %d, decompressed %d." % (arr.size, count)
-        raise RuntimeError(msg)
+        raise RuntimeError(msg, count)
     return out
 
 

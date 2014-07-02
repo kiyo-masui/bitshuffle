@@ -5,13 +5,19 @@
 #define BSHUF_MIN_RECOMMEND_BLOCK 128
 #define BSHUF_BLOCKED_MULT 8    // Block sizes must be multiple of this.
 #define BSHUF_TARGET_BLOCK_SIZE_B 8192
+// Use fast decompression instead of safe decompression for LZ4.
+#define BSHUF_LZ4_DECOMPRESS_FAST
+
 
 #define CHECK_MULT_EIGHT(n) if (n % 8) return -80;
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 #define CHECK_ERR(count) if (count < 0) { return count; }
 #define CHECK_ERR_FREE(count, buf) if (count < 0) { free(buf); return count; }
+#define CHECK_ERR_FREE_LZ(count, buf) if (count < 0) {                      \
+    free(buf); return count - 1000; }
 //#define CHECK_ERR_FREE(count, buf) {}
+
 
 /* Functions giving telling what instructions set used at compile time. */
 int bshuf_using_SSE2(void) {
@@ -1306,6 +1312,54 @@ int64_t bshuf_bitunshuffle(void* in, void* out, const size_t size,
 }
 
 
+/* ---- Utilities ---- */
+
+/* Write a 64 bit unsigned integer to a buffer in big endian order. */
+void bshuf_write_uint64_BE(void* buf, uint64_t num) {
+    uint8_t* b = buf;
+    uint64_t pow28 = 1 << 8;
+    for (int ii = 7; ii >= 0; ii--) {
+        b[ii] = num % pow28;
+        num = num / pow28;
+    }
+}
+
+
+/* Read a 64 bit unsigned integer from a buffer big endian order. */
+uint64_t bshuf_read_uint64_BE(void* buf) {
+    uint8_t* b = buf;
+    uint64_t num = 0, pow28 = 1 << 8, cp = 1;
+    for (int ii = 7; ii >= 0; ii--) {
+        num += b[ii] * cp;
+        cp *= pow28;
+    }
+    return num;
+}
+
+
+/* Write a 32 bit unsigned integer to a buffer in big endian order. */
+void bshuf_write_uint32_BE(void* buf, uint32_t num) {
+    uint8_t* b = buf;
+    uint32_t pow28 = 1 << 8;
+    for (int ii = 3; ii >= 0; ii--) {
+        b[ii] = num % pow28;
+        num = num / pow28;
+    }
+}
+
+
+/* Read a 32 bit unsigned integer from a buffer big endian order. */
+uint32_t bshuf_read_uint32_BE(void* buf) {
+    uint8_t* b = buf;
+    uint32_t num = 0, pow28 = 1 << 8, cp = 1;
+    for (int ii = 3; ii >= 0; ii--) {
+        num += b[ii] * cp;
+        cp *= pow28;
+    }
+    return num;
+}
+
+
 size_t bshuf_compress_lz4_bound(const size_t size,
         const size_t elem_size, size_t block_size) {
 
@@ -1316,9 +1370,13 @@ size_t bshuf_compress_lz4_bound(const size_t size,
     }
     if (block_size < 0 || block_size % BSHUF_BLOCKED_MULT) return -81;
 
-    bound = LZ4_compressBound(block_size * elem_size) * (size / block_size);
+    // Note that each block gets a 4 byte header.
+    // Size of full blocks.
+    bound = (LZ4_compressBound(block_size * elem_size) + 4) * (size / block_size);
+    // Size of partial blocks, if any.
     leftover = ((size % block_size) / BSHUF_BLOCKED_MULT) * BSHUF_BLOCKED_MULT;
-    bound += LZ4_compressBound(leftover * elem_size);
+    if (leftover) bound += LZ4_compressBound(leftover * elem_size) + 4;
+    // Size of uncompressed data not fitting into any blocks.
     bound += (size % BSHUF_BLOCKED_MULT) * elem_size;
     return bound;
 }
@@ -1334,7 +1392,10 @@ int64_t bshuf_compress_lz4_block(void** in, void** out, const size_t size,
 
     count = bshuf_trans_bit_elem(*in, tmp_buf, size, elem_size);
     CHECK_ERR_FREE(count, tmp_buf);
-    nbytes = LZ4_compress(tmp_buf, *out, size * elem_size);
+    nbytes = LZ4_compress(tmp_buf, ((char*) *out) + 4, size * elem_size);
+    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
+    bshuf_write_uint32_BE(*out, nbytes);
+    nbytes += 4;
 
     //nbytes = bshuf_trans_bit_elem(*in, *out, size, elem_size);
 
@@ -1354,10 +1415,27 @@ int64_t bshuf_decompress_lz4_block(void** in, void** out, const size_t size,
     void* tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return -1;
 
-    nbytes = LZ4_decompress_fast(*in, tmp_buf, size * elem_size);
-    CHECK_ERR_FREE(nbytes, tmp_buf);
+    int32_t nbytes_from_header = bshuf_read_uint32_BE(*in);
+#ifdef BSHUF_LZ4_DECOMPRESS_FAST
+    nbytes = LZ4_decompress_fast(((char*) *in) + 4, tmp_buf, size * elem_size);
+    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
+    if (nbytes != nbytes_from_header) {
+        free(tmp_buf);
+        return -91;
+    }
+#else
+    nbytes = LZ4_decompress_safe(((char*) *in) + 4, tmp_buf, nbytes_from_header,
+                                 size * elem_size);
+    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
+    if (nbytes != size * elem_size) {
+        free(tmp_buf);
+        return -91;
+    }
+    nbytes = nbytes_from_header;
+#endif
     count = bshuf_untrans_bit_elem(tmp_buf, *out, size, elem_size);
     CHECK_ERR_FREE(count, tmp_buf);
+    nbytes += 4;
 
     //nbytes = bshuf_untrans_bit_elem(*in, *out, size, elem_size);
 
@@ -1388,6 +1466,8 @@ int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
 }
 
 
+
+
 #undef TRANS_BIT_8X8
 #undef TRANS_ELEM_TYPE
 #undef MIN
@@ -1395,6 +1475,7 @@ int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
 #undef CHECK_MULT_EIGHT
 #undef CHECK_ERR
 #undef CHECK_ERR_FREE
+#undef CHECK_ERR_FREE_LZ
 
 //#undef USESSE2
 //#undef USEAVX2

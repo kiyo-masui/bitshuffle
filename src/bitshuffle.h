@@ -6,10 +6,12 @@
  * if positive or an error code if negitive.
  *
  * Error codes:
- *      -11 : Missing SSE
- *      -12 : Missing AVX
- *      -80 : Input size not a multiple of 8.
- *      -81 : block_size not multiple of 8.
+ *      -11   : Missing SSE
+ *      -12   : Missing AVX
+ *      -80   : Input size not a multiple of 8.
+ *      -81   : block_size not multiple of 8.
+ *      -91   : Decompression error, wrong number of bytes processed.
+ *      -1XXX : Error internal to decompression routine with errorcode -X.
  */
 
 
