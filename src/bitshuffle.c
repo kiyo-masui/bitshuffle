@@ -11,6 +11,7 @@
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 #define CHECK_ERR(count) if (count < 0) { return count; }
 #define CHECK_ERR_FREE(count, buf) if (count < 0) { free(buf); return count; }
+//#define CHECK_ERR_FREE(count, buf) {}
 
 /* Functions giving telling what instructions set used at compile time. */
 int bshuf_using_SSE2(void) {
@@ -1332,8 +1333,11 @@ int64_t bshuf_compress_lz4_block(void** in, void** out, const size_t size,
     if (tmp_buf == NULL) return -1;
 
     count = bshuf_trans_bit_elem(*in, tmp_buf, size, elem_size);
-    if (count < 0) return count;
+    CHECK_ERR_FREE(count, tmp_buf);
     nbytes = LZ4_compress(tmp_buf, *out, size * elem_size);
+
+    //nbytes = bshuf_trans_bit_elem(*in, *out, size, elem_size);
+
     *in = (void*) (((char*) *in) + size * elem_size);
     *out = (void*) (((char*) *out) + nbytes);
 
@@ -1351,10 +1355,15 @@ int64_t bshuf_decompress_lz4_block(void** in, void** out, const size_t size,
     if (tmp_buf == NULL) return -1;
 
     nbytes = LZ4_decompress_fast(*in, tmp_buf, size * elem_size);
+    CHECK_ERR_FREE(nbytes, tmp_buf);
     count = bshuf_untrans_bit_elem(tmp_buf, *out, size, elem_size);
-    if (count < 0) return count;
+    CHECK_ERR_FREE(count, tmp_buf);
+
+    //nbytes = bshuf_untrans_bit_elem(*in, *out, size, elem_size);
+
     *in = (void*) (((char*) *in) + nbytes);
     *out = (void*) (((char*) *out) + size * elem_size);
+
 
     free(tmp_buf);
     return nbytes;

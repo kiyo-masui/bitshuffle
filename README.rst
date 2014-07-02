@@ -27,7 +27,7 @@ level, sophisticated entropy reducing compression libraries such as GZIP and
 BZIP are unlikely to achieve significantly better compression than simpler and
 faster duplicate-string-elimination algorithms such as LZF and LZ4. Bitshuffle
 thus includes routines (and HDF5 filter options) to apply LZ4 compression to
-each block after shuffling.
+each block after shuffling [2]_.
 
 The Bitshuffle algorithm relies on neighbouring elements of a dataset being
 highly correlated to improve data compression. Any correlations that span at
@@ -48,6 +48,8 @@ As a bonus, Bitshuffle ships with a dynamically loaded version of
 used outside of python and in command line utilities such as ``h5dump``.
 
 .. [1] Chosen to fit comfortably within L1 cache as well as be well matched window of the LZF compression library.
+
+.. [2] Over applying bitshuffle to the full dataset then applying LZ4 compression, this has the tremendous advantage that the block is already in the L1 cache.
 
 .. _`dynamically loaded filters`: http://www.hdfgroup.org/HDF5/doc/Advanced/DynamicallyLoadedFilters/HDF5DynamicallyLoadedFilters.pdf
 

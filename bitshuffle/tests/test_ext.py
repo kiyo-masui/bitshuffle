@@ -10,11 +10,13 @@ from bitshuffle import ext
 
 # If we are doing timeings and by what factor in increase workload.
 TIME = 0
+BLOCK = 1024
 
 
 TEST_DTYPES = [np.uint8, np.uint16, np.int32, np.uint64, np.float32,
                np.float64, np.complex128]
 TEST_DTYPES += ['a3', 'a5', 'a7', 'a9', 'a11', 'a12', 'a24', 'a48']
+
 
 class TestProfile(unittest.TestCase):
 
@@ -50,7 +52,9 @@ class TestProfile(unittest.TestCase):
             else:
                 raise
         delta_t = min(delta_ts)
-        size = self.data.size * self.data.dtype.itemsize
+        size_i = self.data.size * self.data.dtype.itemsize
+        size_o = out.size * out.dtype.itemsize
+        size = max([size_i, size_o])
         speed = (ext.REPEAT * size / delta_t / 1024**3)   # GB/s
         if TIME:
             print "%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1./speed, speed)
@@ -246,26 +250,26 @@ class TestProfile(unittest.TestCase):
     def test_9a_bitshuffle_64(self):
         self.case = "bitshuffle 64"
         self.data = self.data.view(np.float64)
-        self.fun = ext.bitshuffle
+        self.fun = lambda x: ext.bitshuffle(x, BLOCK)
 
     def test_9b_bitunshuffle_64(self):
         self.case = "bitunshuffle 64"
         pre_trans = self.data.view(np.float64)
-        self.data = ext.bitshuffle(pre_trans)
-        self.fun = ext.bitunshuffle
+        self.data = ext.bitshuffle(pre_trans, BLOCK)
+        self.fun = lambda x: ext.bitunshuffle(x, BLOCK)
         self.check_data = pre_trans
 
     def test_9c_compress_64(self):
         self.case = "compress 64"
         self.data = self.data.view(np.float64)
-        self.fun = lambda x:ext.compress_lz4(x)
+        self.fun = lambda x:ext.compress_lz4(x, BLOCK)
 
     def test_9d_decompress_64(self):
         self.case = "decompress 64"
         pre_trans = self.data.view(np.float64)
-        self.data = ext.compress_lz4(pre_trans)
+        self.data = ext.compress_lz4(pre_trans, BLOCK)
         self.fun = lambda x: ext.decompress_lz4(x, pre_trans.shape,
-                                                pre_trans.dtype)
+                                                pre_trans.dtype, BLOCK)
         self.check_data = pre_trans
 
 
