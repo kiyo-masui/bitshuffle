@@ -103,6 +103,10 @@ If using the dynamically loaded HDF5 filter, set the environment variable
 ``HDF5_PLUGIN_PATH`` to the value of ``--h5plugin-dir`` or use HDF5's default
 search location of ``/usr/local/hdf5/lib/plugin``.
 
+If you get an error about missing source files when building the extensions,
+try upgrading setuptools.  There is a weird bug where setuptools prior to 0.7
+doesn't work properly with Cython in some cases.
+
 
 Usage
 -----

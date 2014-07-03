@@ -1,6 +1,7 @@
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, Extension
 from setuptools.command.install import install as install_
 from Cython.Distutils import build_ext
+#from Cython.Build import cythonize
 import numpy as np
 # XXX h5py needs to be present to run setup.py. Can't be installed
 # automatically?
@@ -48,7 +49,7 @@ elif sys.platform.startswith('freebsd'):
 
 
 ext_bshuf = Extension("bitshuffle.ext",
-                   ["src/bitshuffle.c", "bitshuffle/ext.pyx", "lz4/lz4.c"],
+                   ["bitshuffle/ext.pyx", "src/bitshuffle.c", "lz4/lz4.c"],
                    include_dirs=INCLUDE_DIRS + [np.get_include(), "src/",
                                                 "lz4/"],
                    library_dirs = LIBRARY_DIRS,
@@ -105,6 +106,8 @@ else:
     H51811P = True
     EXTENSIONS = [ext_bshuf, h5filter, filter_plugin, lzf_plugin]
 
+#EXTENSIONS = cythonize(EXTENSIONS)
+
 
 # Custom installation to include installing dynamic filters.
 class install(install_):
@@ -153,11 +156,12 @@ setup(
     name = 'bitshuffle',
     version = VERSION,
 
-    packages = find_packages(),
+    packages = ['bitshuffle'],
     scripts=[],
     ext_modules = EXTENSIONS,
     cmdclass = {'build_ext': build_ext, 'install': install},
-    install_requires = ['numpy', 'h5py', 'Cython'],
+    #cmdclass = {'install': install},
+    install_requires = ['numpy', 'h5py', 'Cython', 'setuptools>=0.7'],
     #extras_require = {'H5':  ["h5py"]},
 
     # metadata for upload to PyPI
