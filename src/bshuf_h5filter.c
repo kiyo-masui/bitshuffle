@@ -37,8 +37,8 @@ herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
 
     nelements = 3 + nelements;
 
-    values[0] = BSHUF_H5FILTER_VERSION;
-    values[1] = BSHUF_VERSION;
+    values[0] = BSHUF_VERSION_MAJOR;
+    values[1] = BSHUF_VERSION_MINOR;
 
     elem_size = H5Tget_size(type);
     if(elem_size <= 0) {

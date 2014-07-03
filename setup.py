@@ -11,8 +11,19 @@ from os import path
 import shutil
 import glob
 
+VERSION_MAJOR = 0
+VERSION_MINOR = 1
+VERSION_POINT = 0
+VERSION = "%d.%d.%d" % (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
 
 COMPILE_FLAGS = ['-Ofast', '-march=native', '-std=c99', '-fopenmp']
+MACROS = [
+          ('BSHUF_VERSION_MAJOR', VERSION_MAJOR),
+          ('BSHUF_VERSION_MINOR', VERSION_MINOR),
+          ('BSHUF_VERSION_POINT', VERSION_POINT),
+          ]
+
+
 H5PLUGINS_DEFAULT = '/usr/local/hdf5/lib/plugin'
 
 # Copied from h5py.
@@ -38,6 +49,7 @@ ext_bshuf = Extension("bitshuffle.ext",
                    library_dirs = LIBRARY_DIRS,
                    depends=["src/bitshuffle.h", "lz4/lz4.h"],
                    extra_compile_args=COMPILE_FLAGS,
+                   define_macros=MACROS,
                    )
 
 
@@ -50,6 +62,7 @@ h5filter = Extension("bitshuffle.h5",
                             "lz4/lz4.h"],
                    libraries = ['hdf5'],
                    extra_compile_args=COMPILE_FLAGS,
+                   define_macros=MACROS,
                    )
 
 
@@ -62,13 +75,14 @@ filter_plugin = Extension("plugin.libh5bshuf",
                             "lz4/lz4.h"],
                    libraries = ['hdf5'],
                    extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
+                   define_macros=MACROS,
                    )
 
 
 lzf_plugin = Extension("plugin.libh5LZF",
                    ["src/lzf_h5plugin.c", "lzf/lzf_filter.c",
                     "lzf/lzf/lzf_c.c", "lzf/lzf/lzf_d.c"],
-                   depends=["src/bitshuffle.h", "lzf/lzf_filter.h",
+                   depends=["lzf/lzf_filter.h",
                             "lzf/lzf/lzf.h", "lzf/lzf/lzfP.h"],
                    include_dirs = INCLUDE_DIRS + ["lzf/", "lzf/lzf/"],
                    library_dirs = LIBRARY_DIRS,
@@ -132,7 +146,7 @@ class install(install_):
 
 setup(
     name = 'bitshuffle',
-    version = "0.1",
+    version = VERSION,
 
     packages = find_packages(),
     scripts=[],

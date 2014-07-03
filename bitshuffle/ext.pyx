@@ -23,6 +23,14 @@ cdef extern from "bitshuffle.h":
             int block_size)
     int bshuf_decompress_lz4(void *A, void *B, int size, int elem_size,
             int block_size)
+    int BSHUF_VERSION_MAJOR
+    int BSHUF_VERSION_MINOR
+    int BSHUF_VERSION_POINT
+
+
+__version__ = "%d.%d.%d" % (BSHUF_VERSION_MAJOR, BSHUF_VERSION_MINOR,
+        BSHUF_VERSION_POINT)
+
 
 # Prototypes from bitshuffle.c
 cdef extern int bshuf_copy(void *A, void *B, int size, int elem_size)

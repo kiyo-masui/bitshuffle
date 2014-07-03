@@ -43,8 +43,12 @@
 #include <emmintrin.h>
 #endif
 
+#ifndef BSHUF_VERSION_MAJOR
+#define BSHUF_VERSION_MAJOR 0
+#define BSHUF_VERSION_MINOR 1
+#define BSHUF_VERSION_POINT 0
+#endif
 
-#define BSHUF_VERSION 0
 
 /* --- bshuf_using_SSE2 ----
  *
