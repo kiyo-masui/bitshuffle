@@ -45,11 +45,10 @@ class TestProfile(unittest.TestCase):
                 out = self.fun(self.data)
                 delta_ts.append(time.time() - t0)
         except RuntimeError as err:
-
-            if (len(err.args) > 1 and (err.args[1] == 11)
+            if (len(err.args) > 1 and (err.args[1] == -11)
                 and not ext.using_SSE2()):
                 return
-            if (len(err.args) > 1 and (err.args[1] == 12)
+            if (len(err.args) > 1 and (err.args[1] == -12)
                 and not ext.using_AVX2()):
                 return
             else:
@@ -276,7 +275,6 @@ class TestProfile(unittest.TestCase):
         self.check_data = pre_trans
 
 
-
 class TestDevCases(unittest.TestCase):
 
     def deactivated_test_trans_bit_byte(self):
@@ -368,9 +366,11 @@ class TestOddLengths(unittest.TestCase):
                     ans = self.check(data).view(np.uint8)
                     self.assertTrue(np.all(out == ans))
         except RuntimeError as err:
-            if (err.args[1] == 11) and not ext.using_SSE2():
+            if (len(err.args) > 1 and (err.args[1] == -11)
+                and not ext.using_SSE2()):
                 return
-            if (err.args[1] == 12) and not ext.using_AVX2():
+            if (len(err.args) > 1 and (err.args[1] == -12)
+                and not ext.using_AVX2()):
                 return
             else:
                 raise

@@ -23,8 +23,13 @@ class TestFilterPlugins(unittest.TestCase):
         f = h5py.File(fname)
         tid = h5t.py_create(dtype, logical=1)
         sid = h5s.create_simple(shape, shape)
-        dcpl = filters.generate_dcpl(shape, dtype, chunks, None, None,
-                  None, None, None, None)
+        # Different API's for different h5py versions.
+        try:
+            dcpl = filters.generate_dcpl(shape, dtype, chunks, None, None,
+                      None, None, None, None)
+        except TypeError:
+            dcpl = filters.generate_dcpl(shape, dtype, chunks, None, None,
+                      None, None, None)
         dcpl.set_filter(32008, h5z.FLAG_MANDATORY)
         dcpl.set_filter(32000, h5z.FLAG_MANDATORY)
         dset_id = h5d.create(f.id, "range", tid, sid, dcpl=dcpl)
