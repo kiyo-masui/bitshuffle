@@ -1,6 +1,6 @@
 import numpy
 import h5py
-from h5py import h5d, h5s, h5t, filters
+from h5py import h5d, h5s, h5t, h5p, filters
 
 cimport cython
 
@@ -31,6 +31,9 @@ def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
     """Create a dataset with an arbitrary filter pipeline.
 
     Return a new low-level dataset identifier.
+
+    Much of this code is copied from h5py, but couldn't reuse much code due to
+    unstable API.
 
     """
 
@@ -69,8 +72,37 @@ def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
         dtype = numpy.dtype(dtype)
         tid = h5t.py_create(dtype, logical=1)
 
-    dcpl = filters.generate_dcpl(shape, dtype, chunks, None, None, None, 
-                                 None, maxshape, None)
+    if shape == ():
+        if any((chunks, filter_pipeline)):
+            raise TypeError("Scalar datasets don't support chunk/filter options")
+        if maxshape and maxshape != ():
+            raise TypeError("Scalar datasets cannot be extended")
+        return h5p.create(h5p.DATASET_CREATE)
+
+    def rq_tuple(tpl, name):
+        """ Check if chunks/maxshape match dataset rank """
+        if tpl in (None, True):
+            return
+        try:
+            tpl = tuple(tpl)
+        except TypeError:
+            raise TypeError('"%s" argument must be None or a sequence object' % name)
+        if len(tpl) != len(shape):
+            raise ValueError('"%s" must have same rank as dataset shape' % name)
+
+    rq_tuple(chunks, 'chunks')
+    rq_tuple(maxshape, 'maxshape')
+
+    if (chunks is True) or (chunks is None and filter_pipeline):
+        chunks = filters.guess_chunk(shape, maxshape, dtype.itemsize)
+
+    if maxshape is True:
+        maxshape = (None,)*len(shape)
+
+    dcpl = h5p.create(h5p.DATASET_CREATE)
+    if chunks is not None:
+        dcpl.set_chunk(chunks)
+        dcpl.set_fill_time(h5d.FILL_TIME_ALLOC)  # prevent resize glitch
 
     if fillvalue is not None:
         fillvalue = numpy.array(fillvalue)
@@ -102,7 +134,7 @@ def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
 
 
 def create_bitshuffle_lzf_dataset(parent, name, shape, dtype, chunks=None,
-                                  maxshape=None, fillvalue=None,
+                                   maxshape=None, fillvalue=None,
                                   track_times=None):
     """Create dataset with a filter pipeline includind bitshuffle and LZF"""
 
@@ -114,7 +146,7 @@ def create_bitshuffle_lzf_dataset(parent, name, shape, dtype, chunks=None,
 
 
 def create_bitshuffle_comressed_dataset(parent, name, shape, dtype, chunks=None,
-                                  maxshape=None, fillvalue=None,
+                                   maxshape=None, fillvalue=None,
                                   track_times=None):
     """Create dataset with bitshuffle+internal LZ4 compression."""
 
