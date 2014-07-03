@@ -163,28 +163,27 @@ size_t bshuf_compress_lz4_bound(const size_t size,
  *
  * Bitshuffled and compress the data using LZ4.
  *
- * Transpose within elements, in blocks of data of *block_size*
- * elements then compress the blocks using LZ4.
+ * Transpose within elements, in blocks of data of *block_size* elements then
+ * compress the blocks using LZ4.  In the output buffer, each block is prefixed
+ * by a 4 byte integer giving the compressed size of that block.
  *
- * Output buffer must be large enough to hold the compressed data.
- * This could be in principle substantially large than the input buffer.
- * Use the routine *bshuf_compress_lz4_bound* to get an upper limit.
+ * Output buffer must be large enough to hold the compressed data.  This could
+ * be in principle substantially large than the input buffer.  Use the routine
+ * *bshuf_compress_lz4_bound* to get an upper limit.
  *
  * Parameters
- * ----------
- *  in : input buffer, must be of size * elem_size bytes
- *  out : output buffer, must be large enough to hold data.
- *  size : number of elements in input
- *  elem_size : element size of typed data
- *  block_size : Process in blocks of this many elements
+ * ---------- in : input buffer, must be of size * elem_size bytes out : output
+ *  buffer, must be large enough to hold data.  size : number of elements in
+ *  input elem_size : element size of typed data block_size : Process in blocks
+ *  of this many elements
  *
  * Returns
- * -------
- *  number of bytes used in output buffer, negitive error-code if failed.
+ * ------- number of bytes used in output buffer, negitive error-code if
+ *  failed.
  *
  */
-int64_t bshuf_compress_lz4(void* in, void* out, const size_t size,
-        const size_t elem_size, size_t block_size);
+int64_t bshuf_compress_lz4(void* in, void* out, const size_t size, const size_t
+        elem_size, size_t block_size);
 
 
 /* ---- bshuf_decompress_lz4 ----

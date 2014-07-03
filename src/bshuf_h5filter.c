@@ -98,18 +98,23 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
     // User specified block size.
     if (cd_nelmts > 3) block_size = cd_values[3];
 
+    if (block_size == 0) block_size = bshuf_default_block_size(elem_size);
+
     // Compression in addition to bitshiffle.
     if (cd_nelmts > 4 && cd_values[4] == BSHUF_H5_COMPRESS_LZ4) {
         if (flags & H5Z_FLAG_REVERSE) {
             // First eight bytes is the number of bytes in the output buffer,
             // little endian.
             nbytes_uncomp = bshuf_read_uint64_BE(in_buf);
-            in_buf += 8;
+            // Override the block size with the one read from the header.
+            block_size = bshuf_read_uint32_BE((char*) in_buf + 8) / elem_size;
+            // Skip over the header.
+            in_buf += 12;
             buf_size_out = nbytes_uncomp;
         } else {
             nbytes_uncomp = nbytes;
             buf_size_out = bshuf_compress_lz4_bound(nbytes_uncomp / elem_size, 
-                    elem_size, block_size) + 8;
+                    elem_size, block_size) + 12;
         }
     } else {
         nbytes_uncomp = nbytes;
@@ -139,22 +144,24 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
             nbytes_out = nbytes_uncomp;
         } else {
             // Bit shuffle/compress.
+            // Write the header, described in
+            // http://www.hdfgroup.org/services/filters/HDF5_LZ4.pdf.
+            // Techincally we should be using signed integers instead of
+            // unsigned ones, however for valid inputs (positive numbers) these
+            // have the same representation.
             bshuf_write_uint64_BE(out_buf, nbytes_uncomp);
-            err = bshuf_compress_lz4(in_buf, (char*) out_buf + 8, size, elem_size, block_size);
-            nbytes_out = err + 8;
-        }
-    } else {
-        if (flags & H5Z_FLAG_REVERSE) {
+            bshuf_write_uint32_BE((char*) out_buf + 8, block_size * elem_size);
+            err = bshuf_compress_lz4(in_buf, (char*) out_buf + 12, size,
+                    elem_size, block_size); nbytes_out = err + 12; } } else {
+                if (flags & H5Z_FLAG_REVERSE) {
             // Bit unshuffle.
-            err = bshuf_bitunshuffle(in_buf, out_buf, size, elem_size, block_size);
-        } else {
+            err = bshuf_bitunshuffle(in_buf, out_buf, size, elem_size,
+                    block_size); } else {
             // Bit shuffle.
-            err = bshuf_bitshuffle(in_buf, out_buf, size, elem_size, block_size);
-        }
-        nbytes_out = nbytes;
-    }
-    //printf("nb_in %d, nb_uncomp %d, nb_out %d, buf_out %d\n", nbytes,
-    //       nbytes_uncomp, nbytes_out, buf_size_out);
+            err = bshuf_bitshuffle(in_buf, out_buf, size, elem_size,
+                    block_size); } nbytes_out = nbytes; }
+    //printf("nb_in %d, nb_uncomp %d, nb_out %d, buf_out %d, block %d\n",
+    //nbytes, nbytes_uncomp, nbytes_out, buf_size_out, block_size);
 
     if (err < 0) {
         sprintf(msg, "Error in bitshuffle with error code %d.", err);
