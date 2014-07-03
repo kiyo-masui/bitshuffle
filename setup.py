@@ -14,7 +14,12 @@ import glob
 VERSION_MAJOR = 0
 VERSION_MINOR = 1
 VERSION_POINT = 0
+VERSION_DEV = 1
+
 VERSION = "%d.%d.%d" % (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
+if VERSION_DEV:
+    VERSION = VERSION + ".dev%d" % VERSION_DEV
+
 
 COMPILE_FLAGS = ['-Ofast', '-march=native', '-std=c99', '-fopenmp']
 MACROS = [
