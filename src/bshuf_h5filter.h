@@ -13,6 +13,10 @@
  *      because it is done when the small block of data is already in the
  *      L1 cache.
  *
+ *      For LZ4 compression, the compressed format of the data is the same as
+ *      for the normal LZ4 filter described in
+ *      http://www.hdfgroup.org/services/filters/HDF5_LZ4.pdf.
+ *
  */
 
 

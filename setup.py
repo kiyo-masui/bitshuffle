@@ -12,7 +12,7 @@ import shutil
 import glob
 
 
-COMPILE_FLAGS = ['-Ofast', '-march=native', '-std=c99']
+COMPILE_FLAGS = ['-Ofast', '-march=native', '-std=c99', '-fopenmp']
 H5PLUGINS_DEFAULT = '/usr/local/hdf5/lib/plugin'
 
 # Copied from h5py.
