@@ -99,7 +99,8 @@ To install::
 
     python setup.py install [--h5plugin [--h5plugin-dir=spam]]
 
-If using the dynamically loaded HDF5 filter, set the environment variable
+If using the dynamically loaded HDF5 filter (which gives you access to the
+Bitshuffle and LZF filters outside of python), set the environment variable
 ``HDF5_PLUGIN_PATH`` to the value of ``--h5plugin-dir`` or use HDF5's default
 search location of ``/usr/local/hdf5/lib/plugin``.
 
