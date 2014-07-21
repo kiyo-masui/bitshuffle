@@ -14,7 +14,7 @@ import glob
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 1
-VERSION_POINT = 0
+VERSION_POINT = 2
 VERSION_DEV = 1
 
 VERSION = "%d.%d.%d" % (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
@@ -161,7 +161,8 @@ setup(
     ext_modules = EXTENSIONS,
     cmdclass = {'build_ext': build_ext, 'install': install},
     #cmdclass = {'install': install},
-    install_requires = ['numpy', 'h5py', 'Cython', 'setuptools>=0.7'],
+    #install_requires = ['numpy', 'h5py', 'Cython', 'setuptools>=0.7'],
+    install_requires = ['numpy', 'h5py', 'Cython'],
     #extras_require = {'H5':  ["h5py"]},
 
     # metadata for upload to PyPI
