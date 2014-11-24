@@ -57,7 +57,7 @@ int64_t bshuf_copy(void* in, void* out, const size_t size,
 }
 
 
-/* Transpose bytes withing elements, starting partway through input. */
+/* Transpose bytes within elements, starting partway through input. */
 int64_t bshuf_trans_byte_elem_remainder(void* in, void* out, const size_t size,
          const size_t elem_size, const size_t start) {
 
@@ -802,7 +802,6 @@ int64_t bshuf_untrans_bit_elem_SSE(void* in, void* out, const size_t size,
     void* tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return -1;
 
-    // Should acctually check errors individually.
     count = bshuf_trans_byte_bitrow_SSE(in, tmp_buf, size, elem_size);
     CHECK_ERR_FREE(count, tmp_buf);
     count =  bshuf_shuffle_bit_eightelem_SSE(tmp_buf, out, size, elem_size);
@@ -1167,7 +1166,6 @@ int64_t bshuf_trans_bit_elem_AVX(void* in, void* out, const size_t size,
     void* tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return 1;
 
-    // Should acctually check errors individually.
     count = bshuf_trans_byte_elem_SSE(in, out, size, elem_size);
     CHECK_ERR_FREE(count, tmp_buf);
     count = bshuf_trans_bit_byte_AVX(out, tmp_buf, size, elem_size);
@@ -1179,7 +1177,291 @@ int64_t bshuf_trans_bit_elem_AVX(void* in, void* out, const size_t size,
     return count;
 }
 
+
+int64_t bshuf_untrans_bit_byte_AVX(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    CHECK_MULT_EIGHT(size);
+
+    char* in_b = (char*) in;
+    char* out_b = (char*) out;
+    //uint32_t* out_ui32 = (uint32_t*) out;
+
+    size_t nbyte = elem_size * size;
+    size_t brow = size / 8;    // Bytes in a "bitrow".
+    size_t start_ind;
+
+    __m256i ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7, ymm8, ymm9, ymm10,
+            ymm11, ymm12, ymm13, ymm14, ymm15;
+
+    int i0, i1, i2, i3, i4, i5, i6, i7;
+
+    // Loop over bytes within elements.
+    for (size_t ii = 0; ii < elem_size; ii += 1) {
+        // Loop over elements in groups of 256 (packed into 23 bytes).
+        for (size_t jj = 0; jj + 31 < size / 8; jj += 32) {
+            // Load.
+            start_ind = ii * size + jj;
+            ymm0 = _mm256_loadu_si256((__m256i *) &in_b[start_ind + 0 * brow]);
+            ymm1 = _mm256_loadu_si256((__m256i *) &in_b[start_ind + 1 * brow]);
+            ymm2 = _mm256_loadu_si256((__m256i *) &in_b[start_ind + 2 * brow]);
+            ymm3 = _mm256_loadu_si256((__m256i *) &in_b[start_ind + 3 * brow]);
+            ymm4 = _mm256_loadu_si256((__m256i *) &in_b[start_ind + 4 * brow]);
+            ymm5 = _mm256_loadu_si256((__m256i *) &in_b[start_ind + 5 * brow]);
+            ymm6 = _mm256_loadu_si256((__m256i *) &in_b[start_ind + 6 * brow]);
+            ymm7 = _mm256_loadu_si256((__m256i *) &in_b[start_ind + 7 * brow]);
+
+            // Lace 8 rows together for grouping into bytes.
+            ymm8 = _mm256_unpacklo_epi8(ymm0, ymm1);
+            ymm9 = _mm256_unpacklo_epi8(ymm2, ymm3);
+            ymm10 = _mm256_unpacklo_epi8(ymm4, ymm5);
+            ymm11 = _mm256_unpacklo_epi8(ymm6, ymm7);
+            ymm12 = _mm256_unpackhi_epi8(ymm0, ymm1);
+            ymm13 = _mm256_unpackhi_epi8(ymm2, ymm3);
+            ymm14 = _mm256_unpackhi_epi8(ymm4, ymm5);
+            ymm15 = _mm256_unpackhi_epi8(ymm6, ymm7);
+
+            ymm0 = _mm256_unpacklo_epi16(ymm8, ymm9);
+            ymm1 = _mm256_unpacklo_epi16(ymm10, ymm11);
+            ymm2 = _mm256_unpackhi_epi16(ymm8, ymm9);
+            ymm3 = _mm256_unpackhi_epi16(ymm10, ymm11);
+
+            ymm4 = _mm256_unpacklo_epi16(ymm12, ymm13);
+            ymm5 = _mm256_unpacklo_epi16(ymm14, ymm15);
+            ymm6 = _mm256_unpackhi_epi16(ymm12, ymm13);
+            ymm7 = _mm256_unpackhi_epi16(ymm14, ymm15);
+
+            ymm8 = _mm256_unpacklo_epi32(ymm0, ymm1);
+            ymm9 = _mm256_unpackhi_epi32(ymm0, ymm1);
+
+            ymm10 = _mm256_unpacklo_epi32(ymm2, ymm3);
+            ymm11 = _mm256_unpackhi_epi32(ymm2, ymm3);
+
+            ymm12 = _mm256_unpacklo_epi32(ymm4, ymm5);
+            ymm13 = _mm256_unpackhi_epi32(ymm4, ymm5);
+
+            ymm14 = _mm256_unpacklo_epi32(ymm6, ymm7);
+            ymm15 = _mm256_unpackhi_epi32(ymm6, ymm7);
+
+            // Bit transpose.
+            i0 = _mm256_movemask_epi8(ymm8);
+            i1 = _mm256_movemask_epi8(ymm9);
+            i2 = _mm256_movemask_epi8(ymm10);
+            i3 = _mm256_movemask_epi8(ymm11);
+            i4 = _mm256_movemask_epi8(ymm12);
+            i5 = _mm256_movemask_epi8(ymm13);
+            i6 = _mm256_movemask_epi8(ymm14);
+            i7 = _mm256_movemask_epi8(ymm15);
+            ymm8 = _mm256_slli_epi16(ymm8, 1);
+            ymm9 = _mm256_slli_epi16(ymm9, 1);
+            ymm10 = _mm256_slli_epi16(ymm10, 1);
+            ymm11 = _mm256_slli_epi16(ymm11, 1);
+            ymm12 = _mm256_slli_epi16(ymm12, 1);
+            ymm13 = _mm256_slli_epi16(ymm13, 1);
+            ymm14 = _mm256_slli_epi16(ymm14, 1);
+            ymm15 = _mm256_slli_epi16(ymm15, 1);
+            // Weird order here is because the 256 bit instructions act as two
+            // 128 bit instructions instead of on the whole register.
+            ymm7 = _mm256_set_epi32(i7, i5, i3, i1, i6, i4, i2, i0);
+
+            i0 = _mm256_movemask_epi8(ymm8);
+            i1 = _mm256_movemask_epi8(ymm9);
+            i2 = _mm256_movemask_epi8(ymm10);
+            i3 = _mm256_movemask_epi8(ymm11);
+            i4 = _mm256_movemask_epi8(ymm12);
+            i5 = _mm256_movemask_epi8(ymm13);
+            i6 = _mm256_movemask_epi8(ymm14);
+            i7 = _mm256_movemask_epi8(ymm15);
+            ymm8 = _mm256_slli_epi16(ymm8, 1);
+            ymm9 = _mm256_slli_epi16(ymm9, 1);
+            ymm10 = _mm256_slli_epi16(ymm10, 1);
+            ymm11 = _mm256_slli_epi16(ymm11, 1);
+            ymm12 = _mm256_slli_epi16(ymm12, 1);
+            ymm13 = _mm256_slli_epi16(ymm13, 1);
+            ymm14 = _mm256_slli_epi16(ymm14, 1);
+            ymm15 = _mm256_slli_epi16(ymm15, 1);
+            ymm6 = _mm256_set_epi32(i7, i5, i3, i1, i6, i4, i2, i0);
+
+            i0 = _mm256_movemask_epi8(ymm8);
+            i1 = _mm256_movemask_epi8(ymm9);
+            i2 = _mm256_movemask_epi8(ymm10);
+            i3 = _mm256_movemask_epi8(ymm11);
+            i4 = _mm256_movemask_epi8(ymm12);
+            i5 = _mm256_movemask_epi8(ymm13);
+            i6 = _mm256_movemask_epi8(ymm14);
+            i7 = _mm256_movemask_epi8(ymm15);
+            ymm8 = _mm256_slli_epi16(ymm8, 1);
+            ymm9 = _mm256_slli_epi16(ymm9, 1);
+            ymm10 = _mm256_slli_epi16(ymm10, 1);
+            ymm11 = _mm256_slli_epi16(ymm11, 1);
+            ymm12 = _mm256_slli_epi16(ymm12, 1);
+            ymm13 = _mm256_slli_epi16(ymm13, 1);
+            ymm14 = _mm256_slli_epi16(ymm14, 1);
+            ymm15 = _mm256_slli_epi16(ymm15, 1);
+            ymm5 = _mm256_set_epi32(i7, i5, i3, i1, i6, i4, i2, i0);
+
+            i0 = _mm256_movemask_epi8(ymm8);
+            i1 = _mm256_movemask_epi8(ymm9);
+            i2 = _mm256_movemask_epi8(ymm10);
+            i3 = _mm256_movemask_epi8(ymm11);
+            i4 = _mm256_movemask_epi8(ymm12);
+            i5 = _mm256_movemask_epi8(ymm13);
+            i6 = _mm256_movemask_epi8(ymm14);
+            i7 = _mm256_movemask_epi8(ymm15);
+            ymm8 = _mm256_slli_epi16(ymm8, 1);
+            ymm9 = _mm256_slli_epi16(ymm9, 1);
+            ymm10 = _mm256_slli_epi16(ymm10, 1);
+            ymm11 = _mm256_slli_epi16(ymm11, 1);
+            ymm12 = _mm256_slli_epi16(ymm12, 1);
+            ymm13 = _mm256_slli_epi16(ymm13, 1);
+            ymm14 = _mm256_slli_epi16(ymm14, 1);
+            ymm15 = _mm256_slli_epi16(ymm15, 1);
+            ymm4 = _mm256_set_epi32(i7, i5, i3, i1, i6, i4, i2, i0);
+
+            i0 = _mm256_movemask_epi8(ymm8);
+            i1 = _mm256_movemask_epi8(ymm9);
+            i2 = _mm256_movemask_epi8(ymm10);
+            i3 = _mm256_movemask_epi8(ymm11);
+            i4 = _mm256_movemask_epi8(ymm12);
+            i5 = _mm256_movemask_epi8(ymm13);
+            i6 = _mm256_movemask_epi8(ymm14);
+            i7 = _mm256_movemask_epi8(ymm15);
+            ymm8 = _mm256_slli_epi16(ymm8, 1);
+            ymm9 = _mm256_slli_epi16(ymm9, 1);
+            ymm10 = _mm256_slli_epi16(ymm10, 1);
+            ymm11 = _mm256_slli_epi16(ymm11, 1);
+            ymm12 = _mm256_slli_epi16(ymm12, 1);
+            ymm13 = _mm256_slli_epi16(ymm13, 1);
+            ymm14 = _mm256_slli_epi16(ymm14, 1);
+            ymm15 = _mm256_slli_epi16(ymm15, 1);
+            ymm3 = _mm256_set_epi32(i7, i5, i3, i1, i6, i4, i2, i0);
+
+            i0 = _mm256_movemask_epi8(ymm8);
+            i1 = _mm256_movemask_epi8(ymm9);
+            i2 = _mm256_movemask_epi8(ymm10);
+            i3 = _mm256_movemask_epi8(ymm11);
+            i4 = _mm256_movemask_epi8(ymm12);
+            i5 = _mm256_movemask_epi8(ymm13);
+            i6 = _mm256_movemask_epi8(ymm14);
+            i7 = _mm256_movemask_epi8(ymm15);
+            ymm8 = _mm256_slli_epi16(ymm8, 1);
+            ymm9 = _mm256_slli_epi16(ymm9, 1);
+            ymm10 = _mm256_slli_epi16(ymm10, 1);
+            ymm11 = _mm256_slli_epi16(ymm11, 1);
+            ymm12 = _mm256_slli_epi16(ymm12, 1);
+            ymm13 = _mm256_slli_epi16(ymm13, 1);
+            ymm14 = _mm256_slli_epi16(ymm14, 1);
+            ymm15 = _mm256_slli_epi16(ymm15, 1);
+            ymm2 = _mm256_set_epi32(i7, i5, i3, i1, i6, i4, i2, i0);
+
+            i0 = _mm256_movemask_epi8(ymm8);
+            i1 = _mm256_movemask_epi8(ymm9);
+            i2 = _mm256_movemask_epi8(ymm10);
+            i3 = _mm256_movemask_epi8(ymm11);
+            i4 = _mm256_movemask_epi8(ymm12);
+            i5 = _mm256_movemask_epi8(ymm13);
+            i6 = _mm256_movemask_epi8(ymm14);
+            i7 = _mm256_movemask_epi8(ymm15);
+            ymm8 = _mm256_slli_epi16(ymm8, 1);
+            ymm9 = _mm256_slli_epi16(ymm9, 1);
+            ymm10 = _mm256_slli_epi16(ymm10, 1);
+            ymm11 = _mm256_slli_epi16(ymm11, 1);
+            ymm12 = _mm256_slli_epi16(ymm12, 1);
+            ymm13 = _mm256_slli_epi16(ymm13, 1);
+            ymm14 = _mm256_slli_epi16(ymm14, 1);
+            ymm15 = _mm256_slli_epi16(ymm15, 1);
+            ymm1 = _mm256_set_epi32(i7, i5, i3, i1, i6, i4, i2, i0);
+
+            i0 = _mm256_movemask_epi8(ymm8);
+            i1 = _mm256_movemask_epi8(ymm9);
+            i2 = _mm256_movemask_epi8(ymm10);
+            i3 = _mm256_movemask_epi8(ymm11);
+            i4 = _mm256_movemask_epi8(ymm12);
+            i5 = _mm256_movemask_epi8(ymm13);
+            i6 = _mm256_movemask_epi8(ymm14);
+            i7 = _mm256_movemask_epi8(ymm15);
+            ymm0 = _mm256_set_epi32(i7, i5, i3, i1, i6, i4, i2, i0);
+
+            // Lace bytes together in proper order.
+            ymm8 = _mm256_unpacklo_epi8(ymm0, ymm1);
+            ymm9 = _mm256_unpacklo_epi8(ymm2, ymm3);
+            ymm10 = _mm256_unpacklo_epi8(ymm4, ymm5);
+            ymm11 = _mm256_unpacklo_epi8(ymm6, ymm7);
+            ymm12 = _mm256_unpackhi_epi8(ymm0, ymm1);
+            ymm13 = _mm256_unpackhi_epi8(ymm2, ymm3);
+            ymm14 = _mm256_unpackhi_epi8(ymm4, ymm5);
+            ymm15 = _mm256_unpackhi_epi8(ymm6, ymm7);
+
+            ymm0 = _mm256_unpacklo_epi16(ymm8, ymm9);
+            ymm1 = _mm256_unpacklo_epi16(ymm10, ymm11);
+            ymm2 = _mm256_unpackhi_epi16(ymm8, ymm9);
+            ymm3 = _mm256_unpackhi_epi16(ymm10, ymm11);
+
+            ymm4 = _mm256_unpacklo_epi16(ymm12, ymm13);
+            ymm5 = _mm256_unpacklo_epi16(ymm14, ymm15);
+            ymm6 = _mm256_unpackhi_epi16(ymm12, ymm13);
+            ymm7 = _mm256_unpackhi_epi16(ymm14, ymm15);
+
+            ymm8 = _mm256_unpacklo_epi32(ymm0, ymm1);
+            ymm9 = _mm256_unpackhi_epi32(ymm0, ymm1);
+
+            ymm10 = _mm256_unpacklo_epi32(ymm2, ymm3);
+            ymm11 = _mm256_unpackhi_epi32(ymm2, ymm3);
+
+            ymm12 = _mm256_unpacklo_epi32(ymm4, ymm5);
+            ymm13 = _mm256_unpackhi_epi32(ymm4, ymm5);
+
+            ymm14 = _mm256_unpacklo_epi32(ymm6, ymm7);
+            ymm15 = _mm256_unpackhi_epi32(ymm6, ymm7);
+
+            // Store.
+            start_ind = ii * size + jj * 8;
+            _mm256_storeu_si256((__m256i *) &out_b[start_ind + 0 * 32], ymm8);
+            _mm256_storeu_si256((__m256i *) &out_b[start_ind + 1 * 32], ymm10);
+            _mm256_storeu_si256((__m256i *) &out_b[start_ind + 2 * 32], ymm12);
+            _mm256_storeu_si256((__m256i *) &out_b[start_ind + 3 * 32], ymm14);
+            _mm256_storeu_si256((__m256i *) &out_b[start_ind + 4 * 32], ymm9);
+            _mm256_storeu_si256((__m256i *) &out_b[start_ind + 5 * 32], ymm11);
+            _mm256_storeu_si256((__m256i *) &out_b[start_ind + 6 * 32], ymm13);
+            _mm256_storeu_si256((__m256i *) &out_b[start_ind + 7 * 32], ymm15);
+
+        }
+    }
+
+    return nbyte;
+}
+
+
+int64_t bshuf_untrans_bit_elem_AVX(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    int64_t count;
+
+    CHECK_MULT_EIGHT(size);
+
+    // XXX handle better.
+    if (elem_size % 4) return -1;
+
+    void* tmp_buf = malloc(size * elem_size);
+    if (tmp_buf == NULL) return -1;
+
+    /*
+    count = bshuf_trans_byte_bitrow_SSE(in, tmp_buf, size, elem_size);
+    CHECK_ERR_FREE(count, tmp_buf);
+    count =  bshuf_shuffle_bit_eightelem_AVX(tmp_buf, out, size, elem_size);
+
+    free(tmp_buf);
+    return count;
+    */
+
+    count = bshuf_untrans_bit_byte_AVX(in, out, size, elem_size);
+    CHECK_ERR_FREE(count, tmp_buf);
+
+    return count;
+}
+
 #else // #ifdef USEAVX2
+
 
 int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size,
          const size_t elem_size) {
@@ -1197,6 +1479,17 @@ int64_t bshuf_trans_bit_elem_AVX(void* in, void* out, const size_t size,
          const size_t elem_size) {
     return -12;
 }
+
+int64_t bshuf_untrans_bit_byte_AVX(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+    return -12;
+}
+
+int64_t bshuf_untrans_bit_elem_AVX(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+    return -12;
+}
+
 
 #endif // #ifdef USEAVX2
 
@@ -1223,7 +1516,7 @@ int64_t bshuf_untrans_bit_elem(void* in, void* out, const size_t size,
 
     int64_t count;
 #ifdef USEAVX2
-    //return bshuf_untrans_bit_elem_AVX(in, out, size, elem_size);
+    //count = bshuf_untrans_bit_elem_AVX(in, out, size, elem_size);
     count = bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
 #elif defined(USESSE2)
     count = bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
