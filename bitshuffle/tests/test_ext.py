@@ -186,13 +186,27 @@ class TestProfile(unittest.TestCase):
         self.check = trans_bit_elem
 
     def test_05a_untrans_bit_byte_32(self):
+        self.case = "bit U byte scal 32"
+        pre_trans = self.data.view(np.int32)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_byte_scal
+        self.check_data = trans_byte_elem(pre_trans)
+
+    def test_05b_untrans_bit_byte_64(self):
+        self.case = "bit U byte scal 64"
+        pre_trans = self.data.view(np.int64)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_byte_scal
+        self.check_data = trans_byte_elem(pre_trans)
+
+    def test_05c_untrans_bit_byte_32(self):
         self.case = "bit U byte AVX 32"
         pre_trans = self.data.view(np.int32)
         self.data = trans_bit_elem(pre_trans)
         self.fun = ext.untrans_bit_byte_AVX
         self.check_data = trans_byte_elem(pre_trans)
 
-    def test_05b_untrans_bit_byte_64(self):
+    def test_05d_untrans_bit_byte_64(self):
         self.case = "bit U byte AVX 64"
         pre_trans = self.data.view(np.int64)
         self.data = trans_bit_elem(pre_trans)
@@ -264,11 +278,6 @@ class TestProfile(unittest.TestCase):
         self.data = self.data.view(np.float64)
         self.fun = ext.shuffle_bit_eightelem_SSE
 
-    def test_08b_shuffle_bit_eight_AVX_64(self):
-        self.case = "bit S eight AVX 64"
-        self.data = self.data.view(np.float64)
-        self.fun = ext.shuffle_bit_eightelem_AVX
-
     def test_09a_trans_bit_elem_64(self):
         self.case = "bit T elem 64"
         self.data = self.data.view(np.float64)
@@ -310,14 +319,14 @@ class TestProfile(unittest.TestCase):
 
 class TestDevCases(unittest.TestCase):
 
-    def deactivated_test_untrans_bit_byte(self):
-        d = np.arange(256, dtype=np.uint8)
-        d = trans_bit_byte(d)
-        d.shape = (8, 32)
+    def deactivate_test_untrans_bit_byte(self):
+        d = np.arange(32, dtype=np.uint16)
+        d = random.randint(0, 2**7, 256).astype(np.uint16)
+        d1 = ext.trans_bit_elem(d)
         #print d
-        t = ext.untrans_bit_byte_AVX(d)
-        t.shape = (8, 32)
-        print t
+        t = ext.untrans_bit_byte_scal(d1)
+        print np.reshape(trans_byte_elem(d).view(np.uint8), (16, 32))
+        print np.reshape(t.view(np.uint8), (16, 32))
 
     def deactivated_test_trans_bit_byte(self):
         d = np.arange(16, dtype=np.uint16)

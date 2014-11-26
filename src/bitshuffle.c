@@ -1,7 +1,7 @@
 #include "bitshuffle.h"
 
 
-
+// Constants.
 #define BSHUF_MIN_RECOMMEND_BLOCK 128
 #define BSHUF_BLOCKED_MULT 8    // Block sizes must be multiple of this.
 #define BSHUF_TARGET_BLOCK_SIZE_B 8192
@@ -9,6 +9,7 @@
 #define BSHUF_LZ4_DECOMPRESS_FAST
 
 
+// Macros.
 #define CHECK_MULT_EIGHT(n) if (n % 8) return -80;
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
@@ -19,7 +20,8 @@
 //#define CHECK_ERR_FREE(count, buf) {}
 
 
-/* Functions giving telling what instructions set used at compile time. */
+/* Functions telling what instructions set used at compile time. */
+
 int bshuf_using_SSE2(void) {
 #ifdef USESSE2
     return 1;
@@ -105,8 +107,7 @@ int64_t bshuf_trans_byte_elem_scal(void* in, void* out, const size_t size,
     }
 
 
-/* Transpose bits within bytes. Does not use x86 specific instructions.
- * Code from the Hacker's Delight. */
+/* Transpose bits within bytes. Does not use x86 specific instructions. */
 int64_t bshuf_trans_bit_byte_remainder(void* in, void* out, const size_t size,
          const size_t elem_size, const size_t start_byte) {
 
@@ -133,8 +134,7 @@ int64_t bshuf_trans_bit_byte_remainder(void* in, void* out, const size_t size,
 }
 
 
-/* Transpose bits within bytes. Does not use x86 specific instructions.
- * Code from the Hacker's Delight. */
+/* Transpose bits within bytes. Does not use x86 specific instructions. */
 int64_t bshuf_trans_bit_byte_scal(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
@@ -142,8 +142,45 @@ int64_t bshuf_trans_bit_byte_scal(void* in, void* out, const size_t size,
 }
 
 
-/* Transpose bits within bytes. Does not use x86 specific instructions.
- * Code from the Hacker's Delight. */
+/* Untranspose bits within bytes. Does not use x86 specific instructions. */
+int64_t bshuf_untrans_bit_byte_remainder(void* in, void* out, const size_t size,
+         const size_t elem_size, const size_t start) {
+
+    uint8_t* A = in;
+    uint64_t* B = out;
+
+    CHECK_MULT_EIGHT(size);
+    CHECK_MULT_EIGHT(start);
+
+    size_t nbyte = elem_size * size;
+    size_t nbyte_bitrow = size / 8;
+
+    uint64_t x, t;
+
+    for (size_t jj = 0; jj < elem_size; jj ++) {
+        for (size_t ii = start / 8; ii < size / 8; ii ++) {
+            x = 0;
+            for (int kk = 0; kk < 8; kk ++) {
+                x = x << 8;
+                x += A[jj * size + (7 - kk) * nbyte_bitrow + ii];
+            }
+            TRANS_BIT_8X8(x, t);
+            B[jj * size / 8 + ii] = x;
+        }
+    }
+    return size * elem_size;
+}
+
+
+/* Untranspose bits within bytes. Does not use x86 specific instructions. */
+int64_t bshuf_untrans_bit_byte_scal(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    return bshuf_untrans_bit_byte_remainder(in, out, size, elem_size, 0);
+}
+
+
+/* Transpose bits within bytes. Does not use x86 specific instructions. */
 int64_t bshuf_trans_bit_byte_scal_unrolled(void* in, void* out,
         const size_t size, const size_t elem_size) {
 
@@ -275,7 +312,7 @@ int64_t bshuf_trans_elem(void* in, void* out, const size_t lda, const size_t ldb
 }
 
 
-/* Transpose rows of shiffled bits (size / 8 bytes) within groups of 8. */
+/* Transpose rows of shuffled bits (size / 8 bytes) within groups of 8. */
 int64_t bshuf_trans_bitrow_eight(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
@@ -305,8 +342,6 @@ int64_t bshuf_trans_byte_bitrow(void* in, void* out, const size_t size,
     }
     return size * elem_size;
 }
-
-
 
 
 /* ---- Code that requires SSE2. x86 architectures post Pentium 4. ---- */
@@ -1198,7 +1233,7 @@ int64_t bshuf_untrans_bit_byte_AVX(void* in, void* out, const size_t size,
 
     // Loop over bytes within elements.
     for (size_t ii = 0; ii < elem_size; ii += 1) {
-        // Loop over elements in groups of 256 (packed into 23 bytes).
+        // Loop over elements in groups of 256 (packed into 32 bytes).
         for (size_t jj = 0; jj + 31 < size / 8; jj += 32) {
             // Load.
             start_ind = ii * size + jj;
