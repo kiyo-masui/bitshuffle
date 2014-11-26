@@ -59,16 +59,49 @@ int64_t bshuf_copy(void* in, void* out, const size_t size,
 }
 
 
+#define TRANS_BYTE_ELEM_SIZE(A, B, size, elem_size, start) {                \
+        for (size_t ii = start; ii + 15 < size; ii += 16) {                 \
+                for (size_t jj = 0; jj < elem_size; jj++) {                 \
+            for (size_t kk = 0; kk < 16; kk++) {                            \
+                    B[jj * size + ii + kk]                                  \
+                        = A[ii * elem_size + kk * elem_size + jj];          \
+                }                                                           \
+            }                                                               \
+        }                                                                   \
+        for (size_t ii = size - size % 16; ii < size; ii ++) {              \
+            for (size_t jj = 0; jj < elem_size; jj++) {                     \
+                B[jj * size + ii] = A[ii * elem_size + jj];                 \
+            }                                                               \
+        }                                                                   \
+    }
+
 /* Transpose bytes within elements, starting partway through input. */
 int64_t bshuf_trans_byte_elem_remainder(void* in, void* out, const size_t size,
          const size_t elem_size, const size_t start) {
 
-    char* A = (char*) in;
-    char* B = (char*) out;
+    char* restrict A = (char*) in;
+    char* restrict B = (char*) out;
 
     CHECK_MULT_EIGHT(start);
 
     if (size > start) {
+        switch (elem_size) {
+            case 4:
+                TRANS_BYTE_ELEM_SIZE(A, B, size, 4, start);
+                break;
+            case 8:
+                TRANS_BYTE_ELEM_SIZE(A, B, size, 8, start);
+                break;
+            case 12:
+                TRANS_BYTE_ELEM_SIZE(A, B, size, 12, start);
+                break;
+            case 16:
+                TRANS_BYTE_ELEM_SIZE(A, B, size, 16, start);
+                break;
+            default:
+                TRANS_BYTE_ELEM_SIZE(A, B, size, elem_size, start);
+        }
+        /*
         // ii loop separated into 2 loops so the compiler can unroll
         // the inner one.
         for (size_t ii = start; ii + 7 < size; ii += 8) {
@@ -84,6 +117,7 @@ int64_t bshuf_trans_byte_elem_remainder(void* in, void* out, const size_t size,
                 B[jj * size + ii] = A[ii * elem_size + jj];
             }
         }
+        */
     }
     return size * elem_size;
 }
@@ -97,6 +131,45 @@ int64_t bshuf_trans_byte_elem_scal(void* in, void* out, const size_t size,
 }
 
 
+/* Inverse of above functions. */
+int64_t bshuf_untrans_byte_elem_remainder(void* in, void* out, const size_t size,
+         const size_t elem_size, const size_t start) {
+
+    char* A = (char*) in;
+    char* B = (char*) out;
+
+    CHECK_MULT_EIGHT(start);
+
+    if (size > start) {
+        // ii loop separated into 2 loops so the compiler can unroll
+        // the inner one.
+        for (size_t ii = start; ii + 7 < size; ii += 8) {
+            for (size_t jj = 0; jj < elem_size; jj++) {
+                for (size_t kk = 0; kk < 8; kk++) {
+                    B[ii * elem_size + kk * elem_size + jj]
+                        = A[jj * size + ii + kk];
+                }
+            }
+        }
+        for (size_t ii = size - size % 8; ii < size; ii ++) {
+            for (size_t jj = 0; jj < elem_size; jj++) {
+                B[ii * elem_size + jj] = A[jj * size + ii];
+            }
+        }
+    }
+    return size * elem_size;
+}
+
+
+int64_t bshuf_untrans_byte_elem_scal(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    return bshuf_untrans_byte_elem_remainder(in, out, size, elem_size, 0);
+}
+
+
+/* Transpose 8x8 bit array packed into a single 64 bit number `x`.
+ * `t` is workspace. Code from Hacker's Delight. */
 #define TRANS_BIT_8X8(x, t) {                                               \
         t = (x ^ (x >> 7)) & 0x00AA00AA00AA00AALL;                          \
         x = x ^ t ^ (t << 7);                                               \
@@ -1464,6 +1537,64 @@ int64_t bshuf_untrans_bit_byte_AVX(void* in, void* out, const size_t size,
     }
 
     return nbyte;
+}
+
+
+/* Untranspose bytes within elements using best SSE algorithm available. */
+int64_t bshuf_untrans_byte_elem_AVX(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    int64_t count;
+
+    // Trivial cases: power of 2 bytes.
+    switch (elem_size) {
+        case 1:
+            count = bshuf_copy(in, out, size, elem_size);
+            return count;
+        case 2:
+            count = bshuf_trans_byte_elem_SSE_16(in, out, size);
+            return count;
+        case 4:
+            count = bshuf_trans_byte_elem_SSE_32(in, out, size);
+            return count;
+        case 8:
+            count = bshuf_trans_byte_elem_SSE_64(in, out, size);
+            return count;
+    }
+
+    // Worst case: odd number of bytes. Turns out that this is faster for
+    // (odd * 2) byte elements as well (hense % 4).
+    if (elem_size % 4) {
+        count = bshuf_trans_byte_elem_scal(in, out, size, elem_size);
+        return count;
+    }
+
+    // Multiple of power of 2: transpose hierarchically.
+    {
+        size_t nchunk_elem;
+        void* tmp_buf = malloc(size * elem_size);
+
+        if ((elem_size % 8) == 0) {
+            nchunk_elem = elem_size / 8;
+            TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int64_t);
+            count = bshuf_trans_byte_elem_SSE_64(out, tmp_buf, size * nchunk_elem);
+            bshuf_trans_elem(tmp_buf, out, 8, nchunk_elem, size);
+        } else if ((elem_size % 4) == 0) {
+            nchunk_elem = elem_size / 4;
+            TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int32_t);
+            count = bshuf_trans_byte_elem_SSE_32(out, tmp_buf, size * nchunk_elem);
+            bshuf_trans_elem(tmp_buf, out, 4, nchunk_elem, size);
+        } else {
+            // Not used since scalar algorithm is faster.
+            nchunk_elem = elem_size / 2;
+            TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int16_t);
+            count = bshuf_trans_byte_elem_SSE_16(out, tmp_buf, size * nchunk_elem);
+            bshuf_trans_elem(tmp_buf, out, 2, nchunk_elem, size);
+        }
+
+        free(tmp_buf);
+        return count;
+    }
 }
 
 
