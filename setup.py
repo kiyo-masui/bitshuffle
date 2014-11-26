@@ -23,6 +23,7 @@ if VERSION_DEV:
 
 
 COMPILE_FLAGS = ['-Ofast', '-march=native', '-std=c99', '-fopenmp']
+#COMPILE_FLAGS = ['-Ofast', '-march=core2', '-std=c99', '-fopenmp']
 MACROS = [
           ('BSHUF_VERSION_MAJOR', VERSION_MAJOR),
           ('BSHUF_VERSION_MINOR', VERSION_MINOR),

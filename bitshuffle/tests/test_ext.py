@@ -72,9 +72,21 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.copy
         self.check = lambda x: x
 
-    def test_01_trans_byte_elem_scal(self):
+    def test_01a_trans_byte_elem_scal_16(self):
+        self.case = "byte T elem scal 16"
+        self.data = self.data.view(np.int16)
+        self.fun = ext.trans_byte_elem_scal
+        self.check = trans_byte_elem
+
+    def test_01b_trans_byte_elem_scal_32(self):
+        self.case = "byte T elem scal 32"
+        self.data = self.data.view(np.int32)
+        self.fun = ext.trans_byte_elem_scal
+        self.check = trans_byte_elem
+
+    def test_01c_trans_byte_elem_scal_64(self):
         self.case = "byte T elem scal 64"
-        self.data = self.data.view(np.float64)
+        self.data = self.data.view(np.int64)
         self.fun = ext.trans_byte_elem_scal
         self.check = trans_byte_elem
 
