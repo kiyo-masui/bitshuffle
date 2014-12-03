@@ -8,8 +8,8 @@ np.import_array()
 
 
 # Repeat each calcualtion this many times. For timeing.
-#cdef int REPEATC = 1
-cdef int REPEATC = 32
+cdef int REPEATC = 1
+#cdef int REPEATC = 32
 
 REPEAT = REPEATC
 
