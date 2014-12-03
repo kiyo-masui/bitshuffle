@@ -97,6 +97,44 @@ int64_t bshuf_trans_byte_elem_scal(void* in, void* out, const size_t size,
 }
 
 
+/* Untranspose bytes within elements, starting partway through input. */
+int64_t bshuf_untrans_byte_elem_remainder(void* in, void* out, const size_t size,
+         const size_t elem_size, const size_t start) {
+
+    char* A = (char*) in;
+    char* B = (char*) out;
+
+    CHECK_MULT_EIGHT(start);
+
+    if (size > start) {
+        // ii loop separated into 2 loops so the compiler can unroll
+        // the inner one.
+        for (size_t ii = start; ii + 7 < size; ii += 8) {
+            for (size_t jj = 0; jj < elem_size; jj++) {
+                for (size_t kk = 0; kk < 8; kk++) {
+                    B[ii * elem_size + kk * elem_size + jj] 
+                        = A[jj * size + ii + kk];
+                }
+            }
+        }
+        for (size_t ii = size - size % 8; ii < size; ii ++) {
+            for (size_t jj = 0; jj < elem_size; jj++) {
+                 B[ii * elem_size + jj] = A[jj * size + ii];
+            }
+        }
+    }
+    return size * elem_size;
+}
+
+
+/* Untranspose bytes within elements, scalar algorithm. */
+int64_t bshuf_untrans_byte_elem_scal(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    return bshuf_untrans_byte_elem_remainder(in, out, size, elem_size, 0);
+}
+
+
 #define TRANS_BIT_8X8(x, t) {                                               \
         t = (x ^ (x >> 7)) & 0x00AA00AA00AA00AALL;                          \
         x = x ^ t ^ (t << 7);                                               \
@@ -903,7 +941,6 @@ int64_t bshuf_shuffle_bit_eightelem_SSE(void* in, void* out, const size_t size,
 #endif // #ifdef USESSE2
 
 
-
 /* ---- Code that requires AVX2. Intel Haswell (2013) and later. ---- */
 
 #ifdef USEAVX2
@@ -914,7 +951,7 @@ int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size
 
     char* A = (char*) in;
     char* B = (char*) out;
-    uint32_t* Bui;
+    int32_t* Bui;
 
     int64_t count;
 
@@ -922,7 +959,7 @@ int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size
     size_t kk;
 
     __m256i ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7;
-    int64_t bt0, bt1, bt2, bt3, bt4, bt5, bt6, bt7;
+    int32_t bt0, bt1, bt2, bt3, bt4, bt5, bt6, bt7;
 
     // Turns out that doublly unrolling this loop (unrolling 2 loops of 8) 
     // gives a speed up roughly 70% for some problem sizes.  The compiler will
@@ -939,7 +976,7 @@ int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size
         ymm7 = _mm256_loadu_si256((__m256i *) &A[ii + 7*32]);
 
         kk = 0;
-        Bui = (uint32_t*) &B[((7 - kk) * nbyte + ii) / 8];
+        Bui = (int32_t*) &B[((7 - kk) * nbyte + ii) / 8];
         bt0 = _mm256_movemask_epi8(ymm0);
         bt1 = _mm256_movemask_epi8(ymm1);
         bt2 = _mm256_movemask_epi8(ymm2);
@@ -966,7 +1003,7 @@ int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size
         Bui[7] = bt7;
 
         kk = 1;
-        Bui = (uint32_t*) &B[((7 - kk) * nbyte + ii) / 8];
+        Bui = (int32_t*) &B[((7 - kk) * nbyte + ii) / 8];
         bt0 = _mm256_movemask_epi8(ymm0);
         bt1 = _mm256_movemask_epi8(ymm1);
         bt2 = _mm256_movemask_epi8(ymm2);
@@ -993,7 +1030,7 @@ int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size
         Bui[7] = bt7;
 
         kk = 2;
-        Bui = (uint32_t*) &B[((7 - kk) * nbyte + ii) / 8];
+        Bui = (int32_t*) &B[((7 - kk) * nbyte + ii) / 8];
         bt0 = _mm256_movemask_epi8(ymm0);
         bt1 = _mm256_movemask_epi8(ymm1);
         bt2 = _mm256_movemask_epi8(ymm2);
@@ -1020,7 +1057,7 @@ int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size
         Bui[7] = bt7;
 
         kk = 3;
-        Bui = (uint32_t*) &B[((7 - kk) * nbyte + ii) / 8];
+        Bui = (int32_t*) &B[((7 - kk) * nbyte + ii) / 8];
         bt0 = _mm256_movemask_epi8(ymm0);
         bt1 = _mm256_movemask_epi8(ymm1);
         bt2 = _mm256_movemask_epi8(ymm2);
@@ -1047,7 +1084,7 @@ int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size
         Bui[7] = bt7;
 
         kk = 4;
-        Bui = (uint32_t*) &B[((7 - kk) * nbyte + ii) / 8];
+        Bui = (int32_t*) &B[((7 - kk) * nbyte + ii) / 8];
         bt0 = _mm256_movemask_epi8(ymm0);
         bt1 = _mm256_movemask_epi8(ymm1);
         bt2 = _mm256_movemask_epi8(ymm2);
@@ -1074,7 +1111,7 @@ int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size
         Bui[7] = bt7;
 
         kk = 5;
-        Bui = (uint32_t*) &B[((7 - kk) * nbyte + ii) / 8];
+        Bui = (int32_t*) &B[((7 - kk) * nbyte + ii) / 8];
         bt0 = _mm256_movemask_epi8(ymm0);
         bt1 = _mm256_movemask_epi8(ymm1);
         bt2 = _mm256_movemask_epi8(ymm2);
@@ -1101,7 +1138,7 @@ int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size
         Bui[7] = bt7;
 
         kk = 6;
-        Bui = (uint32_t*) &B[((7 - kk) * nbyte + ii) / 8];
+        Bui = (int32_t*) &B[((7 - kk) * nbyte + ii) / 8];
         bt0 = _mm256_movemask_epi8(ymm0);
         bt1 = _mm256_movemask_epi8(ymm1);
         bt2 = _mm256_movemask_epi8(ymm2);
@@ -1128,7 +1165,7 @@ int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out, const size_t size
         Bui[7] = bt7;
 
         kk = 7;
-        Bui = (uint32_t*) &B[((7 - kk) * nbyte + ii) / 8];
+        Bui = (int32_t*) &B[((7 - kk) * nbyte + ii) / 8];
         bt0 = _mm256_movemask_epi8(ymm0);
         bt1 = _mm256_movemask_epi8(ymm1);
         bt2 = _mm256_movemask_epi8(ymm2);
@@ -1295,7 +1332,7 @@ int64_t bshuf_untrans_bit_byte_AVX(void* in, void* out, const size_t size,
             ymm13 = _mm256_slli_epi16(ymm13, 1);
             ymm14 = _mm256_slli_epi16(ymm14, 1);
             ymm15 = _mm256_slli_epi16(ymm15, 1);
-            // Weird order here is because the 256 bit instructions act as two
+            // Weird order here is because the 256 bit unpack instructions act as two
             // 128 bit instructions instead of on the whole register.
             ymm7 = _mm256_set_epi32(i7, i5, i3, i1, i6, i4, i2, i0);
 
@@ -1463,7 +1500,256 @@ int64_t bshuf_untrans_bit_byte_AVX(void* in, void* out, const size_t size,
         }
     }
 
-    return nbyte;
+    int64_t count = bshuf_untrans_bit_byte_remainder(in, out, size, elem_size,
+            size - size % (32 * 8));
+
+    return count;
+}
+
+
+/* For data organized into a row for each bit (8 * elem_size rows), transpose
+ * the bytes. */
+int64_t bshuf_trans_byte_bitrow_AVX(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    char* A = (char*) in;
+    char* B = (char*) out;
+
+    CHECK_MULT_EIGHT(size);
+
+    size_t nrows = 8 * elem_size;
+    size_t nbyte_row = size / 8;
+
+    if (elem_size % 4) return bshuf_trans_byte_bitrow_SSE(in, out, size, elem_size);
+
+    if (1) {
+
+    __m256i ymm_0[8];
+    __m256i ymm_1[8];
+    __m256i ymm_storeage[8][elem_size];
+    
+    for (size_t jj = 0; jj + 31 < nbyte_row; jj += 32) {
+        for (size_t ii = 0; ii < elem_size; ii ++) {
+
+            for (size_t kk = 0; kk < 8; kk ++){
+                ymm_0[kk] = _mm256_loadu_si256(
+                        (__m256i *) &A[(ii * 8 + kk) * nbyte_row + jj]);
+            }
+
+            for (size_t kk = 0; kk < 4; kk ++){
+                ymm_1[kk] = _mm256_unpacklo_epi8(ymm_0[kk * 2], ymm_0[kk * 2 + 1]);
+                ymm_1[kk + 4] = _mm256_unpackhi_epi8(ymm_0[kk * 2], ymm_0[kk * 2 + 1]);
+            }
+
+            for (size_t kk = 0; kk < 2; kk ++){
+                for (size_t mm = 0; mm < 2; mm ++){
+                    ymm_0[kk * 4 + mm] = _mm256_unpacklo_epi16(
+                            ymm_1[kk * 4 + mm * 2], ymm_1[kk * 4 + mm * 2 + 1]);
+                    ymm_0[kk * 4 + mm + 2] = _mm256_unpackhi_epi16(
+                            ymm_1[kk * 4 + mm * 2], ymm_1[kk * 4 + mm * 2 + 1]);
+                }
+            }
+
+            for (size_t kk = 0; kk < 4; kk ++){
+                ymm_1[kk * 2] = _mm256_unpacklo_epi32(ymm_0[kk * 2], ymm_0[kk * 2 + 1]);
+                ymm_1[kk * 2 + 1] = _mm256_unpackhi_epi32(ymm_0[kk * 2], ymm_0[kk * 2 + 1]);
+            }
+
+            for (size_t kk = 0; kk < 8; kk ++){
+                ymm_storeage[kk][ii] = ymm_1[kk];
+            }
+        }
+
+        for (size_t mm = 0; mm < 8; mm ++) {
+            for (size_t ii = 0; ii + 3 < elem_size; ii += 4) {
+
+                for (size_t kk = 0; kk < 4; kk ++){
+                    ymm_0[kk] = ymm_storeage[mm][ii + kk];
+                }
+
+                ymm_1[0] = _mm256_unpacklo_epi64(ymm_0[0], ymm_0[1]);
+                ymm_1[1] = _mm256_unpacklo_epi64(ymm_0[2], ymm_0[3]);
+                ymm_1[2] = _mm256_unpackhi_epi64(ymm_0[0], ymm_0[1]);
+                ymm_1[3] = _mm256_unpackhi_epi64(ymm_0[2], ymm_0[3]);
+
+                ymm_0[0] = _mm256_permute2x128_si256(ymm_1[0], ymm_1[1], 32);
+                ymm_0[1] = _mm256_permute2x128_si256(ymm_1[2], ymm_1[3], 32);
+                ymm_0[2] = _mm256_permute2x128_si256(ymm_1[0], ymm_1[1], 49);
+                ymm_0[3] = _mm256_permute2x128_si256(ymm_1[2], ymm_1[3], 49);
+
+                _mm256_storeu_si256((__m256i *) &B[(jj + mm * 2 + 0 * 16) * nrows + ii * 8], ymm_0[0]);
+                _mm256_storeu_si256((__m256i *) &B[(jj + mm * 2 + 0 * 16 + 1) * nrows + ii * 8], ymm_0[1]);
+                _mm256_storeu_si256((__m256i *) &B[(jj + mm * 2 + 1 * 16) * nrows + ii * 8], ymm_0[2]);
+                _mm256_storeu_si256((__m256i *) &B[(jj + mm * 2 + 1 * 16 + 1) * nrows + ii * 8], ymm_0[3]);
+            }
+        }
+    }
+    } else {
+
+    __m256i a0, b0, c0, d0, e0, f0, g0, h0, a1, b1, c1, d1, e1, f1, g1, h1;
+    __m256d *ad, *bd, *cd, *dd, *ed, *fd, *gd, *hd;
+    __m128d as, bs, cs, ds, es, fs, gs, hs;
+
+    for (size_t jj = 0; jj + 31 < nbyte_row; jj += 32) {
+        for (size_t ii = 0; ii + 7 < nrows; ii += 8) {
+            a0 = _mm256_loadu_si256((__m256i *) &A[(ii + 0)*nbyte_row + jj]);
+            b0 = _mm256_loadu_si256((__m256i *) &A[(ii + 1)*nbyte_row + jj]);
+            c0 = _mm256_loadu_si256((__m256i *) &A[(ii + 2)*nbyte_row + jj]);
+            d0 = _mm256_loadu_si256((__m256i *) &A[(ii + 3)*nbyte_row + jj]);
+            e0 = _mm256_loadu_si256((__m256i *) &A[(ii + 4)*nbyte_row + jj]);
+            f0 = _mm256_loadu_si256((__m256i *) &A[(ii + 5)*nbyte_row + jj]);
+            g0 = _mm256_loadu_si256((__m256i *) &A[(ii + 6)*nbyte_row + jj]);
+            h0 = _mm256_loadu_si256((__m256i *) &A[(ii + 7)*nbyte_row + jj]);
+
+
+            a1 = _mm256_unpacklo_epi8(a0, b0);
+            b1 = _mm256_unpacklo_epi8(c0, d0);
+            c1 = _mm256_unpacklo_epi8(e0, f0);
+            d1 = _mm256_unpacklo_epi8(g0, h0);
+            e1 = _mm256_unpackhi_epi8(a0, b0);
+            f1 = _mm256_unpackhi_epi8(c0, d0);
+            g1 = _mm256_unpackhi_epi8(e0, f0);
+            h1 = _mm256_unpackhi_epi8(g0, h0);
+
+            a0 = _mm256_unpacklo_epi16(a1, b1);
+            b0 = _mm256_unpacklo_epi16(c1, d1);
+            c0 = _mm256_unpackhi_epi16(a1, b1);
+            d0 = _mm256_unpackhi_epi16(c1, d1);
+
+            e0 = _mm256_unpacklo_epi16(e1, f1);
+            f0 = _mm256_unpacklo_epi16(g1, h1);
+            g0 = _mm256_unpackhi_epi16(e1, f1);
+            h0 = _mm256_unpackhi_epi16(g1, h1);
+
+
+            a1 = _mm256_unpacklo_epi32(a0, b0);
+            b1 = _mm256_unpackhi_epi32(a0, b0);
+
+            c1 = _mm256_unpacklo_epi32(c0, d0);
+            d1 = _mm256_unpackhi_epi32(c0, d0);
+
+            e1 = _mm256_unpacklo_epi32(e0, f0);
+            f1 = _mm256_unpackhi_epi32(e0, f0);
+
+            g1 = _mm256_unpacklo_epi32(g0, h0);
+            h1 = _mm256_unpackhi_epi32(g0, h0);
+
+            ad = (__m256d *) &a1;
+            bd = (__m256d *) &b1;
+            cd = (__m256d *) &c1;
+            dd = (__m256d *) &d1;
+            ed = (__m256d *) &e1;
+            fd = (__m256d *) &f1;
+            gd = (__m256d *) &g1;
+            hd = (__m256d *) &h1;
+
+            as = _mm256_extractf128_pd(*ad, 0);
+            bs = _mm256_extractf128_pd(*bd, 0);
+            cs = _mm256_extractf128_pd(*cd, 0);
+            ds = _mm256_extractf128_pd(*dd, 0);
+            es = _mm256_extractf128_pd(*ed, 0);
+            fs = _mm256_extractf128_pd(*fd, 0);
+            gs = _mm256_extractf128_pd(*gd, 0);
+            hs = _mm256_extractf128_pd(*hd, 0);
+
+            _mm_storel_pd((double *) &B[(jj + 0 + 0 * 16) * nrows + ii], as);
+            _mm_storel_pd((double *) &B[(jj + 2 + 0 * 16) * nrows + ii], bs);
+            _mm_storel_pd((double *) &B[(jj + 4 + 0 * 16) * nrows + ii], cs);
+            _mm_storel_pd((double *) &B[(jj + 6 + 0 * 16) * nrows + ii], ds);
+            _mm_storel_pd((double *) &B[(jj + 8 + 0 * 16) * nrows + ii], es);
+            _mm_storel_pd((double *) &B[(jj + 10 + 0 * 16) * nrows + ii], fs);
+            _mm_storel_pd((double *) &B[(jj + 12 + 0 * 16) * nrows + ii], gs);
+            _mm_storel_pd((double *) &B[(jj + 14 + 0 * 16) * nrows + ii], hs);
+
+            _mm_storeh_pd((double *) &B[(jj + 1 + 0 * 16) * nrows + ii], as);
+            _mm_storeh_pd((double *) &B[(jj + 3 + 0 * 16) * nrows + ii], bs);
+            _mm_storeh_pd((double *) &B[(jj + 5 + 0 * 16) * nrows + ii], cs);
+            _mm_storeh_pd((double *) &B[(jj + 7 + 0 * 16) * nrows + ii], ds);
+            _mm_storeh_pd((double *) &B[(jj + 9 + 0 * 16) * nrows + ii], es);
+            _mm_storeh_pd((double *) &B[(jj + 11 + 0 * 16) * nrows + ii], fs);
+            _mm_storeh_pd((double *) &B[(jj + 13 + 0 * 16) * nrows + ii], gs);
+            _mm_storeh_pd((double *) &B[(jj + 15 + 0 * 16) * nrows + ii], hs);
+
+            as = _mm256_extractf128_pd(*ad, 1);
+            bs = _mm256_extractf128_pd(*bd, 1);
+            cs = _mm256_extractf128_pd(*cd, 1);
+            ds = _mm256_extractf128_pd(*dd, 1);
+            es = _mm256_extractf128_pd(*ed, 1);
+            fs = _mm256_extractf128_pd(*fd, 1);
+            gs = _mm256_extractf128_pd(*gd, 1);
+            hs = _mm256_extractf128_pd(*hd, 1);
+
+            _mm_storel_pd((double *) &B[(jj + 0 + 1 * 16) * nrows + ii], as);
+            _mm_storel_pd((double *) &B[(jj + 2 + 1 * 16) * nrows + ii], bs);
+            _mm_storel_pd((double *) &B[(jj + 4 + 1 * 16) * nrows + ii], cs);
+            _mm_storel_pd((double *) &B[(jj + 6 + 1 * 16) * nrows + ii], ds);
+            _mm_storel_pd((double *) &B[(jj + 8 + 1 * 16) * nrows + ii], es);
+            _mm_storel_pd((double *) &B[(jj + 10 + 1 * 16) * nrows + ii], fs);
+            _mm_storel_pd((double *) &B[(jj + 12 + 1 * 16) * nrows + ii], gs);
+            _mm_storel_pd((double *) &B[(jj + 14 + 1 * 16) * nrows + ii], hs);
+
+            _mm_storeh_pd((double *) &B[(jj + 1 + 1 * 16) * nrows + ii], as);
+            _mm_storeh_pd((double *) &B[(jj + 3 + 1 * 16) * nrows + ii], bs);
+            _mm_storeh_pd((double *) &B[(jj + 5 + 1 * 16) * nrows + ii], cs);
+            _mm_storeh_pd((double *) &B[(jj + 7 + 1 * 16) * nrows + ii], ds);
+            _mm_storeh_pd((double *) &B[(jj + 9 + 1 * 16) * nrows + ii], es);
+            _mm_storeh_pd((double *) &B[(jj + 11 + 1 * 16) * nrows + ii], fs);
+            _mm_storeh_pd((double *) &B[(jj + 13 + 1 * 16) * nrows + ii], gs);
+            _mm_storeh_pd((double *) &B[(jj + 15 + 1 * 16) * nrows + ii], hs);
+        }
+    }
+    }
+
+    for (size_t ii = 0; ii + 7 < nrows; ii += 8) {
+        for (size_t jj = nbyte_row - nbyte_row % 32; jj < nbyte_row; jj ++) {
+            B[jj * nrows + ii + 0] = A[(ii + 0)*nbyte_row + jj];
+            B[jj * nrows + ii + 1] = A[(ii + 1)*nbyte_row + jj];
+            B[jj * nrows + ii + 2] = A[(ii + 2)*nbyte_row + jj];
+            B[jj * nrows + ii + 3] = A[(ii + 3)*nbyte_row + jj];
+            B[jj * nrows + ii + 4] = A[(ii + 4)*nbyte_row + jj];
+            B[jj * nrows + ii + 5] = A[(ii + 5)*nbyte_row + jj];
+            B[jj * nrows + ii + 6] = A[(ii + 6)*nbyte_row + jj];
+            B[jj * nrows + ii + 7] = A[(ii + 7)*nbyte_row + jj];
+        }
+    }
+    return size * elem_size;
+}
+
+
+/* Shuffle bits within the bytes of eight element blocks. */
+int64_t bshuf_shuffle_bit_eightelem_AVX(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    CHECK_MULT_EIGHT(size);
+
+    // With a bit of care, this could be written such that such that it is
+    // in_buf = out_buf safe.
+    char* A = (char*) in;
+    char* B = (char*) out;
+    int32_t* Bui = (int32_t*) out;
+
+    size_t nbyte = elem_size * size;
+
+    __m256i ymm;
+    int32_t bt;
+
+    if (elem_size % 4) {
+        bshuf_shuffle_bit_eightelem_SSE(in, out, size, elem_size);
+    } else {
+        for (size_t jj = 0; jj + 31 < 8 * elem_size; jj += 32) {
+            for (size_t ii = 0; ii + 8 * elem_size - 1 < nbyte;
+                    ii += 8 * elem_size) {
+                ymm = _mm256_loadu_si256((__m256i *) &A[ii + jj]);
+                for (size_t kk = 0; kk < 8; kk++) {
+                    bt = _mm256_movemask_epi8(ymm);
+                    ymm = _mm256_slli_epi16(ymm, 1);
+                    size_t ind = (ii + jj / 8 + (7 - kk) * elem_size);
+                    Bui[ind / 4] = bt;
+                }
+            }
+        }
+    }
+    return size * elem_size;
 }
 
 
@@ -1474,24 +1760,21 @@ int64_t bshuf_untrans_bit_elem_AVX(void* in, void* out, const size_t size,
 
     CHECK_MULT_EIGHT(size);
 
-    // XXX handle better.
-    if (elem_size % 4) return -1;
-
     void* tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return -1;
-
+    
     /*
-    count = bshuf_trans_byte_bitrow_SSE(in, tmp_buf, size, elem_size);
+    // Turns out this algorithm is much slower than the one below.
+    count = bshuf_untrans_bit_byte_AVX(in, tmp_buf, size, elem_size);
+    CHECK_ERR_FREE(count, tmp_buf);
+    count = bshuf_untrans_byte_elem_scal(tmp_buf, out, size, elem_size);
+    */
+
+    count = bshuf_trans_byte_bitrow_AVX(in, tmp_buf, size, elem_size);
     CHECK_ERR_FREE(count, tmp_buf);
     count =  bshuf_shuffle_bit_eightelem_AVX(tmp_buf, out, size, elem_size);
 
     free(tmp_buf);
-    return count;
-    */
-
-    count = bshuf_untrans_bit_byte_AVX(in, out, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
-
     return count;
 }
 
@@ -1551,8 +1834,8 @@ int64_t bshuf_untrans_bit_elem(void* in, void* out, const size_t size,
 
     int64_t count;
 #ifdef USEAVX2
-    //count = bshuf_untrans_bit_elem_AVX(in, out, size, elem_size);
-    count = bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
+    count = bshuf_untrans_bit_elem_AVX(in, out, size, elem_size);
+    //count = bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
 #elif defined(USESSE2)
     count = bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
 #else
