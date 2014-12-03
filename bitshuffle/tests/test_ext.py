@@ -9,7 +9,9 @@ from bitshuffle import ext
 
 
 # If we are doing timeings and by what factor in increase workload.
+# Remember to change `ext.REPEATC`.
 TIME = 0
+#TIME = 8    # 8kB blocks same as final blocking. 
 BLOCK = 1024
 
 
@@ -67,42 +69,54 @@ class TestProfile(unittest.TestCase):
             ans = self.check_data.view(np.uint8)
             self.assertTrue(np.all(ans == out.view(np.uint8)))
 
-    def test_0_copy(self):
+    def test_00_copy(self):
         self.case = "copy"
         self.fun = ext.copy
         self.check = lambda x: x
 
-    def test_1_trans_byte_elem_scal(self):
-        self.case = "byte T elem scal 64"
-        self.data = self.data.view(np.float64)
+    def test_01a_trans_byte_elem_scal_16(self):
+        self.case = "byte T elem scal 16"
+        self.data = self.data.view(np.int16)
         self.fun = ext.trans_byte_elem_scal
         self.check = trans_byte_elem
 
-    def test_2a_trans_byte_elem_16(self):
+    def test_01b_trans_byte_elem_scal_32(self):
+        self.case = "byte T elem scal 32"
+        self.data = self.data.view(np.int32)
+        self.fun = ext.trans_byte_elem_scal
+        self.check = trans_byte_elem
+
+    def test_01c_trans_byte_elem_scal_64(self):
+        self.case = "byte T elem scal 64"
+        self.data = self.data.view(np.int64)
+        self.fun = ext.trans_byte_elem_scal
+        self.check = trans_byte_elem
+
+    def test_01d_trans_byte_elem_16(self):
         self.case = "byte T elem SSE 16"
         self.data = self.data.view(np.int16)
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
-    def test_2b_trans_byte_elem_32(self):
+    def test_01e_trans_byte_elem_32(self):
         self.case = "byte T elem SSE 32"
         self.data = self.data.view(np.float32)
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
-    def test_2c_trans_byte_elem_64(self):
+    def test_01f_trans_byte_elem_64(self):
         self.case = "byte T elem SSE 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
-    def test_2d_trans_byte_elem_128(self):
+    def test_01g_trans_byte_elem_128(self):
         self.case = "byte T elem SSE 128"
         self.data = self.data.view(np.complex128)
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
-    def test_2f_trans_byte_elem_96(self):
+    def test_01h_trans_byte_elem_96(self):
         self.case = "byte T elem SSE 96"
         n = self.data.size // 128 * 96
         dt = np.dtype([('a', 'i4'), ('b', 'i4'), ('c', 'i4')])
@@ -110,7 +124,7 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
-    def test_2g_trans_byte_elem_80(self):
+    def test_01i_trans_byte_elem_80(self):
         self.case = "byte T elem SSE 80"
         n = self.data.size // 128 * 80
         dt = np.dtype([('a', 'i2'), ('b', 'i2'), ('c', 'i2'), 
@@ -119,154 +133,255 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
-    def test_3a_trans_bit_byte(self):
+    def test_02a_untrans_byte_elem_scal_32(self):
+        self.case = "byte U elem scal 32"
+        pre_trans = self.data.view(np.int32)
+        self.data = trans_byte_elem(pre_trans)
+        self.fun = ext.untrans_byte_elem_scal
+        self.check_data = pre_trans
+
+    def test_02b_untrans_byte_elem_scal_64(self):
+        self.case = "byte U elem scal 64"
+        pre_trans = self.data.view(np.int64)
+        self.data = trans_byte_elem(pre_trans)
+        self.fun = ext.untrans_byte_elem_scal
+        self.check_data = pre_trans
+
+    def test_03a_trans_bit_byte(self):
         self.case = "bit T byte 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_byte_scal
         self.check = trans_bit_byte
 
-    def test_3b_trans_bit_byte1(self):
+    def test_03b_trans_bit_byte1(self):
         self.case = "bit T byte un 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_byte_scal_unrolled
         self.check = trans_bit_byte
 
-    def test_3d_trans_bit_byte_SSE(self):
+    def test_03d_trans_bit_byte_SSE(self):
         self.case = "bit T byte SSE 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_byte_SSE
         self.check = trans_bit_byte
 
-    def test_3f_trans_bit_byte_AVX(self):
+    def test_03f_trans_bit_byte_AVX(self):
         self.case = "bit T byte AVX 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_byte_AVX
         self.check = trans_bit_byte
 
-    def test_3g_trans_bit_byte_AVX_32(self):
+    def test_03g_trans_bit_byte_AVX_32(self):
         self.case = "bit T byte AVX 32"
         self.data = self.data.view(np.float32)
         self.fun = ext.trans_bit_byte_AVX
         self.check = trans_bit_byte
 
-    def test_3f_trans_bit_byte_AVX1(self):
+    def test_03f_trans_bit_byte_AVX1(self):
         self.case = "bit T byte AVX un 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_byte_AVX_unrolled
         self.check = trans_bit_byte
 
-    def test_4a_trans_bit_elem_AVX(self):
+    def test_04a_trans_bit_elem_AVX(self):
         self.case = "bit T elem AVX 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_elem_AVX
         self.check = trans_bit_elem
 
-    def test_4b_trans_bit_elem_AVX_128(self):
+    def test_04b_trans_bit_elem_AVX_128(self):
         self.case = "bit T elem AVX 128"
         self.data = self.data.view(np.complex128)
         self.fun = ext.trans_bit_elem_AVX
         self.check = trans_bit_elem
 
-    def test_4c_trans_bit_elem_AVX_32(self):
+    def test_04c_trans_bit_elem_AVX_32(self):
         self.case = "bit T elem AVX 32"
         self.data = self.data.view(np.float32)
         self.fun = ext.trans_bit_elem_AVX
         self.check = trans_bit_elem
 
-    def test_4d_trans_bit_elem_AVX_16(self):
+    def test_04d_trans_bit_elem_AVX_16(self):
         self.case = "bit T elem AVX 16"
         self.data = self.data.view(np.int16)
         self.fun = ext.trans_bit_elem_AVX
         self.check = trans_bit_elem
 
-    def test_4e_trans_bit_elem_64(self):
+    def test_04e_trans_bit_elem_64(self):
         self.case = "bit T elem scal 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_elem_scal
         self.check = trans_bit_elem
 
-    def test_5a_untrans_bit_elem_16(self):
+    def test_04f_trans_bit_elem_SSE_32(self):
+        self.case = "bit T elem SSE 32"
+        self.data = self.data.view(np.float32)
+        self.fun = ext.trans_bit_elem_SSE
+        self.check = trans_bit_elem
+
+    def test_04g_trans_bit_elem_SSE_64(self):
+        self.case = "bit T elem SSE 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_bit_elem_SSE
+        self.check = trans_bit_elem
+
+    def test_05a_untrans_bit_byte_16(self):
+        self.case = "bit U byte scal 16"
+        pre_trans = self.data.view(np.int16)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_byte_scal
+        self.check_data = trans_byte_elem(pre_trans)
+
+    def test_05b_untrans_bit_byte_32(self):
+        self.case = "bit U byte scal 32"
+        pre_trans = self.data.view(np.int32)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_byte_scal
+        self.check_data = trans_byte_elem(pre_trans)
+
+    def test_05c_untrans_bit_byte_64(self):
+        self.case = "bit U byte scal 64"
+        pre_trans = self.data.view(np.int64)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_byte_scal
+        self.check_data = trans_byte_elem(pre_trans)
+
+    def test_05d_untrans_bit_byte_32(self):
+        self.case = "bit U byte AVX 32"
+        pre_trans = self.data.view(np.int32)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_byte_AVX
+        self.check_data = trans_byte_elem(pre_trans)
+
+    def test_05e_untrans_bit_byte_64(self):
+        self.case = "bit U byte AVX 64"
+        pre_trans = self.data.view(np.int64)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_byte_AVX
+        self.check_data = trans_byte_elem(pre_trans)
+
+    def test_06a_untrans_bit_elem_16(self):
         self.case = "bit U elem SSE 16"
         pre_trans = self.data.view(np.int16)
         self.data = trans_bit_elem(pre_trans)
         self.fun = ext.untrans_bit_elem_SSE
         self.check_data = pre_trans
 
-    def test_5b_untrans_bit_elem_128(self):
+    def test_06b_untrans_bit_elem_128(self):
         self.case = "bit U elem SSE 128"
         pre_trans = self.data.view(np.complex128)
         self.data = trans_bit_elem(pre_trans)
         self.fun = ext.untrans_bit_elem_SSE
         self.check_data = pre_trans
 
-    def test_5c_untrans_bit_elem_32(self):
+    def test_06c_untrans_bit_elem_32(self):
         self.case = "bit U elem SSE 32"
         pre_trans = self.data.view(np.float32)
         self.data = trans_bit_elem(pre_trans)
         self.fun = ext.untrans_bit_elem_SSE
         self.check_data = pre_trans
 
-    def test_5d_untrans_bit_elem_64(self):
+    def test_06d_untrans_bit_elem_32(self):
+        self.case = "bit U elem AVX 32"
+        pre_trans = self.data.view(np.float32)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_AVX
+        self.check_data = pre_trans
+
+    def test_06e_untrans_bit_elem_64(self):
         self.case = "bit U elem SSE 64"
         pre_trans = self.data.view(np.float64)
         self.data = trans_bit_elem(pre_trans)
         self.fun = ext.untrans_bit_elem_SSE
         self.check_data = pre_trans
 
-    def test_5e_untrans_bit_elem_64(self):
+    def test_06f_untrans_bit_elem_64(self):
+        self.case = "bit U elem AVX 64"
+        pre_trans = self.data.view(np.float64)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_AVX
+        self.check_data = pre_trans
+
+    def test_06g_untrans_bit_elem_64(self):
         self.case = "bit U elem scal 64"
         pre_trans = self.data.view(np.float64)
         self.data = trans_bit_elem(pre_trans)
         self.fun = ext.untrans_bit_elem_scal
         self.check_data = pre_trans
 
-    def test_6a_trans_byte_bitrow_64(self):
+    def test_07a_trans_byte_bitrow_64(self):
         self.case = "byte T row 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_byte_bitrow
 
-    def test_6b_trans_byte_bitrow_SSE_64(self):
+    def test_07b_trans_byte_bitrow_SSE_64(self):
         self.case = "byte T row SSE 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_byte_bitrow_SSE
         self.check = ext.trans_byte_bitrow
 
-    def test_7a_shuffle_bit_eight_SSE_64(self):
+    def test_07c_trans_byte_bitrow_AVX_64(self):
+        self.case = "byte T row AVX 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_byte_bitrow_AVX
+        self.check = ext.trans_byte_bitrow
+
+    def test_08a_shuffle_bit_eight_SSE_64(self):
         self.case = "bit S eight SSE 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.shuffle_bit_eightelem_SSE
 
-    def test_8a_trans_bit_elem_64(self):
+    def test_08b_shuffle_bit_eight_AVX_32(self):
+        self.case = "bit S eight AVX 32"
+        self.data = self.data.view(np.float32)
+        self.fun = ext.shuffle_bit_eightelem_AVX
+
+    def test_08c_shuffle_bit_eight_AVX_64(self):
+        self.case = "bit S eight AVX 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.shuffle_bit_eightelem_AVX
+
+    def test_08d_shuffle_bit_eight_AVX_16(self):
+        self.case = "bit S eight AVX 16"
+        self.data = self.data.view(np.int16)
+        self.fun = ext.shuffle_bit_eightelem_AVX
+
+    def test_08e_shuffle_bit_eight_AVX_128(self):
+        self.case = "bit S eight AVX 128"
+        self.data = self.data.view(np.complex128)
+        self.fun = ext.shuffle_bit_eightelem_AVX
+
+    def test_09a_trans_bit_elem_64(self):
         self.case = "bit T elem 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_elem
         self.check = trans_bit_elem
 
-    def test_8b_untrans_bit_elem_64(self):
+    def test_09b_untrans_bit_elem_64(self):
         self.case = "bit U elem 64"
         pre_trans = self.data.view(np.float64)
         self.data = trans_bit_elem(pre_trans)
         self.fun = ext.untrans_bit_elem
         self.check_data = pre_trans
 
-    def test_9a_bitshuffle_64(self):
+    def test_10a_bitshuffle_64(self):
         self.case = "bitshuffle 64"
         self.data = self.data.view(np.float64)
         self.fun = lambda x: ext.bitshuffle(x, BLOCK)
 
-    def test_9b_bitunshuffle_64(self):
+    def test_10b_bitunshuffle_64(self):
         self.case = "bitunshuffle 64"
         pre_trans = self.data.view(np.float64)
         self.data = ext.bitshuffle(pre_trans, BLOCK)
         self.fun = lambda x: ext.bitunshuffle(x, BLOCK)
         self.check_data = pre_trans
 
-    def test_9c_compress_64(self):
+    def test_10c_compress_64(self):
         self.case = "compress 64"
         self.data = self.data.view(np.float64)
         self.fun = lambda x:ext.compress_lz4(x, BLOCK)
 
-    def test_9d_decompress_64(self):
+    def test_10d_decompress_64(self):
         self.case = "decompress 64"
         pre_trans = self.data.view(np.float64)
         self.data = ext.compress_lz4(pre_trans, BLOCK)
@@ -276,6 +391,38 @@ class TestProfile(unittest.TestCase):
 
 
 class TestDevCases(unittest.TestCase):
+
+    def deactivated_test_trans_byte_bitrow_AVX(self):
+        d = np.arange(256, dtype=np.uint32)
+        #d = ext.trans_bit_elem(d)
+        t = ext.trans_byte_bitrow_AVX(d).view(np.uint8)
+        t1 = ext.trans_byte_bitrow_SSE(d).view(np.uint8)
+        t.shape = (32, 32)
+        t1.shape = (32, 32)
+        #print t[:20,:18]
+        self.assertTrue(np.all(t == t1))
+
+    def deactivated_test_untrans_bit_elem(self):
+        d = np.arange(32, dtype=np.uint16)
+        #d = random.randint(0, 2**7, 256).astype(np.uint16)
+        d1 = ext.trans_bit_elem(d)
+        #print d
+        t = ext.untrans_bit_elem_AVX(d1)
+        t1 = ext.untrans_bit_byte_scal(d1)
+        t2 = ext.untrans_byte_elem_scal(t1)
+        #print np.reshape(d1.view(np.uint8), (16, 4))
+        print np.reshape(t1.view(np.uint8), (2, 32))
+        #print np.reshape(t2.view(np.uint8), (32, 2))
+        #print np.reshape(t.view(np.uint8), (32, 2))
+
+    def deactivated_test_untrans_bit_byte(self):
+        d = np.arange(32, dtype=np.uint16)
+        #d = random.randint(0, 2**7, 256).astype(np.uint16)
+        d1 = ext.trans_bit_elem(d)
+        #print d
+        t = ext.untrans_bit_byte_scal(d1)
+        print np.reshape(trans_byte_elem(d).view(np.uint8), (2, 32))
+        print np.reshape(t.view(np.uint8), (2, 32))
 
     def deactivated_test_trans_bit_byte(self):
         d = np.arange(16, dtype=np.uint16)
@@ -393,6 +540,23 @@ class TestBitShuffleCircle(unittest.TestCase):
                 data = dbuf[:n]
                 shuff = ext.bitshuffle(data)
                 out = ext.bitunshuffle(shuff)
+                self.assertTrue(out.dtype is data.dtype)
+                self.assertTrue(np.all(data.view(np.uint8)
+                                       == out.view(np.uint8)))
+
+    def test_circle_with_compression(self):
+        nmax = 10000
+        reps = 100
+        for dtype in TEST_DTYPES:
+            itemsize = np.dtype(dtype).itemsize
+            nbyte_max = nmax * itemsize
+            dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
+            dbuf = dbuf.view(dtype)
+            for ii in range(reps):
+                n = random.randint(0, nmax, 1)
+                data = dbuf[:n]
+                shuff = ext.compress_lz4(data)
+                out = ext.decompress_lz4(shuff, data.shape, data.dtype)
                 self.assertTrue(out.dtype is data.dtype)
                 self.assertTrue(np.all(data.view(np.uint8)
                                        == out.view(np.uint8)))
