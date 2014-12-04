@@ -40,9 +40,20 @@ int bshuf_using_AVX2(void) {
 }
 
 
+typedef struct ptr_and_lock {
+    omp_lock_t lock;
+    void *ptr;
+} ptr_and_lock;
+
 // Function definition for worker functions.
 typedef int64_t (*bshufFunDef)(void** in, void** out, const size_t size,
          const size_t elem_size);
+
+typedef int64_t (*bshufFunDef_sim)(void* in, void* out, const size_t size,
+         const size_t elem_size);
+
+typedef int64_t (*bshufFunDef_adv)(ptr_and_lock* in, ptr_and_lock* out,
+        const size_t size, const size_t elem_size);
 
 
 /* ---- Code that should compile on any machine. ---- */
@@ -1657,7 +1668,6 @@ int64_t bshuf_untrans_bit_elem(void* in, void* out, const size_t size,
     int64_t count;
 #ifdef USEAVX2
     count = bshuf_untrans_bit_elem_AVX(in, out, size, elem_size);
-    //count = bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
 #elif defined(USESSE2)
     count = bshuf_untrans_bit_elem_SSE(in, out, size, elem_size);
 #else
@@ -1709,12 +1719,139 @@ int64_t bshuf_blocked_wrap_fun(bshufFunDef fun, void* in, void* out,
 }
 
 
+int64_t bshuf_blocked_wrap_fun_adv(bshufFunDef_adv fun, void* in, void* out,
+        const size_t size, const size_t elem_size, size_t block_size) {
+
+    ptr_and_lock A, B;
+    omp_lock_t in_lock, out_lock;
+
+    omp_init_lock(&in_lock);
+    omp_init_lock(&out_lock);
+
+    A.lock = in_lock;
+    A.ptr = in;
+    B.lock = out_lock;
+    B.ptr = out;
+
+    int64_t err = 0, count, cum_count = 0;
+    size_t last_block_size;
+    size_t leftover;
+
+    if (block_size == 0) {
+        block_size = bshuf_default_block_size(elem_size);
+    }
+    if (block_size < 0 || block_size % BSHUF_BLOCKED_MULT) return -81;
+
+    #pragma omp parallel for private(count) reduction(+ : cum_count)
+    for (size_t ii = 0; ii < size / block_size; ii ++) {
+        count = fun(&A, &B, block_size, elem_size);
+        if (count < 0) err = count;
+        cum_count += count;
+    }
+
+    last_block_size = size % block_size;
+    last_block_size = last_block_size - last_block_size % BSHUF_BLOCKED_MULT;
+    if (last_block_size) {
+        count = fun(&A, &B, last_block_size, elem_size);
+        if (count < 0) err = count;
+        cum_count += count;
+    }
+
+    if (err < 0) return err;
+
+    leftover = size % BSHUF_BLOCKED_MULT;
+    memcpy(B.ptr, A.ptr, leftover * elem_size);
+
+    omp_destroy_lock(&in_lock);
+    omp_destroy_lock(&out_lock);
+
+    return cum_count + leftover * elem_size;
+}
+
+
+int64_t bshuf_blocked_wrap_fun_sim(bshufFunDef_sim fun, void* in, void* out,
+        const size_t size, const size_t elem_size, size_t block_size) {
+    char* A = in;
+    char* B = out;
+
+    int64_t err = 0, count, cum_count = 0;
+    size_t last_block_size;
+    size_t leftover;
+
+    if (block_size == 0) {
+        block_size = bshuf_default_block_size(elem_size);
+    }
+    if (block_size < 0 || block_size % BSHUF_BLOCKED_MULT) return -81;
+
+    #pragma omp parallel for private(count) reduction(+ : cum_count)
+    for (size_t ii = 0; ii < size / block_size; ii ++) {
+        size_t ind = ii * elem_size * block_size;
+        count = fun((void *) &A[ind], (void *) &B[ind], block_size, elem_size);
+        if (count < 0) err = count;
+        cum_count += count;
+    }
+
+    last_block_size = size % block_size;
+    last_block_size = last_block_size - last_block_size % BSHUF_BLOCKED_MULT;
+    if (last_block_size) {
+        size_t ind = elem_size * (size - size % block_size);
+        count = fun((void *) &A[ind], (void *) &B[ind], last_block_size, elem_size);
+        if (count < 0) err = count;
+        cum_count += count;
+    }
+
+    if (err < 0) return err;
+
+    leftover = size % BSHUF_BLOCKED_MULT;
+    size_t ind = elem_size * (size - leftover);
+    memcpy(&B[ind], &A[ind], leftover * elem_size);
+
+    return cum_count + leftover * elem_size;
+}
+
+
 int64_t bshuf_bitshuffle_block(void** in, void** out, const size_t size,
         const size_t elem_size) {
 
     int64_t count = bshuf_trans_bit_elem(*in, *out, size, elem_size);
     *in = (void*) ((char*) *in + size * elem_size);
     *out = (void*) ((char*) *out + size * elem_size);
+    return count;
+}
+
+
+int64_t bshuf_bitshuffle_block_adv(ptr_and_lock* in_pl, ptr_and_lock* out_pl,
+        const size_t size, const size_t elem_size) {
+
+    omp_set_lock(&in_pl->lock);
+    omp_set_lock(&out_pl->lock);
+    #pragma omp flush
+    void *in = in_pl->ptr;
+    void *out = out_pl->ptr;
+    in_pl->ptr = (void*) ((char*) in + size * elem_size);
+    out_pl->ptr = (void*) ((char*) out + size * elem_size);
+    omp_unset_lock(&in_pl->lock);
+    omp_unset_lock(&out_pl->lock);
+
+    int64_t count = bshuf_trans_bit_elem(in, out, size, elem_size);
+    return count;
+}
+
+
+int64_t bshuf_bitunshuffle_block_adv(ptr_and_lock* in_pl, ptr_and_lock* out_pl,
+        const size_t size, const size_t elem_size) {
+
+    omp_set_lock(&in_pl->lock);
+    omp_set_lock(&out_pl->lock);
+    #pragma omp flush
+    void *in = in_pl->ptr;
+    void *out = out_pl->ptr;
+    in_pl->ptr = (void*) ((char*) in + size * elem_size);
+    out_pl->ptr = (void*) ((char*) out + size * elem_size);
+    omp_unset_lock(&in_pl->lock);
+    omp_unset_lock(&out_pl->lock);
+
+    int64_t count = bshuf_untrans_bit_elem(in, out, size, elem_size);
     return count;
 }
 
@@ -1732,7 +1869,9 @@ int64_t bshuf_bitunshuffle_block(void** in, void** out, const size_t size,
 int64_t bshuf_bitshuffle(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
-    return bshuf_blocked_wrap_fun(&bshuf_bitshuffle_block, in, out, size,
+    //return bshuf_blocked_wrap_fun_adv(&bshuf_bitshuffle_block_adv, in, out, size,
+    //        elem_size, block_size);
+    return bshuf_blocked_wrap_fun_sim(&bshuf_trans_bit_elem, in, out, size,
             elem_size, block_size);
 }
 
@@ -1740,7 +1879,9 @@ int64_t bshuf_bitshuffle(void* in, void* out, const size_t size,
 int64_t bshuf_bitunshuffle(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
-    return bshuf_blocked_wrap_fun(&bshuf_bitunshuffle_block, in, out, size,
+    //return bshuf_blocked_wrap_fun_adv(&bshuf_bitunshuffle_block_adv, in, out, size,
+    //        elem_size, block_size);
+    return bshuf_blocked_wrap_fun_sim(&bshuf_untrans_bit_elem, in, out, size,
             elem_size, block_size);
 }
 

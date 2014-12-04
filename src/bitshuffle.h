@@ -35,6 +35,8 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include <omp.h>
+
 #include "lz4.h"
 
 // Conditional includes for SSE2 and AVX2.
