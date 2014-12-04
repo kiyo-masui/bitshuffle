@@ -1869,20 +1869,20 @@ int64_t bshuf_bitunshuffle_block(void** in, void** out, const size_t size,
 int64_t bshuf_bitshuffle(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
-    //return bshuf_blocked_wrap_fun_adv(&bshuf_bitshuffle_block_adv, in, out, size,
-    //        elem_size, block_size);
-    return bshuf_blocked_wrap_fun_sim(&bshuf_trans_bit_elem, in, out, size,
+    return bshuf_blocked_wrap_fun_adv(&bshuf_bitshuffle_block_adv, in, out, size,
             elem_size, block_size);
+    //return bshuf_blocked_wrap_fun_sim(&bshuf_trans_bit_elem, in, out, size,
+    //        elem_size, block_size);
 }
 
 
 int64_t bshuf_bitunshuffle(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
-    //return bshuf_blocked_wrap_fun_adv(&bshuf_bitunshuffle_block_adv, in, out, size,
-    //        elem_size, block_size);
-    return bshuf_blocked_wrap_fun_sim(&bshuf_untrans_bit_elem, in, out, size,
+    return bshuf_blocked_wrap_fun_adv(&bshuf_bitunshuffle_block_adv, in, out, size,
             elem_size, block_size);
+    //return bshuf_blocked_wrap_fun_sim(&bshuf_untrans_bit_elem, in, out, size,
+    //        elem_size, block_size);
 }
 
 
@@ -1981,6 +1981,89 @@ int64_t bshuf_compress_lz4_block(void** in, void** out, const size_t size,
 }
 
 
+
+int64_t bshuf_compress_lz4_block_adv(ptr_and_lock* in_pl, ptr_and_lock* out_pl,
+        const size_t size, const size_t elem_size) {
+
+    int64_t nbytes, count;
+
+    void* tmp_buf = malloc(size * elem_size);
+    if (tmp_buf == NULL) return -1;
+
+    omp_set_lock(&in_pl->lock);
+    #pragma omp flush
+    void *in = in_pl->ptr;
+    in_pl->ptr = (void*) ((char*) in + size * elem_size);
+    count = bshuf_trans_bit_elem(in, tmp_buf, size, elem_size);
+    CHECK_ERR_FREE(count, tmp_buf);
+
+    // Overlapping locks ensure that one thread is not overtaken by another, 
+    // resulting in data bocks written in the wrong order. However, limits to 
+    // at most factor of 2 parralellization.
+    omp_set_lock(&out_pl->lock);
+    omp_unset_lock(&in_pl->lock);
+
+    #pragma omp flush
+    void *out = out_pl->ptr;
+    nbytes = LZ4_compress(tmp_buf, (char*) out + 4, size * elem_size);
+    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
+    bshuf_write_uint32_BE(out, nbytes);
+    nbytes += 4;
+    out_pl->ptr = (void*) ((char*) out + nbytes);
+    omp_unset_lock(&out_pl->lock);
+
+    free(tmp_buf);
+    return nbytes;
+}
+
+
+int64_t bshuf_decompress_lz4_block_adv(ptr_and_lock* in_pl, ptr_and_lock* out_pl,
+        const size_t size, const size_t elem_size) {
+
+    int64_t nbytes, count;
+
+    omp_set_lock(&in_pl->lock);
+    omp_set_lock(&out_pl->lock);
+    #pragma omp flush
+    void *in = in_pl->ptr;
+    void *out = out_pl->ptr;
+    int32_t nbytes_from_header = bshuf_read_uint32_BE(in);
+    in_pl->ptr = (void*) ((char*) in + nbytes_from_header + 4);
+    out_pl->ptr = (void*) ((char*) out + size * elem_size);
+    omp_unset_lock(&in_pl->lock);
+    omp_unset_lock(&out_pl->lock);
+
+    void* tmp_buf = malloc(size * elem_size);
+    if (tmp_buf == NULL) return -1;
+
+#ifdef BSHUF_LZ4_DECOMPRESS_FAST
+    nbytes = LZ4_decompress_fast((char*) in + 4, tmp_buf, size * elem_size);
+    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
+    if (nbytes != nbytes_from_header) {
+        free(tmp_buf);
+        return -91;
+    }
+#else
+    nbytes = LZ4_decompress_safe((char*) in + 4, tmp_buf, nbytes_from_header,
+                                 size * elem_size);
+    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
+    if (nbytes != size * elem_size) {
+        free(tmp_buf);
+        return -91;
+    }
+    nbytes = nbytes_from_header;
+#endif
+    count = bshuf_untrans_bit_elem(tmp_buf, out, size, elem_size);
+    CHECK_ERR_FREE(count, tmp_buf);
+    nbytes += 4;
+
+
+
+    free(tmp_buf);
+    return nbytes;
+}
+
+
 int64_t bshuf_decompress_lz4_block(void** in, void** out, const size_t size,
         const size_t elem_size) {
 
@@ -2024,18 +2107,18 @@ int64_t bshuf_decompress_lz4_block(void** in, void** out, const size_t size,
 
 int64_t bshuf_compress_lz4(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
-    //bshuf_bitshuffle(in, out, size, elem_size, block_size);
-    //return elem_size * size;
-    return bshuf_blocked_wrap_fun(&bshuf_compress_lz4_block, in, out, size,
+    //return bshuf_blocked_wrap_fun(&bshuf_compress_lz4_block, in, out, size,
+    //        elem_size, block_size);
+    return bshuf_blocked_wrap_fun_adv(&bshuf_compress_lz4_block_adv, in, out, size,
             elem_size, block_size);
 }
 
 
 int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
-    //bshuf_bitunshuffle(in, out, size, elem_size, block_size);
-    //return elem_size * size;
-    return bshuf_blocked_wrap_fun(&bshuf_decompress_lz4_block, in, out, size,
+    //return bshuf_blocked_wrap_fun(&bshuf_decompress_lz4_block, in, out, size,
+    //        elem_size, block_size);
+    return bshuf_blocked_wrap_fun_adv(&bshuf_decompress_lz4_block_adv, in, out, size,
             elem_size, block_size);
 }
 
