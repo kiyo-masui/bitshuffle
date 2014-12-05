@@ -132,15 +132,6 @@ void queue_set_next_out(async_io_queue *q, size_t *this, void* out_ptr) {
 
 
 // Function definition for worker functions.
-typedef int64_t (*bshufFunDef)(void** in, void** out, const size_t size,
-         const size_t elem_size);
-
-typedef int64_t (*bshufFunDef_sim)(void* in, void* out, const size_t size,
-         const size_t elem_size);
-
-typedef int64_t (*bshufFunDef_adv)(ptr_and_lock* in, ptr_and_lock* out,
-        const size_t size, const size_t elem_size);
-
 typedef int64_t (*bshufFunDef_ioq)(async_io_queue* q,
         const size_t size, const size_t elem_size);
 
@@ -1777,88 +1768,6 @@ size_t bshuf_default_block_size(const size_t elem_size) {
 }
 
 
-int64_t bshuf_blocked_wrap_fun(bshufFunDef fun, void* in, void* out,
-        const size_t size, const size_t elem_size, size_t block_size) {
-    void* A = in;
-    void* B = out;
-
-    int64_t count, cum_count = 0;
-    size_t this_block_size;
-    size_t leftover;
-
-    if (block_size == 0) {
-        block_size = bshuf_default_block_size(elem_size);
-    }
-    if (block_size < 0 || block_size % BSHUF_BLOCKED_MULT) return -81;
-
-    for (size_t ii = 0; ii < size; ii += block_size) {
-        this_block_size = MIN(size - ii, block_size);
-        this_block_size = this_block_size - this_block_size % BSHUF_BLOCKED_MULT;
-        if (this_block_size) {
-            count = fun(&A, &B, this_block_size, elem_size);
-            if (count < 0) return count;
-            cum_count += count;
-        }
-    }
-    leftover = size % BSHUF_BLOCKED_MULT;
-
-    memcpy(B, A, leftover * elem_size);
-
-    return cum_count + leftover * elem_size;
-}
-
-
-int64_t bshuf_blocked_wrap_fun_adv(bshufFunDef_adv fun, void* in, void* out,
-        const size_t size, const size_t elem_size, size_t block_size) {
-
-    ptr_and_lock A, B;
-    // XXX double allocating locks.  Not that big of deal, but shouldn't do it.
-    omp_lock_t in_lock, out_lock;
-
-    omp_init_lock(&in_lock);
-    omp_init_lock(&out_lock);
-
-    A.lock = in_lock;
-    A.ptr = in;
-    B.lock = out_lock;
-    B.ptr = out;
-
-    int64_t err = 0, count, cum_count = 0;
-    size_t last_block_size;
-    size_t leftover;
-
-    if (block_size == 0) {
-        block_size = bshuf_default_block_size(elem_size);
-    }
-    if (block_size < 0 || block_size % BSHUF_BLOCKED_MULT) return -81;
-
-    #pragma omp parallel for private(count) reduction(+ : cum_count)
-    for (size_t ii = 0; ii < size / block_size; ii ++) {
-        count = fun(&A, &B, block_size, elem_size);
-        if (count < 0) err = count;
-        cum_count += count;
-    }
-
-    last_block_size = size % block_size;
-    last_block_size = last_block_size - last_block_size % BSHUF_BLOCKED_MULT;
-    if (last_block_size) {
-        count = fun(&A, &B, last_block_size, elem_size);
-        if (count < 0) err = count;
-        cum_count += count;
-    }
-
-    if (err < 0) return err;
-
-    leftover = size % BSHUF_BLOCKED_MULT;
-    memcpy(B.ptr, A.ptr, leftover * elem_size);
-
-    omp_destroy_lock(&in_lock);
-    omp_destroy_lock(&out_lock);
-
-    return cum_count + leftover * elem_size;
-}
-
-
 int64_t bshuf_blocked_wrap_fun_ioq(bshufFunDef_ioq fun, void* in, void* out,
         const size_t size, const size_t elem_size, size_t block_size) {
 
@@ -1905,100 +1814,31 @@ int64_t bshuf_blocked_wrap_fun_ioq(bshufFunDef_ioq fun, void* in, void* out,
 }
 
 
-
-int64_t bshuf_blocked_wrap_fun_sim(bshufFunDef_sim fun, void* in, void* out,
-        const size_t size, const size_t elem_size, size_t block_size) {
-    char* A = in;
-    char* B = out;
-
-    int64_t err = 0, count, cum_count = 0;
-    size_t last_block_size;
-    size_t leftover;
-
-    if (block_size == 0) {
-        block_size = bshuf_default_block_size(elem_size);
-    }
-    if (block_size < 0 || block_size % BSHUF_BLOCKED_MULT) return -81;
-
-    #pragma omp parallel for private(count) reduction(+ : cum_count)
-    for (size_t ii = 0; ii < size / block_size; ii ++) {
-        size_t ind = ii * elem_size * block_size;
-        count = fun((void *) &A[ind], (void *) &B[ind], block_size, elem_size);
-        if (count < 0) err = count;
-        cum_count += count;
-    }
-
-    last_block_size = size % block_size;
-    last_block_size = last_block_size - last_block_size % BSHUF_BLOCKED_MULT;
-    if (last_block_size) {
-        size_t ind = elem_size * (size - size % block_size);
-        count = fun((void *) &A[ind], (void *) &B[ind], last_block_size, elem_size);
-        if (count < 0) err = count;
-        cum_count += count;
-    }
-
-    if (err < 0) return err;
-
-    leftover = size % BSHUF_BLOCKED_MULT;
-    size_t ind = elem_size * (size - leftover);
-    memcpy(&B[ind], &A[ind], leftover * elem_size);
-
-    return cum_count + leftover * elem_size;
-}
-
-
-int64_t bshuf_bitshuffle_block(void** in, void** out, const size_t size,
-        const size_t elem_size) {
-
-    int64_t count = bshuf_trans_bit_elem(*in, *out, size, elem_size);
-    *in = (void*) ((char*) *in + size * elem_size);
-    *out = (void*) ((char*) *out + size * elem_size);
-    return count;
-}
-
-
-int64_t bshuf_bitshuffle_block_adv(ptr_and_lock* in_pl, ptr_and_lock* out_pl,
+int64_t bshuf_bitshuffle_block_ioq(async_io_queue *q,
         const size_t size, const size_t elem_size) {
 
-    omp_set_lock(&in_pl->lock);
-    omp_set_lock(&out_pl->lock);
-    #pragma omp flush
-    void *in = in_pl->ptr;
-    void *out = out_pl->ptr;
-    in_pl->ptr = (void*) ((char*) in + size * elem_size);
-    out_pl->ptr = (void*) ((char*) out + size * elem_size);
-    omp_unset_lock(&in_pl->lock);
-    omp_unset_lock(&out_pl->lock);
+    size_t this;
+    void *in = queue_get_in(q, &this);
+    queue_set_next_in(q, &this, (void*) ((char*) in + size * elem_size));
+    void *out = queue_get_out(q, &this);
+    queue_set_next_out(q, &this, (void *) ((char *) out + size * elem_size));
 
     int64_t count = bshuf_trans_bit_elem(in, out, size, elem_size);
     return count;
 }
 
 
-int64_t bshuf_bitunshuffle_block_adv(ptr_and_lock* in_pl, ptr_and_lock* out_pl,
+int64_t bshuf_bitunshuffle_block_ioq(async_io_queue* q,
         const size_t size, const size_t elem_size) {
 
-    omp_set_lock(&in_pl->lock);
-    omp_set_lock(&out_pl->lock);
-    #pragma omp flush
-    void *in = in_pl->ptr;
-    void *out = out_pl->ptr;
-    in_pl->ptr = (void*) ((char*) in + size * elem_size);
-    out_pl->ptr = (void*) ((char*) out + size * elem_size);
-    omp_unset_lock(&in_pl->lock);
-    omp_unset_lock(&out_pl->lock);
+
+    size_t this;
+    void *in = queue_get_in(q, &this);
+    queue_set_next_in(q, &this, (void*) ((char*) in + size * elem_size));
+    void *out = queue_get_out(q, &this);
+    queue_set_next_out(q, &this, (void *) ((char *) out + size * elem_size));
 
     int64_t count = bshuf_untrans_bit_elem(in, out, size, elem_size);
-    return count;
-}
-
-
-int64_t bshuf_bitunshuffle_block(void** in, void** out, const size_t size,
-        const size_t elem_size) {
-
-    int64_t count = bshuf_untrans_bit_elem(*in, *out, size, elem_size);
-    *in = (void*) ((char*) *in + size * elem_size);
-    *out = (void*) ((char*) *out + size * elem_size);
     return count;
 }
 
@@ -2006,20 +1846,16 @@ int64_t bshuf_bitunshuffle_block(void** in, void** out, const size_t size,
 int64_t bshuf_bitshuffle(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
-    return bshuf_blocked_wrap_fun_adv(&bshuf_bitshuffle_block_adv, in, out, size,
+    return bshuf_blocked_wrap_fun_ioq(&bshuf_bitshuffle_block_ioq, in, out, size,
             elem_size, block_size);
-    //return bshuf_blocked_wrap_fun_sim(&bshuf_trans_bit_elem, in, out, size,
-    //        elem_size, block_size);
 }
 
 
 int64_t bshuf_bitunshuffle(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
-    return bshuf_blocked_wrap_fun_adv(&bshuf_bitunshuffle_block_adv, in, out, size,
+    return bshuf_blocked_wrap_fun_ioq(&bshuf_bitunshuffle_block_ioq, in, out, size,
             elem_size, block_size);
-    //return bshuf_blocked_wrap_fun_sim(&bshuf_untrans_bit_elem, in, out, size,
-    //        elem_size, block_size);
 }
 
 
@@ -2093,67 +1929,6 @@ size_t bshuf_compress_lz4_bound(const size_t size,
 }
 
 
-int64_t bshuf_compress_lz4_block(void** in, void** out, const size_t size,
-        const size_t elem_size) {
-
-    int64_t nbytes, count;
-
-    void* tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return -1;
-
-    count = bshuf_trans_bit_elem(*in, tmp_buf, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
-    nbytes = LZ4_compress(tmp_buf, (char*) *out + 4, size * elem_size);
-    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    bshuf_write_uint32_BE(*out, nbytes);
-    nbytes += 4;
-
-    //nbytes = bshuf_trans_bit_elem(*in, *out, size, elem_size);
-
-    *in = (void*) ((char*) *in + size * elem_size);
-    *out = (void*) ((char*) *out + nbytes);
-
-    free(tmp_buf);
-    return nbytes;
-}
-
-
-
-int64_t bshuf_compress_lz4_block_adv(ptr_and_lock* in_pl, ptr_and_lock* out_pl,
-        const size_t size, const size_t elem_size) {
-
-    int64_t nbytes, count;
-
-    void* tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return -1;
-
-    omp_set_lock(&in_pl->lock);
-    #pragma omp flush
-    void *in = in_pl->ptr;
-    in_pl->ptr = (void*) ((char*) in + size * elem_size);
-    count = bshuf_trans_bit_elem(in, tmp_buf, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
-
-    // Overlapping locks ensure that one thread is not overtaken by another, 
-    // resulting in data bocks written in the wrong order. However, limits to 
-    // at most factor of 2 parralellization.
-    omp_set_lock(&out_pl->lock);
-    omp_unset_lock(&in_pl->lock);
-
-    #pragma omp flush
-    void *out = out_pl->ptr;
-    nbytes = LZ4_compress(tmp_buf, (char*) out + 4, size * elem_size);
-    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    bshuf_write_uint32_BE(out, nbytes);
-    nbytes += 4;
-    out_pl->ptr = (void*) ((char*) out + nbytes);
-    omp_unset_lock(&out_pl->lock);
-
-    free(tmp_buf);
-    return nbytes;
-}
-
-
 int64_t bshuf_compress_lz4_block_ioq(async_io_queue *q,
         const size_t size, const size_t elem_size) {
 
@@ -2195,61 +1970,13 @@ int64_t bshuf_compress_lz4_block_ioq(async_io_queue *q,
 }
 
 
-int64_t bshuf_decompress_lz4_block_adv(ptr_and_lock* in_pl, ptr_and_lock* out_pl,
-        const size_t size, const size_t elem_size) {
-
-    int64_t nbytes, count;
-
-    omp_set_lock(&in_pl->lock);
-    omp_set_lock(&out_pl->lock);
-    #pragma omp flush
-    void *in = in_pl->ptr;
-    void *out = out_pl->ptr;
-    int32_t nbytes_from_header = bshuf_read_uint32_BE(in);
-    in_pl->ptr = (void*) ((char*) in + nbytes_from_header + 4);
-    out_pl->ptr = (void*) ((char*) out + size * elem_size);
-    omp_unset_lock(&in_pl->lock);
-    omp_unset_lock(&out_pl->lock);
-
-    void* tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return -1;
-
-#ifdef BSHUF_LZ4_DECOMPRESS_FAST
-    nbytes = LZ4_decompress_fast((char*) in + 4, tmp_buf, size * elem_size);
-    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    if (nbytes != nbytes_from_header) {
-        free(tmp_buf);
-        return -91;
-    }
-#else
-    nbytes = LZ4_decompress_safe((char*) in + 4, tmp_buf, nbytes_from_header,
-                                 size * elem_size);
-    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    if (nbytes != size * elem_size) {
-        free(tmp_buf);
-        return -91;
-    }
-    nbytes = nbytes_from_header;
-#endif
-    count = bshuf_untrans_bit_elem(tmp_buf, out, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
-    nbytes += 4;
-
-
-
-    free(tmp_buf);
-    return nbytes;
-}
-
 
 int64_t bshuf_decompress_lz4_block_ioq(async_io_queue *q,
         const size_t size, const size_t elem_size) {
 
     int64_t nbytes, count;
 
-
     size_t this;
-
     void *in = queue_get_in(q, &this);
     int32_t nbytes_from_header = bshuf_read_uint32_BE(in);
     queue_set_next_in(q, &this, (void*) ((char*) in + nbytes_from_header + 4));
@@ -2286,54 +2013,8 @@ int64_t bshuf_decompress_lz4_block_ioq(async_io_queue *q,
 }
 
 
-
-int64_t bshuf_decompress_lz4_block(void** in, void** out, const size_t size,
-        const size_t elem_size) {
-
-    int64_t nbytes, count;
-
-    void* tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return -1;
-
-    int32_t nbytes_from_header = bshuf_read_uint32_BE(*in);
-#ifdef BSHUF_LZ4_DECOMPRESS_FAST
-    nbytes = LZ4_decompress_fast((char*) *in + 4, tmp_buf, size * elem_size);
-    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    if (nbytes != nbytes_from_header) {
-        free(tmp_buf);
-        return -91;
-    }
-#else
-    nbytes = LZ4_decompress_safe((char*) *in + 4, tmp_buf, nbytes_from_header,
-                                 size * elem_size);
-    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    if (nbytes != size * elem_size) {
-        free(tmp_buf);
-        return -91;
-    }
-    nbytes = nbytes_from_header;
-#endif
-    count = bshuf_untrans_bit_elem(tmp_buf, *out, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
-    nbytes += 4;
-
-    //nbytes = bshuf_untrans_bit_elem(*in, *out, size, elem_size);
-
-    *in = (void*) ((char*) *in + nbytes);
-    *out = (void*) ((char*) *out + size * elem_size);
-
-
-    free(tmp_buf);
-    return nbytes;
-}
-
-
 int64_t bshuf_compress_lz4(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
-    //return bshuf_blocked_wrap_fun(&bshuf_compress_lz4_block, in, out, size,
-    //        elem_size, block_size);
-    //return bshuf_blocked_wrap_fun_adv(&bshuf_compress_lz4_block_adv, in, out, size,
-    //        elem_size, block_size);
     return bshuf_blocked_wrap_fun_ioq(&bshuf_compress_lz4_block_ioq, in, out, size,
             elem_size, block_size);
 }
@@ -2341,10 +2022,6 @@ int64_t bshuf_compress_lz4(void* in, void* out, const size_t size,
 
 int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
-    //return bshuf_blocked_wrap_fun(&bshuf_decompress_lz4_block, in, out, size,
-    //        elem_size, block_size);
-    //return bshuf_blocked_wrap_fun_adv(&bshuf_decompress_lz4_block_adv, in, out, size,
-    //        elem_size, block_size);
     return bshuf_blocked_wrap_fun_ioq(&bshuf_decompress_lz4_block_ioq, in, out, size,
             elem_size, block_size);
 }
