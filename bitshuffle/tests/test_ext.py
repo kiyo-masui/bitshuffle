@@ -11,7 +11,7 @@ from bitshuffle import ext
 # If we are doing timeings by what factor to increase workload.
 # Remember to change `ext.REPEATC`.
 TIME = 0
-TIME = 1024    # 8kB blocks same as final blocking. 
+#TIME = 8    # 8kB blocks same as final blocking. 
 BLOCK = 1024
 
 
