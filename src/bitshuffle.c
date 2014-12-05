@@ -1,5 +1,28 @@
 #include "bitshuffle.h"
 #include "iochain.h"
+#include "lz4.h"
+
+#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
+
+
+#if defined(__AVX2__) && defined (__SSE2__)
+#define USEAVX2
+#endif
+
+#if defined(__SSE2__)
+#define USESSE2
+#endif
+
+
+// Conditional includes for SSE2 and AVX2.
+#ifdef USEAVX2
+#include <immintrin.h>
+#elif defined USESSE2
+#include <emmintrin.h>
+#endif
+
 
 // Constants.
 #define BSHUF_MIN_RECOMMEND_BLOCK 128
@@ -561,8 +584,8 @@ int64_t bshuf_trans_byte_elem_SSE(void* in, void* out, const size_t size,
     // Multiple of power of 2: transpose hierarchically.
     {
         size_t nchunk_elem;
-        // XXX Check pointer.
         void* tmp_buf = malloc(size * elem_size);
+        if (tmp_buf == NULL) return -1;
 
         if ((elem_size % 8) == 0) {
             nchunk_elem = elem_size / 8;
@@ -1171,7 +1194,7 @@ int64_t bshuf_trans_bit_elem_AVX(void* in, void* out, const size_t size,
     CHECK_MULT_EIGHT(size);
 
     void* tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return 1;
+    if (tmp_buf == NULL) return -1;
 
     count = bshuf_trans_byte_elem_SSE(in, out, size, elem_size);
     CHECK_ERR_FREE(count, tmp_buf);
@@ -1939,8 +1962,6 @@ int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
 }
 
 
-
-
 #undef TRANS_BIT_8X8
 #undef TRANS_ELEM_TYPE
 #undef MIN
@@ -1950,5 +1971,5 @@ int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
 #undef CHECK_ERR_FREE
 #undef CHECK_ERR_FREE_LZ
 
-//#undef USESSE2
-//#undef USEAVX2
+#undef USESSE2
+#undef USEAVX2

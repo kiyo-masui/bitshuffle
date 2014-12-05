@@ -32,15 +32,14 @@
  *  - Call `ioc_destroy` in serial block.
  *  - Safe for num_threads >= IOC_SIZE (but less efficient).
  *
- *
  */
-
 
 
 #ifndef IOCHAIN_H
 #define IOCHAIN_H
 
 
+#include <stdlib.h>
 #include <omp.h>
 
 

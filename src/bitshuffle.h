@@ -19,32 +19,10 @@
 #ifndef BITSHUFFLE_H
 #define BITSHUFFLE_H
 
-// XXX All these includes can be moved to the .c file.
-#if defined(__AVX2__) && defined (__SSE2__)
-#define USEAVX2
-#endif
 
-#if defined(__SSE2__)
-#define USESSE2
-#endif
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
 #include <stdint.h>
-#include <string.h>
-#include <inttypes.h>
+#include <stdlib.h>
 
-
-#include "lz4.h"
-
-// Conditional includes for SSE2 and AVX2.
-#ifdef USEAVX2
-#include <immintrin.h>
-#elif defined USESSE2
-#include <emmintrin.h>
-#endif
 
 // These are usually set in the setup.py.
 #ifndef BSHUF_VERSION_MAJOR
