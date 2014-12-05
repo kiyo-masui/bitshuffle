@@ -1,5 +1,5 @@
 #include "bitshuffle.h"
-
+#include "iochain.h"
 
 // Constants.
 #define BSHUF_MIN_RECOMMEND_BLOCK 128
@@ -40,99 +40,10 @@ int bshuf_using_AVX2(void) {
 }
 
 
-/* Simple FIFO queue that blocks operations on the next entry in the queue
- * until the required pointer becomes available.
- *
- * Usage
- * -----
- *  - Call `queue_init` in serial block.
- *  - Each thread must call each of the `queue_get*` and `queue_set*` methods
- *    exactly once per iteration, starting with `queue_get_in` and ending
- *    with `queue_set_next_out`.
- *  - The order (`queue_get_in`, `queue_set_next_in`, *work*, `queue_get_out`,
- *    `queue_set_next_out`, *work*) is most efficient.
- *  - Have each thread call `queue_end_pop`.
- *  - `queue_get_in` is blocked until the previouse entry's
- *    `queue_set_next_in` is called.
- *  - `queue_get_out` is blocked until the previouse entry's
- *    `queue_set_next_out` is called.
- *  - There are no blocks on the very first iteration.
- *  - Call `queue_destroy` in serial block.
- *  - Safe for num_threads >= QUEUE_LEN (but less efficient).
- *
- *
- *                                                                          */
-
-#define QUEUE_LEN 33
-
-typedef struct ptr_and_lock {
-    omp_lock_t lock;
-    void *ptr;
-} ptr_and_lock;
-
-typedef struct async_io_queue {
-    omp_lock_t next_lock;
-    size_t next;
-    ptr_and_lock in_pl[QUEUE_LEN];
-    ptr_and_lock out_pl[QUEUE_LEN];
-} async_io_queue;
-
-void queue_init(async_io_queue *q, void *in_ptr_0, void *out_ptr_0) {
-    omp_init_lock(&q->next_lock);
-    for (size_t ii = 0; ii < QUEUE_LEN; ii ++) {
-        omp_init_lock(&(q->in_pl[ii].lock));
-        omp_init_lock(&(q->out_pl[ii].lock));
-    }
-    q->next = 0;
-    q->in_pl[0].ptr = in_ptr_0;
-    q->out_pl[0].ptr = out_ptr_0;
-}
-
-void queue_destroy(async_io_queue *q) {
-    omp_destroy_lock(&q->next_lock);
-    for (size_t ii = 0; ii < QUEUE_LEN; ii ++) {
-        omp_destroy_lock(&(q->in_pl[ii].lock));
-        omp_destroy_lock(&(q->out_pl[ii].lock));
-    }
-}
-
-void * queue_get_in(async_io_queue *q, size_t *this) {
-    omp_set_lock(&q->next_lock);
-    #pragma omp flush
-    *this = q->next;
-    q->next ++;
-    omp_set_lock(&(q->in_pl[*this % QUEUE_LEN].lock));
-    omp_set_lock(&(q->in_pl[(*this + 1) % QUEUE_LEN].lock));
-    omp_set_lock(&(q->out_pl[(*this + 1) % QUEUE_LEN].lock));
-    omp_unset_lock(&q->next_lock);
-    return q->in_pl[*this % QUEUE_LEN].ptr;
-}
-
-void queue_set_next_in(async_io_queue *q, size_t* this, void* in_ptr) {
-    q->in_pl[(*this + 1) % QUEUE_LEN].ptr = in_ptr;
-    omp_unset_lock(&(q->in_pl[(*this + 1) % QUEUE_LEN].lock));
-}
-
-void * queue_get_out(async_io_queue *q, size_t *this) {
-    omp_set_lock(&(q->out_pl[(*this) % QUEUE_LEN].lock));
-    #pragma omp flush
-    void *out_ptr = q->out_pl[*this % QUEUE_LEN].ptr;
-    omp_unset_lock(&(q->out_pl[(*this) % QUEUE_LEN].lock));
-    return out_ptr;
-}
-
-void queue_set_next_out(async_io_queue *q, size_t *this, void* out_ptr) {
-    q->out_pl[(*this + 1) % QUEUE_LEN].ptr = out_ptr;
-    omp_unset_lock(&(q->out_pl[(*this + 1) % QUEUE_LEN].lock));
-    // *in_pl[this]* lock released at the end of the iteration to avoid being
-    // overtaken by previouse threads and having *out_pl[this]* corrupted.
-    // Especially worried about thread 0, iteration 0.
-    omp_unset_lock(&(q->in_pl[(*this) % QUEUE_LEN].lock));
-}
 
 
 // Function definition for worker functions.
-typedef int64_t (*bshufFunDef_ioq)(async_io_queue* q,
+typedef int64_t (*bshufFunDef_ioq)(ioc_chain* C_ptr,
         const size_t size, const size_t elem_size);
 
 
@@ -650,6 +561,7 @@ int64_t bshuf_trans_byte_elem_SSE(void* in, void* out, const size_t size,
     // Multiple of power of 2: transpose hierarchically.
     {
         size_t nchunk_elem;
+        // XXX Check pointer.
         void* tmp_buf = malloc(size * elem_size);
 
         if ((elem_size % 8) == 0) {
@@ -1771,8 +1683,8 @@ size_t bshuf_default_block_size(const size_t elem_size) {
 int64_t bshuf_blocked_wrap_fun_ioq(bshufFunDef_ioq fun, void* in, void* out,
         const size_t size, const size_t elem_size, size_t block_size) {
 
-    async_io_queue q;
-    queue_init(&q, in, out);
+    ioc_chain C;
+    ioc_init(&C, in, out);
 
     int64_t err = 0, count, cum_count = 0;
     size_t last_block_size;
@@ -1784,7 +1696,7 @@ int64_t bshuf_blocked_wrap_fun_ioq(bshufFunDef_ioq fun, void* in, void* out,
 
     #pragma omp parallel for private(count) reduction(+ : cum_count)
     for (size_t ii = 0; ii < size / block_size; ii ++) {
-        count = fun(&q, block_size, elem_size);
+        count = fun(&C, block_size, elem_size);
         if (count < 0) err = count;
         cum_count += count;
     }
@@ -1792,7 +1704,7 @@ int64_t bshuf_blocked_wrap_fun_ioq(bshufFunDef_ioq fun, void* in, void* out,
     last_block_size = size % block_size;
     last_block_size = last_block_size - last_block_size % BSHUF_BLOCKED_MULT;
     if (last_block_size) {
-        count = fun(&q, last_block_size, elem_size);
+        count = fun(&C, last_block_size, elem_size);
         if (count < 0) err = count;
         cum_count += count;
     }
@@ -1800,43 +1712,43 @@ int64_t bshuf_blocked_wrap_fun_ioq(bshufFunDef_ioq fun, void* in, void* out,
     if (err < 0) return err;
 
     size_t leftover_bytes = size % BSHUF_BLOCKED_MULT * elem_size;
-    size_t this;
-    char *last_in = (char *) queue_get_in(&q, &this);
-    queue_set_next_in(&q, &this, (void *) (last_in + leftover_bytes));
-    char *last_out = (char *) queue_get_out(&q, &this);
-    queue_set_next_out(&q, &this, (void *) (last_out + leftover_bytes));
+    size_t this_iter;
+    char *last_in = (char *) ioc_get_in(&C, &this_iter);
+    ioc_set_next_in(&C, &this_iter, (void *) (last_in + leftover_bytes));
+    char *last_out = (char *) ioc_get_out(&C, &this_iter);
+    ioc_set_next_out(&C, &this_iter, (void *) (last_out + leftover_bytes));
 
     memcpy(last_out, last_in, leftover_bytes);
 
-    queue_destroy(&q);
+    ioc_destroy(&C);
 
     return cum_count + leftover_bytes;
 }
 
 
-int64_t bshuf_bitshuffle_block_ioq(async_io_queue *q,
+int64_t bshuf_bitshuffle_block_ioq(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size) {
 
-    size_t this;
-    void *in = queue_get_in(q, &this);
-    queue_set_next_in(q, &this, (void*) ((char*) in + size * elem_size));
-    void *out = queue_get_out(q, &this);
-    queue_set_next_out(q, &this, (void *) ((char *) out + size * elem_size));
+    size_t this_iter;
+    void *in = ioc_get_in(C_ptr, &this_iter);
+    ioc_set_next_in(C_ptr, &this_iter, (void*) ((char*) in + size * elem_size));
+    void *out = ioc_get_out(C_ptr, &this_iter);
+    ioc_set_next_out(C_ptr, &this_iter, (void *) ((char *) out + size * elem_size));
 
     int64_t count = bshuf_trans_bit_elem(in, out, size, elem_size);
     return count;
 }
 
 
-int64_t bshuf_bitunshuffle_block_ioq(async_io_queue* q,
+int64_t bshuf_bitunshuffle_block_ioq(ioc_chain* C_ptr,
         const size_t size, const size_t elem_size) {
 
 
-    size_t this;
-    void *in = queue_get_in(q, &this);
-    queue_set_next_in(q, &this, (void*) ((char*) in + size * elem_size));
-    void *out = queue_get_out(q, &this);
-    queue_set_next_out(q, &this, (void *) ((char *) out + size * elem_size));
+    size_t this_iter;
+    void *in = ioc_get_in(C_ptr, &this_iter);
+    ioc_set_next_in(C_ptr, &this_iter, (void*) ((char*) in + size * elem_size));
+    void *out = ioc_get_out(C_ptr, &this_iter);
+    ioc_set_next_out(C_ptr, &this_iter, (void *) ((char *) out + size * elem_size));
 
     int64_t count = bshuf_untrans_bit_elem(in, out, size, elem_size);
     return count;
@@ -1929,7 +1841,7 @@ size_t bshuf_compress_lz4_bound(const size_t size,
 }
 
 
-int64_t bshuf_compress_lz4_block_ioq(async_io_queue *q,
+int64_t bshuf_compress_lz4_block_ioq(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size) {
 
     int64_t nbytes, count;
@@ -1943,10 +1855,10 @@ int64_t bshuf_compress_lz4_block_ioq(async_io_queue *q,
         return -1;
     }
 
-    size_t this;
+    size_t this_iter;
 
-    void *in = queue_get_in(q, &this);
-    queue_set_next_in(q, &this, (void*) ((char*) in + size * elem_size));
+    void *in = ioc_get_in(C_ptr, &this_iter);
+    ioc_set_next_in(C_ptr, &this_iter, (void*) ((char*) in + size * elem_size));
 
     count = bshuf_trans_bit_elem(in, tmp_buf_bshuf, size, elem_size);
     if (count < 0) {
@@ -1958,8 +1870,8 @@ int64_t bshuf_compress_lz4_block_ioq(async_io_queue *q,
     free(tmp_buf_bshuf);
     CHECK_ERR_FREE_LZ(nbytes, tmp_buf_lz4);
 
-    void *out = queue_get_out(q, &this);
-    queue_set_next_out(q, &this, (void *) ((char *) out + nbytes + 4));
+    void *out = ioc_get_out(C_ptr, &this_iter);
+    ioc_set_next_out(C_ptr, &this_iter, (void *) ((char *) out + nbytes + 4));
 
     bshuf_write_uint32_BE(out, nbytes);
     memcpy((char *) out + 4, tmp_buf_lz4, nbytes);
@@ -1971,18 +1883,18 @@ int64_t bshuf_compress_lz4_block_ioq(async_io_queue *q,
 
 
 
-int64_t bshuf_decompress_lz4_block_ioq(async_io_queue *q,
+int64_t bshuf_decompress_lz4_block_ioq(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size) {
 
     int64_t nbytes, count;
 
-    size_t this;
-    void *in = queue_get_in(q, &this);
+    size_t this_iter;
+    void *in = ioc_get_in(C_ptr, &this_iter);
     int32_t nbytes_from_header = bshuf_read_uint32_BE(in);
-    queue_set_next_in(q, &this, (void*) ((char*) in + nbytes_from_header + 4));
+    ioc_set_next_in(C_ptr, &this_iter, (void*) ((char*) in + nbytes_from_header + 4));
 
-    void *out = queue_get_out(q, &this);
-    queue_set_next_out(q, &this, (void *) ((char *) out + size * elem_size));
+    void *out = ioc_get_out(C_ptr, &this_iter);
+    ioc_set_next_out(C_ptr, &this_iter, (void *) ((char *) out + size * elem_size));
 
     void* tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return -1;

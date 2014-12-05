@@ -6,19 +6,20 @@
  * if positive or an error code if negitive.
  *
  * Error codes:
- *      -11   : Missing SSE
- *      -12   : Missing AVX
+ *      -1    : Failed to allocate memory.
+ *      -11   : Missing SSE.
+ *      -12   : Missing AVX.
  *      -80   : Input size not a multiple of 8.
  *      -81   : block_size not multiple of 8.
  *      -91   : Decompression error, wrong number of bytes processed.
- *      -1XXX : Error internal to decompression routine with errorcode -X.
+ *      -1YYY : Error internal to compression routine with errorcode -YYY.
  */
 
 
 #ifndef BITSHUFFLE_H
 #define BITSHUFFLE_H
 
-
+// XXX All these includes can be moved to the .c file.
 #if defined(__AVX2__) && defined (__SSE2__)
 #define USEAVX2
 #endif
@@ -35,7 +36,6 @@
 #include <string.h>
 #include <inttypes.h>
 
-#include <omp.h>
 
 #include "lz4.h"
 
@@ -46,6 +46,7 @@
 #include <emmintrin.h>
 #endif
 
+// These are usually set in the setup.py.
 #ifndef BSHUF_VERSION_MAJOR
 #define BSHUF_VERSION_MAJOR 0
 #define BSHUF_VERSION_MINOR 1
@@ -179,14 +180,16 @@ size_t bshuf_compress_lz4_bound(const size_t size,
  * *bshuf_compress_lz4_bound* to get an upper limit.
  *
  * Parameters
- * ---------- in : input buffer, must be of size * elem_size bytes out : output
- *  buffer, must be large enough to hold data.  size : number of elements in
- *  input elem_size : element size of typed data block_size : Process in blocks
- *  of this many elements
+ * ----------
+ *  in : input buffer, must be of size * elem_size bytes 
+ *  out : output buffer, must be large enough to hold data.
+ *  size : number of elements in input
+ *  elem_size : element size of typed data
+ *  block_size : Process in blocks of this many elements
  *
  * Returns
- * ------- number of bytes used in output buffer, negitive error-code if
- *  failed.
+ * ------- 
+ *  number of bytes used in output buffer, negitive error-code if failed.
  *
  */
 int64_t bshuf_compress_lz4(void* in, void* out, const size_t size, const size_t
