@@ -2242,6 +2242,51 @@ int64_t bshuf_decompress_lz4_block_adv(ptr_and_lock* in_pl, ptr_and_lock* out_pl
 }
 
 
+int64_t bshuf_decompress_lz4_block_ioq(async_io_queue *q,
+        const size_t size, const size_t elem_size) {
+
+    int64_t nbytes, count;
+
+
+    size_t this;
+
+    void *in = queue_get_in(q, &this);
+    int32_t nbytes_from_header = bshuf_read_uint32_BE(in);
+    queue_set_next_in(q, &this, (void*) ((char*) in + nbytes_from_header + 4));
+
+    void *out = queue_get_out(q, &this);
+    queue_set_next_out(q, &this, (void *) ((char *) out + size * elem_size));
+
+    void* tmp_buf = malloc(size * elem_size);
+    if (tmp_buf == NULL) return -1;
+
+#ifdef BSHUF_LZ4_DECOMPRESS_FAST
+    nbytes = LZ4_decompress_fast((char*) in + 4, tmp_buf, size * elem_size);
+    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
+    if (nbytes != nbytes_from_header) {
+        free(tmp_buf);
+        return -91;
+    }
+#else
+    nbytes = LZ4_decompress_safe((char*) in + 4, tmp_buf, nbytes_from_header,
+                                 size * elem_size);
+    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
+    if (nbytes != size * elem_size) {
+        free(tmp_buf);
+        return -91;
+    }
+    nbytes = nbytes_from_header;
+#endif
+    count = bshuf_untrans_bit_elem(tmp_buf, out, size, elem_size);
+    CHECK_ERR_FREE(count, tmp_buf);
+    nbytes += 4;
+
+    free(tmp_buf);
+    return nbytes;
+}
+
+
+
 int64_t bshuf_decompress_lz4_block(void** in, void** out, const size_t size,
         const size_t elem_size) {
 
@@ -2298,7 +2343,9 @@ int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
     //return bshuf_blocked_wrap_fun(&bshuf_decompress_lz4_block, in, out, size,
     //        elem_size, block_size);
-    return bshuf_blocked_wrap_fun_adv(&bshuf_decompress_lz4_block_adv, in, out, size,
+    //return bshuf_blocked_wrap_fun_adv(&bshuf_decompress_lz4_block_adv, in, out, size,
+    //        elem_size, block_size);
+    return bshuf_blocked_wrap_fun_ioq(&bshuf_decompress_lz4_block_ioq, in, out, size,
             elem_size, block_size);
 }
 
