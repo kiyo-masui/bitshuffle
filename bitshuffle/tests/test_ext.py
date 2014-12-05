@@ -528,8 +528,8 @@ class TestBitShuffleCircle(unittest.TestCase):
     any length buffer."""
 
     def test_circle(self):
-        nmax = 10000
-        reps = 100
+        nmax = 100000
+        reps = 20
         for dtype in TEST_DTYPES:
             itemsize = np.dtype(dtype).itemsize
             nbyte_max = nmax * itemsize
@@ -545,8 +545,8 @@ class TestBitShuffleCircle(unittest.TestCase):
                                        == out.view(np.uint8)))
 
     def test_circle_with_compression(self):
-        nmax = 10000
-        reps = 100
+        nmax = 100000
+        reps = 20
         for dtype in TEST_DTYPES:
             itemsize = np.dtype(dtype).itemsize
             nbyte_max = nmax * itemsize
