@@ -91,14 +91,22 @@ def _setup_arr(arr):
     return out, size, itemsize
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 cdef _wrap_C_fun(Cfptr fun, np.ndarray arr):
     """Wrap a C function with standard call signature."""
 
-    cdef int ii, size, itemsize, count
+    cdef int ii, size, itemsize, count=0
     cdef np.ndarray out
     out, size, itemsize = _setup_arr(arr)
-    cdef void* arr_ptr = <void*> arr.data
-    cdef void* out_ptr = <void*> out.data
+
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] arr_flat
+    arr_flat = arr.view(np.uint8).ravel()
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] out_flat
+    out_flat = out.view(np.uint8).ravel()
+    cdef void* arr_ptr = <void*> &arr_flat[0]
+    cdef void* out_ptr = <void*> &out_flat[0]
+
     for ii in range(REPEATC):
         count = fun(arr_ptr, out_ptr, size, itemsize)
     if count < 0:
@@ -219,6 +227,8 @@ def untrans_bit_elem(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_untrans_bit_elem, arr)
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def bitshuffle(np.ndarray arr not None, int block_size=0):
     """Bitshuffle an array.
 
@@ -227,11 +237,17 @@ def bitshuffle(np.ndarray arr not None, int block_size=0):
 
     """
 
-    cdef int ii, size, itemsize, count
+    cdef int ii, size, itemsize, count=0
     cdef np.ndarray out
     out, size, itemsize = _setup_arr(arr)
-    cdef void* arr_ptr = <void*> arr.data
-    cdef void* out_ptr = <void*> out.data
+
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] arr_flat
+    arr_flat = arr.view(np.uint8).ravel()
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] out_flat
+    out_flat = out.view(np.uint8).ravel()
+    cdef void* arr_ptr = <void*> &arr_flat[0]
+    cdef void* out_ptr = <void*> &out_flat[0]
+
     for ii in range(REPEATC):
         count = bshuf_bitshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
     if count < 0:
@@ -241,6 +257,8 @@ def bitshuffle(np.ndarray arr not None, int block_size=0):
     return out
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def bitunshuffle(np.ndarray arr not None, int block_size=0):
     """Bitshuffle an array.
 
@@ -249,11 +267,17 @@ def bitunshuffle(np.ndarray arr not None, int block_size=0):
 
     """
 
-    cdef int ii, size, itemsize, count
+    cdef int ii, size, itemsize, count=0
     cdef np.ndarray out
     out, size, itemsize = _setup_arr(arr)
-    cdef void* arr_ptr = <void*> arr.data
-    cdef void* out_ptr = <void*> out.data
+
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] arr_flat
+    arr_flat = arr.view(np.uint8).ravel()
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] out_flat
+    out_flat = out.view(np.uint8).ravel()
+    cdef void* arr_ptr = <void*> &arr_flat[0]
+    cdef void* out_ptr = <void*> &out_flat[0]
+
     for ii in range(REPEATC):
         count = bshuf_bitunshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
     if count < 0:
@@ -263,6 +287,8 @@ def bitunshuffle(np.ndarray arr not None, int block_size=0):
     return out
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def compress_lz4(np.ndarray arr not None, int block_size=0):
     """Bitshuffle then compress an array using LZ4.
 
@@ -273,7 +299,7 @@ def compress_lz4(np.ndarray arr not None, int block_size=0):
 
     """
 
-    cdef int ii, size, itemsize, count
+    cdef int ii, size, itemsize, count=0
     shape = (arr.shape[i] for i in range(arr.ndim))
     if not arr.flags['C_CONTIGUOUS']:
         msg = "Input array must be C-contiguouse."
@@ -287,8 +313,12 @@ def compress_lz4(np.ndarray arr not None, int block_size=0):
     cdef np.ndarray out
     out = np.empty(max_out_size, dtype=np.uint8)
 
-    cdef void* arr_ptr = <void*> arr.data
-    cdef void* out_ptr = <void*> out.data
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] arr_flat
+    arr_flat = arr.view(np.uint8).ravel()
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] out_flat
+    out_flat = out.view(np.uint8).ravel()
+    cdef void* arr_ptr = <void*> &arr_flat[0]
+    cdef void* out_ptr = <void*> &out_flat[0]
     for ii in range(REPEATC):
         count = bshuf_compress_lz4(arr_ptr, out_ptr, size, itemsize, block_size)
     if count < 0:
@@ -298,6 +328,8 @@ def compress_lz4(np.ndarray arr not None, int block_size=0):
     return out[:count]
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
     """Domcompress a buffer using LZ4 then bitunshuffle it yeilding an array.
 
@@ -312,7 +344,7 @@ def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
 
     """
 
-    cdef int ii, size, itemsize, count
+    cdef int ii, size, itemsize, count=0
     if not arr.flags['C_CONTIGUOUS']:
         msg = "Input array must be C-contiguouse."
         raise ValueError(msg)
@@ -322,8 +354,12 @@ def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
     cdef np.ndarray out
     out = np.empty(tuple(shape), dtype=dtype)
 
-    cdef void* arr_ptr = <void*> arr.data
-    cdef void* out_ptr = <void*> out.data
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] arr_flat
+    arr_flat = arr.view(np.uint8).ravel()
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] out_flat
+    out_flat = out.view(np.uint8).ravel()
+    cdef void* arr_ptr = <void*> &arr_flat[0]
+    cdef void* out_ptr = <void*> &out_flat[0]
     for ii in range(REPEATC):
         count = bshuf_decompress_lz4(arr_ptr, out_ptr, size, itemsize,
                                      block_size)
