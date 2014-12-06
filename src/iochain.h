@@ -1,15 +1,15 @@
 /*
- * Paralellization construct for distributing a chain of dependant IO events.
+ * Parallelization construct for distributing a chain of dependant IO events.
  *
  * Similar in concept to a queue. Each task includes reading an input
- * and writing output, but the loction of the input/output (the pointers)
- * depend on the previouse item in the chain.
+ * and writing output, but the location of the input/output (the pointers)
+ * depend on the previous item in the chain.
  *
- * This is designed for paralellizing blocked compression/decompression IO,
+ * This is designed for parallelizing blocked compression/decompression IO,
  * where the destination of a compressed block depends on the compressed size
- * of all previouse blocks.
+ * of all previous blocks.
  *
- * Implemented with openMP locks.
+ * Implemented with OpenMP locks.
  *
  *
  * Usage
@@ -24,9 +24,9 @@
  *  - The order (`ioc_get_in`, `ioc_set_next_in`, *work*, `ioc_get_out`,
  *    `ioc_set_next_out`, *work*) is most efficient.
  *  - Have each thread call `ioc_end_pop`.
- *  - `ioc_get_in` is blocked until the previouse entry's
+ *  - `ioc_get_in` is blocked until the previous entry's
  *    `ioc_set_next_in` is called.
- *  - `ioc_get_out` is blocked until the previouse entry's
+ *  - `ioc_get_out` is blocked until the previous entry's
  *    `ioc_set_next_out` is called.
  *  - There are no blocks on the very first iteration.
  *  - Call `ioc_destroy` in serial block.
@@ -113,7 +113,7 @@ void ioc_set_next_out(ioc_chain *C, size_t *this_iter, void* out_ptr) {
     C->out_pl[(*this_iter + 1) % IOC_SIZE].ptr = out_ptr;
     omp_unset_lock(&(C->out_pl[(*this_iter + 1) % IOC_SIZE].lock));
     // *in_pl[this_iter]* lock released at the end of the iteration to avoid being
-    // overtaken by previouse threads and having *out_pl[this_iter]* corrupted.
+    // overtaken by previous threads and having *out_pl[this_iter]* corrupted.
     // Especially worried about thread 0, iteration 0.
     omp_unset_lock(&(C->in_pl[(*this_iter) % IOC_SIZE].lock));
 }

@@ -4,7 +4,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <inttypes.h>
 
 
 #if defined(__AVX2__) && defined (__SSE2__)
@@ -919,9 +918,9 @@ int64_t bshuf_trans_bit_byte_AVX_unrolled(void* in, void* out,
     __m256i ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7;
     int32_t bt0, bt1, bt2, bt3, bt4, bt5, bt6, bt7;
 
-    // Turns out that doublly unrolling this loop (unrolling 2 loops of 8) 
+    // Turns out that doubly unrolling this loop (unrolling 2 loops of 8) 
     // gives a speed up roughly 70% for some problem sizes.  The compiler will
-    // not automatically doublly unroll a loop, but will optimize the
+    // not automatically doubly unroll a loop, but will optimize the
     // order of operations within one long section.
     for (size_t ii = 0; ii + 32 * 8 - 1 < nbyte; ii += 32 * 8) {
         ymm0 = _mm256_loadu_si256((__m256i *) &A[ii + 0*32]);
@@ -1185,7 +1184,7 @@ int64_t bshuf_trans_bit_byte_AVX(void* in, void* out, const size_t size,
 }
 
 
-/* Tranpose bits within elements. */
+/* Transpose bits within elements. */
 int64_t bshuf_trans_bit_elem_AVX(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
@@ -1693,8 +1692,8 @@ int64_t bshuf_untrans_bit_elem(void* in, void* out, const size_t size,
 
 
 size_t bshuf_default_block_size(const size_t elem_size) {
-    // This function needs to be absolutly stable between versions.
-    // Otherwise encoded data will not be decodeable.
+    // This function needs to be absolutely stable between versions.
+    // Otherwise encoded data will not be decodable.
 
     size_t block_size = BSHUF_TARGET_BLOCK_SIZE_B / elem_size;
     // Ensure it is a required multiple.

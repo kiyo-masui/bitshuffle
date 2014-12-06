@@ -7,7 +7,7 @@ cimport cython
 np.import_array()
 
 
-# Repeat each calcualtion this many times. For timeing.
+# Repeat each calculation this many times. For timing.
 cdef int REPEATC = 1
 #cdef int REPEATC = 32
 
@@ -82,7 +82,7 @@ def using_AVX2():
 def _setup_arr(arr):
     shape = tuple(arr.shape)
     if not arr.flags['C_CONTIGUOUS']:
-        msg = "Input array must be C-contiguouse."
+        msg = "Input array must be C-contiguous."
         raise ValueError(msg)
     size = arr.size
     dtype = arr.dtype
@@ -232,7 +232,7 @@ def untrans_bit_elem(np.ndarray arr not None):
 def bitshuffle(np.ndarray arr not None, int block_size=0):
     """Bitshuffle an array.
 
-    Output array is the same shape and datatype as input array but underlying
+    Output array is the same shape and data type as input array but underlying
     buffer has been bitshuffled.
 
     """
@@ -262,7 +262,7 @@ def bitshuffle(np.ndarray arr not None, int block_size=0):
 def bitunshuffle(np.ndarray arr not None, int block_size=0):
     """Bitshuffle an array.
 
-    Output array is the same shape and datatype as input array but underlying
+    Output array is the same shape and data type as input array but underlying
     buffer has been un-bitshuffled.
 
     """
@@ -294,7 +294,7 @@ def compress_lz4(np.ndarray arr not None, int block_size=0):
 
     Returns
     -------
-    out : array with np.uint8 datatype
+    out : array with np.uint8 data type
         Buffer holding compressed data.
 
     """
@@ -302,7 +302,7 @@ def compress_lz4(np.ndarray arr not None, int block_size=0):
     cdef int ii, size, itemsize, count=0
     shape = (arr.shape[i] for i in range(arr.ndim))
     if not arr.flags['C_CONTIGUOUS']:
-        msg = "Input array must be C-contiguouse."
+        msg = "Input array must be C-contiguous."
         raise ValueError(msg)
     size = arr.size
     dtype = arr.dtype
@@ -331,7 +331,7 @@ def compress_lz4(np.ndarray arr not None, int block_size=0):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
-    """Domcompress a buffer using LZ4 then bitunshuffle it yeilding an array.
+    """Decompress a buffer using LZ4 then bitunshuffle it yielding an array.
 
     Parameters
     ----------
@@ -346,7 +346,7 @@ def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
 
     cdef int ii, size, itemsize, count=0
     if not arr.flags['C_CONTIGUOUS']:
-        msg = "Input array must be C-contiguouse."
+        msg = "Input array must be C-contiguous."
         raise ValueError(msg)
     size = np.prod(shape)
     itemsize = dtype.itemsize

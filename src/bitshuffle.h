@@ -12,7 +12,7 @@
  *      -80   : Input size not a multiple of 8.
  *      -81   : block_size not multiple of 8.
  *      -91   : Decompression error, wrong number of bytes processed.
- *      -1YYY : Error internal to compression routine with errorcode -YYY.
+ *      -1YYY : Error internal to compression routine with error code -YYY.
  */
 
 
@@ -34,7 +34,7 @@
 
 /* --- bshuf_using_SSE2 ----
  *
- * Whether rotines where compiled against the SSE2 instruction set.
+ * Whether routines where compiled against the SSE2 instruction set.
  *
  * Returns
  * -------
@@ -119,7 +119,7 @@ int64_t bshuf_bitshuffle(void* in, void* out, const size_t size,
  *
  * Returns
  * -------
- *  number of bytes processed, negitive error-code if failed.
+ *  number of bytes processed, negative error-code if failed.
  *
  */
 int64_t bshuf_bitunshuffle(void* in, void* out, const size_t size,
@@ -167,7 +167,7 @@ size_t bshuf_compress_lz4_bound(const size_t size,
  *
  * Returns
  * ------- 
- *  number of bytes used in output buffer, negitive error-code if failed.
+ *  number of bytes used in output buffer, negative error-code if failed.
  *
  */
 int64_t bshuf_compress_lz4(void* in, void* out, const size_t size, const size_t
@@ -184,9 +184,9 @@ int64_t bshuf_compress_lz4(void* in, void* out, const size_t size, const size_t
  * must patch the parameters used to compress the data.
  *
  * NOT TO BE USED WITH UNTRUSTED DATA: This routine uses the function 
- * LZ4_decompress_fast from LZ4, which does not pretect against malicously
+ * LZ4_decompress_fast from LZ4, which does not protect against maliciously
  * formed datasets. By modifying the compressed data, this function could be
- * coersed to leave the boundaries of the input buffer.
+ * coerced to leave the boundaries of the input buffer.
  *
  * Parameters
  * ----------
@@ -198,7 +198,7 @@ int64_t bshuf_compress_lz4(void* in, void* out, const size_t size, const size_t
  *
  * Returns
  * -------
- *  number of bytes consumed in *input* buffer, negitive error-code if failed.
+ *  number of bytes consumed in *input* buffer, negative error-code if failed.
  *
  */
 int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
