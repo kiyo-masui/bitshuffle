@@ -65,7 +65,7 @@ int bshuf_using_AVX2(void) {
 
 
 // Function definition for worker functions.
-typedef int64_t (*bshufFunDef_ioq)(ioc_chain* C_ptr,
+typedef int64_t (*bshufFunDef)(ioc_chain* C_ptr,
         const size_t size, const size_t elem_size);
 
 
@@ -1702,7 +1702,7 @@ size_t bshuf_default_block_size(const size_t elem_size) {
 }
 
 
-int64_t bshuf_blocked_wrap_fun_ioq(bshufFunDef_ioq fun, void* in, void* out,
+int64_t bshuf_blocked_wrap_fun(bshufFunDef fun, void* in, void* out,
         const size_t size, const size_t elem_size, size_t block_size) {
 
     ioc_chain C;
@@ -1748,7 +1748,7 @@ int64_t bshuf_blocked_wrap_fun_ioq(bshufFunDef_ioq fun, void* in, void* out,
 }
 
 
-int64_t bshuf_bitshuffle_block_ioq(ioc_chain *C_ptr,
+int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size) {
 
     size_t this_iter;
@@ -1762,7 +1762,7 @@ int64_t bshuf_bitshuffle_block_ioq(ioc_chain *C_ptr,
 }
 
 
-int64_t bshuf_bitunshuffle_block_ioq(ioc_chain* C_ptr,
+int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr,
         const size_t size, const size_t elem_size) {
 
 
@@ -1780,7 +1780,7 @@ int64_t bshuf_bitunshuffle_block_ioq(ioc_chain* C_ptr,
 int64_t bshuf_bitshuffle(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
-    return bshuf_blocked_wrap_fun_ioq(&bshuf_bitshuffle_block_ioq, in, out, size,
+    return bshuf_blocked_wrap_fun(&bshuf_bitshuffle_block, in, out, size,
             elem_size, block_size);
 }
 
@@ -1788,7 +1788,7 @@ int64_t bshuf_bitshuffle(void* in, void* out, const size_t size,
 int64_t bshuf_bitunshuffle(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
-    return bshuf_blocked_wrap_fun_ioq(&bshuf_bitunshuffle_block_ioq, in, out, size,
+    return bshuf_blocked_wrap_fun(&bshuf_bitunshuffle_block, in, out, size,
             elem_size, block_size);
 }
 
@@ -1863,7 +1863,7 @@ size_t bshuf_compress_lz4_bound(const size_t size,
 }
 
 
-int64_t bshuf_compress_lz4_block_ioq(ioc_chain *C_ptr,
+int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size) {
 
     int64_t nbytes, count;
@@ -1905,7 +1905,7 @@ int64_t bshuf_compress_lz4_block_ioq(ioc_chain *C_ptr,
 
 
 
-int64_t bshuf_decompress_lz4_block_ioq(ioc_chain *C_ptr,
+int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size) {
 
     int64_t nbytes, count;
@@ -1949,14 +1949,14 @@ int64_t bshuf_decompress_lz4_block_ioq(ioc_chain *C_ptr,
 
 int64_t bshuf_compress_lz4(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
-    return bshuf_blocked_wrap_fun_ioq(&bshuf_compress_lz4_block_ioq, in, out, size,
+    return bshuf_blocked_wrap_fun(&bshuf_compress_lz4_block, in, out, size,
             elem_size, block_size);
 }
 
 
 int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
-    return bshuf_blocked_wrap_fun_ioq(&bshuf_decompress_lz4_block_ioq, in, out, size,
+    return bshuf_blocked_wrap_fun(&bshuf_decompress_lz4_block, in, out, size,
             elem_size, block_size);
 }
 
