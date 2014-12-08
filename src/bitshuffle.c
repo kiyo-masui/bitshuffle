@@ -383,7 +383,7 @@ int64_t bshuf_trans_bit_elem_scal(void* in, void* out, const size_t size,
 
 /* For data organized into a row for each bit (8 * elem_size rows), transpose
  * the bytes. */
-int64_t bshuf_trans_byte_bitrow(void* in, void* out, const size_t size,
+int64_t bshuf_trans_byte_bitrow_scal(void* in, void* out, const size_t size,
          const size_t elem_size) {
     char* A = (char*) in;
     char* B = (char*) out;
@@ -392,9 +392,12 @@ int64_t bshuf_trans_byte_bitrow(void* in, void* out, const size_t size,
 
     CHECK_MULT_EIGHT(size);
 
-    for (size_t ii = 0; ii < nbyte_row; ii++) {
-        for (size_t jj = 0; jj < 8*elem_size; jj++) {
-            B[ii * 8 * elem_size + jj] = A[jj * nbyte_row + ii];
+    for (size_t jj = 0; jj < elem_size; jj++) {
+        for (size_t ii = 0; ii < nbyte_row; ii++) {
+            for (size_t kk = 0; kk < 8; kk++) {
+                B[ii * 8 * elem_size + jj * 8 + kk] = \
+                        A[(jj * 8 + kk) * nbyte_row + ii];
+            }
         }
     }
     return size * elem_size;

@@ -312,19 +312,19 @@ class TestProfile(unittest.TestCase):
     def test_07a_trans_byte_bitrow_64(self):
         self.case = "byte T row scal 64"
         self.data = self.data.view(np.float64)
-        self.fun = ext.trans_byte_bitrow
+        self.fun = ext.trans_byte_bitrow_scal
 
     def test_07b_trans_byte_bitrow_SSE_64(self):
         self.case = "byte T row SSE 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_byte_bitrow_SSE
-        self.check = ext.trans_byte_bitrow
+        self.check = ext.trans_byte_bitrow_scal
 
     def test_07c_trans_byte_bitrow_AVX_64(self):
         self.case = "byte T row AVX 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_byte_bitrow_AVX
-        self.check = ext.trans_byte_bitrow
+        self.check = ext.trans_byte_bitrow_scal
 
     def test_08a_shuffle_bit_eight_SSE_64(self):
         self.case = "bit S eight SSE 64"
