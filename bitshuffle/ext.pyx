@@ -51,6 +51,7 @@ cdef extern int bshuf_trans_bit_elem_scal(void *A, void *B, int size, int elem_s
 cdef extern int bshuf_trans_byte_bitrow_SSE(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_bitrow_AVX(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_bitrow_scal(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_shuffle_bit_eightelem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_shuffle_bit_eightelem_SSE(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_shuffle_bit_eightelem_AVX(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_untrans_bit_elem_SSE(void *A, void *B, int size, int elem_size)
@@ -189,6 +190,10 @@ def trans_byte_bitrow_AVX(np.ndarray arr not None):
 
 def trans_byte_bitrow_scal(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_byte_bitrow_scal, arr)
+
+
+def shuffle_bit_eightelem_scal(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_shuffle_bit_eightelem_scal, arr)
 
 
 def shuffle_bit_eightelem_SSE(np.ndarray arr not None):

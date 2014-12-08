@@ -284,33 +284,6 @@ int64_t bshuf_trans_bit_byte_scal_unrolled(void* in, void* out,
 }
 
 
-int64_t bshuf_untrans_bit_elem_scal(void* in, void* out, const size_t size,
-         const size_t elem_size) {
-
-    char* A = (char*) in;
-    char* B = (char*) out;
-
-    union {uint64_t x; char b[8];} mx0;
-    uint64_t t0;
-    size_t nbyte_bitrow = size / 8;
-
-    CHECK_MULT_EIGHT(size);
-
-    for (size_t ii = 0; ii < nbyte_bitrow; ii ++) {
-        for (size_t jj = 0; jj < elem_size; jj ++) {
-            for (size_t kk = 0; kk < 8; kk ++) {
-                mx0.b[kk] = A[jj * size + kk * nbyte_bitrow + ii + 0];
-            }
-            TRANS_BIT_8X8(mx0.x, t0);
-            for (size_t kk = 0; kk < 8; kk ++) {
-                B[(ii + 0) * 8 * elem_size + kk * elem_size + jj] = mx0.b[kk];
-            }
-        }
-    }
-    return size * elem_size;
-}
-
-
 /* Transpose of an array, optimized for small elements. */
 #define TRANS_ELEM_TYPE(in, out, lda, ldb, type_t) {                        \
         type_t* A = (type_t*) in;                                           \
@@ -401,6 +374,53 @@ int64_t bshuf_trans_byte_bitrow_scal(void* in, void* out, const size_t size,
         }
     }
     return size * elem_size;
+}
+
+
+/* Shuffle bits within the bytes of eight element blocks. */
+int64_t bshuf_shuffle_bit_eightelem_scal(void* in, void* out,
+        const size_t size, const size_t elem_size) {
+
+    CHECK_MULT_EIGHT(size);
+
+    char* A = (char*) in;
+    char* B = (char*) out;
+
+    size_t nbyte = elem_size * size;
+
+    uint64_t x, t;
+
+    for (size_t jj = 0; jj < 8 * elem_size; jj += 8) {
+        for (size_t ii = 0; ii + 8 * elem_size - 1 < nbyte; ii += 8 * elem_size) {
+            x = *((uint64_t*) &A[ii + jj]);
+            TRANS_BIT_8X8(x, t);
+            for (size_t kk = 0; kk < 8; kk++) {
+                *((uint8_t*) &B[ii + jj / 8 + kk * elem_size]) = x;
+                x = x >> 8;
+            }
+        }
+    }
+    return size * elem_size;
+}
+
+
+int64_t bshuf_untrans_bit_elem_scal(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    int64_t count;
+
+    CHECK_MULT_EIGHT(size);
+
+    void* tmp_buf = malloc(size * elem_size);
+    if (tmp_buf == NULL) return -1;
+
+    count = bshuf_trans_byte_bitrow_scal(in, tmp_buf, size, elem_size);
+    CHECK_ERR_FREE(count, tmp_buf);
+    count =  bshuf_shuffle_bit_eightelem_scal(tmp_buf, out, size, elem_size);
+
+    free(tmp_buf);
+
+    return count;
 }
 
 
@@ -782,27 +802,15 @@ int64_t bshuf_shuffle_bit_eightelem_SSE(void* in, void* out, const size_t size,
     // With a bit of care, this could be written such that such that it is
     // in_buf = out_buf safe.
     char* A = (char*) in;
-    char* B = (char*) out;
     uint16_t* Bui = (uint16_t*) out;
 
     size_t nbyte = elem_size * size;
 
     __m128i xmm;
     int bt;
-    uint64_t x, t;
 
     if (elem_size % 2) {
-        for (size_t ii = 0; ii + 8 * elem_size - 1 < nbyte;
-                ii += 8 * elem_size) {
-            for (size_t jj = 0; jj < 8 * elem_size; jj += 8) {
-                x = *((uint64_t*) &A[ii + jj]);
-                TRANS_BIT_8X8(x, t);
-                for (size_t kk = 0; kk < 8; kk++) {
-                    *((uint8_t*) &B[ii + jj / 8 + kk * elem_size]) = x;
-                    x = x >> 8;
-                }
-            }
-        }
+        bshuf_shuffle_bit_eightelem_scal(in, out, size, elem_size);
     } else {
         for (size_t ii = 0; ii + 8 * elem_size - 1 < nbyte;
                 ii += 8 * elem_size) {
