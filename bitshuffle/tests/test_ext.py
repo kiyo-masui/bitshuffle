@@ -11,7 +11,7 @@ from bitshuffle import ext
 # If we are doing timeings by what factor to increase workload.
 # Remember to change `ext.REPEATC`.
 TIME = 0
-TIME = 8    # 8kB blocks same as final blocking. 
+#TIME = 8    # 8kB blocks same as final blocking. 
 BLOCK = 1024
 
 
@@ -153,12 +153,6 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.trans_bit_byte_scal
         self.check = trans_bit_byte
 
-    def test_03b_trans_bit_byte_un(self):
-        self.case = "bit T byte scal un 64"
-        self.data = self.data.view(np.float64)
-        self.fun = ext.trans_bit_byte_scal_unrolled
-        self.check = trans_bit_byte
-
     def test_03d_trans_bit_byte_SSE(self):
         self.case = "bit T byte SSE 64"
         self.data = self.data.view(np.float64)
@@ -175,12 +169,6 @@ class TestProfile(unittest.TestCase):
         self.case = "bit T byte AVX 32"
         self.data = self.data.view(np.float32)
         self.fun = ext.trans_bit_byte_AVX
-        self.check = trans_bit_byte
-
-    def test_03f_trans_bit_byte_AVX_un(self):
-        self.case = "bit T byte AVX un 64"
-        self.data = self.data.view(np.float64)
-        self.fun = ext.trans_bit_byte_AVX_unrolled
         self.check = trans_bit_byte
 
     def test_04a_trans_bit_elem_AVX(self):

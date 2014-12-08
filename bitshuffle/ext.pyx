@@ -40,10 +40,8 @@ cdef extern int bshuf_trans_byte_elem_scal(void *A, void *B, int size, int elem_
 cdef extern int bshuf_untrans_byte_elem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_elem_SSE(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_byte_scal(void *A, void *B, int size, int elem_size)
-cdef extern int bshuf_trans_bit_byte_scal_unrolled(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_byte_SSE(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_byte_AVX(void *A, void *B, int size, int elem_size)
-cdef extern int bshuf_trans_bit_byte_AVX_unrolled(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bitrow_eight(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_elem_AVX(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_elem_SSE(void *A, void *B, int size, int elem_size)
@@ -148,20 +146,12 @@ def trans_bit_byte_scal(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_bit_byte_scal, arr)
 
 
-def trans_bit_byte_scal_unrolled(np.ndarray arr not None):
-    return _wrap_C_fun(&bshuf_trans_bit_byte_scal_unrolled, arr)
-
-
 def trans_bit_byte_SSE(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_bit_byte_SSE, arr)
 
 
 def trans_bit_byte_AVX(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_bit_byte_AVX, arr)
-
-
-def trans_bit_byte_AVX_unrolled(np.ndarray arr not None):
-    return _wrap_C_fun(&bshuf_trans_bit_byte_AVX_unrolled, arr)
 
 
 def trans_bitrow_eight(np.ndarray arr not None):
