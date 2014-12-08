@@ -284,33 +284,6 @@ int64_t bshuf_trans_bit_byte_scal_unrolled(void* in, void* out,
 }
 
 
-int64_t bshuf_trans_bit_elem_scal(void* in, void* out, const size_t size,
-         const size_t elem_size) {
-
-    char* A = (char*) in;
-    char* B = (char*) out;
-
-    union {uint64_t x; char b[8];} mx0;
-    uint64_t t0;
-    size_t nbyte_bitrow = size / 8;
-
-    CHECK_MULT_EIGHT(size);
-
-    for (size_t ii = 0; ii < nbyte_bitrow; ii ++) {
-        for (size_t jj = 0; jj < elem_size; jj ++) {
-            for (size_t kk = 0; kk < 8; kk ++) {
-                mx0.b[kk] = A[(ii + 0) * 8 * elem_size + kk * elem_size + jj];
-            }
-            TRANS_BIT_8X8(mx0.x, t0);
-            for (size_t kk = 0; kk < 8; kk ++) {
-                B[jj * size + kk * nbyte_bitrow + ii + 0] = mx0.b[kk];
-            }
-        }
-    }
-    return size * elem_size;
-}
-
-
 int64_t bshuf_untrans_bit_elem_scal(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
@@ -382,6 +355,29 @@ int64_t bshuf_trans_bitrow_eight(void* in, void* out, const size_t size,
     CHECK_MULT_EIGHT(size);
 
     return bshuf_trans_elem(in, out, 8, elem_size, nbyte_bitrow);
+}
+
+
+int64_t bshuf_trans_bit_elem_scal(void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+
+    int64_t count;
+
+    CHECK_MULT_EIGHT(size);
+
+    void* tmp_buf = malloc(size * elem_size);
+    if (tmp_buf == NULL) return -1;
+
+    count = bshuf_trans_byte_elem_scal(in, out, size, elem_size);
+    CHECK_ERR_FREE(count, tmp_buf);
+    count = bshuf_trans_bit_byte_scal(out, tmp_buf, size, elem_size);
+    CHECK_ERR_FREE(count, tmp_buf);
+    count = bshuf_trans_bitrow_eight(tmp_buf, out, size, elem_size);
+
+    free(tmp_buf);
+
+    return count;
 }
 
 
@@ -1902,7 +1898,6 @@ int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr,
 
     return nbytes + 4;
 }
-
 
 
 int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
