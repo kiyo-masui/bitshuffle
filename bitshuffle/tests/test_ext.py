@@ -17,7 +17,7 @@ BLOCK = 1024
 
 TEST_DTYPES = [np.uint8, np.uint16, np.int32, np.uint64, np.float32,
                np.float64, np.complex128]
-TEST_DTYPES += ['a3', 'a5', 'a7', 'a9', 'a11', 'a12', 'a24', 'a48']
+TEST_DTYPES += ['a3', 'a5', 'a6', 'a7', 'a9', 'a11', 'a12', 'a24', 'a48']
 
 
 class TestProfile(unittest.TestCase):
@@ -383,21 +383,11 @@ class TestDevCases(unittest.TestCase):
         d1 = ext.trans_bit_elem(d)
         #print d
         t = ext.untrans_bit_elem_AVX(d1)
-        t1 = ext.untrans_bit_byte_scal(d1)
-        t2 = ext.untrans_byte_elem_scal(t1)
+        #t1 = ext.untrans_bit_byte_scal(d1)
         #print np.reshape(d1.view(np.uint8), (16, 4))
-        print np.reshape(t1.view(np.uint8), (2, 32))
+        #print np.reshape(t1.view(np.uint8), (2, 32))
         #print np.reshape(t2.view(np.uint8), (32, 2))
         #print np.reshape(t.view(np.uint8), (32, 2))
-
-    def deactivated_test_untrans_bit_byte(self):
-        d = np.arange(32, dtype=np.uint16)
-        #d = random.randint(0, 2**7, 256).astype(np.uint16)
-        d1 = ext.trans_bit_elem(d)
-        #print d
-        t = ext.untrans_bit_byte_scal(d1)
-        print np.reshape(trans_byte_elem(d).view(np.uint8), (2, 32))
-        print np.reshape(t.view(np.uint8), (2, 32))
 
     def deactivated_test_trans_bit_byte(self):
         d = np.arange(16, dtype=np.uint16)
@@ -409,7 +399,7 @@ class TestDevCases(unittest.TestCase):
 
     def deactivated_test_trans_byte_bitrow_SSE(self):
         d = np.arange(256, dtype = np.uint8)
-        t = ext.trans_byte_bitrow(d)
+        t = ext.trans_byte_bitrow_scal(d)
         #print np.reshape(t, (32, 8))
         t1 = ext.trans_byte_bitrow_SSE(d)
         #print np.reshape(t1, (32, 8))

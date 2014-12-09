@@ -180,7 +180,7 @@ def create_bitshuffle_lzf_dataset(parent, name, shape, dtype, chunks=None,
                                   track_times=None):
     """Create dataset with a filter pipeline including bitshuffle and LZF"""
 
-    filter_pipeline = [BSHUF_H5FILTER, LZF_FILTER]
+    filter_pipeline = [H5FILTER, LZF_FILTER]
     dset_id = create_dataset(parent, name, shape, dtype, chunks=chunks,
                              filter_pipeline=filter_pipeline, maxshape=maxshape,
                              fillvalue=fillvalue, track_times=track_times)
@@ -192,7 +192,7 @@ def create_bitshuffle_compressed_dataset(parent, name, shape, dtype,
                                         fillvalue=None, track_times=None):
     """Create dataset with bitshuffle+internal LZ4 compression."""
 
-    filter_pipeline = [BSHUF_H5FILTER,]
+    filter_pipeline = [H5FILTER,]
     filter_opts = [(0, H5_COMPRESS_LZ4)]
     dset_id = create_dataset(parent, name, shape, dtype, chunks=chunks,
                              filter_pipeline=filter_pipeline,
