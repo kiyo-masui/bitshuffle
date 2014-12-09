@@ -1,3 +1,8 @@
+"""
+Wrappers for public and private bitshuffle routines
+
+"""
+
 import numpy as np
 
 cimport numpy as np
@@ -62,6 +67,7 @@ ctypedef int (*Cfptr) (void *A, void *B, int size, int elem_size)
 
 
 def using_SSE2():
+    """Whether compiled using SSE2 instructions."""
     if bshuf_using_SSE2():
         return True
     else:
@@ -69,6 +75,7 @@ def using_SSE2():
 
 
 def using_AVX2():
+    """Whether compiled using AVX2 instructions."""
     if bshuf_using_AVX2():
         return True
     else:
@@ -215,6 +222,20 @@ def bitshuffle(np.ndarray arr not None, int block_size=0):
     Output array is the same shape and data type as input array but underlying
     buffer has been bitshuffled.
 
+    Parameters
+    ----------
+    arr : numpy array
+        Data to ne processed.
+    block_size : positive integer
+        Block size in number of elements. By default, block size is chosen
+        automatically.
+
+    Returns
+    -------
+    out : numpy array
+        Array with the same shape as input but underlying data has been
+        bitshuffled.
+
     """
 
     cdef int ii, size, itemsize, count=0
@@ -245,6 +266,19 @@ def bitunshuffle(np.ndarray arr not None, int block_size=0):
     Output array is the same shape and data type as input array but underlying
     buffer has been un-bitshuffled.
 
+    Parameters
+    ----------
+    arr : numpy array
+        Data to ne processed.
+    block_size : positive integer
+        Block size in number of elements. Must match value used for shuffling.
+
+    Returns
+    -------
+    out : numpy array
+        Array with the same shape as input but underlying data has been
+        un-bitshuffled.
+
     """
 
     cdef int ii, size, itemsize, count=0
@@ -271,6 +305,14 @@ def bitunshuffle(np.ndarray arr not None, int block_size=0):
 @cython.wraparound(False)
 def compress_lz4(np.ndarray arr not None, int block_size=0):
     """Bitshuffle then compress an array using LZ4.
+
+    Parameters
+    ----------
+    arr : numpy array
+        Data to ne processed.
+    block_size : positive integer
+        Block size in number of elements. By default, block size is chosen
+        automatically.
 
     Returns
     -------
@@ -315,12 +357,22 @@ def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
 
     Parameters
     ----------
-    buf : buffer
+    arr : numpy array
         Input data to be decompressed.
     shape : tuple of integers
-        Shape of the output (decompressed array).
+        Shape of the output (decompressed array). Must match the shape of the
+        original data array before compression.
     dtype : numpy dtype
-        Datatype of the output array
+        Datatype of the output array. Must match the data type of the original
+        data array before compression.
+    block_size : positive integer
+        Block size in number of elements. Must match value used for
+        compression.
+
+    Returns
+    -------
+    out : numpy array with shape *shape* and data type *dtype*
+        Decompressed data.
 
     """
 
