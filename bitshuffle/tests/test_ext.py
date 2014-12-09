@@ -133,20 +133,6 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
-    def test_02a_untrans_byte_elem_scal_32(self):
-        self.case = "byte U elem scal 32"
-        pre_trans = self.data.view(np.int32)
-        self.data = trans_byte_elem(pre_trans)
-        self.fun = ext.untrans_byte_elem_scal
-        self.check_data = pre_trans
-
-    def test_02b_untrans_byte_elem_scal_64(self):
-        self.case = "byte U elem scal 64"
-        pre_trans = self.data.view(np.int64)
-        self.data = trans_byte_elem(pre_trans)
-        self.fun = ext.untrans_byte_elem_scal
-        self.check_data = pre_trans
-
     def test_03a_trans_bit_byte(self):
         self.case = "bit T byte scal 64"
         self.data = self.data.view(np.float64)
@@ -212,41 +198,6 @@ class TestProfile(unittest.TestCase):
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_bit_elem_SSE
         self.check = trans_bit_elem
-
-    def test_05a_untrans_bit_byte_16(self):
-        self.case = "bit U byte scal 16"
-        pre_trans = self.data.view(np.int16)
-        self.data = trans_bit_elem(pre_trans)
-        self.fun = ext.untrans_bit_byte_scal
-        self.check_data = trans_byte_elem(pre_trans)
-
-    def test_05b_untrans_bit_byte_32(self):
-        self.case = "bit U byte scal 32"
-        pre_trans = self.data.view(np.int32)
-        self.data = trans_bit_elem(pre_trans)
-        self.fun = ext.untrans_bit_byte_scal
-        self.check_data = trans_byte_elem(pre_trans)
-
-    def test_05c_untrans_bit_byte_64(self):
-        self.case = "bit U byte scal 64"
-        pre_trans = self.data.view(np.int64)
-        self.data = trans_bit_elem(pre_trans)
-        self.fun = ext.untrans_bit_byte_scal
-        self.check_data = trans_byte_elem(pre_trans)
-
-    def test_05d_untrans_bit_byte_32(self):
-        self.case = "bit U byte AVX 32"
-        pre_trans = self.data.view(np.int32)
-        self.data = trans_bit_elem(pre_trans)
-        self.fun = ext.untrans_bit_byte_AVX
-        self.check_data = trans_byte_elem(pre_trans)
-
-    def test_05e_untrans_bit_byte_64(self):
-        self.case = "bit U byte AVX 64"
-        pre_trans = self.data.view(np.int64)
-        self.data = trans_bit_elem(pre_trans)
-        self.fun = ext.untrans_bit_byte_AVX
-        self.check_data = trans_byte_elem(pre_trans)
 
     def test_06a_untrans_bit_elem_16(self):
         self.case = "bit U elem SSE 16"
