@@ -1,8 +1,17 @@
 /*
  * Bitshuffle - Filter for improving compression of typed binary data.
+ *
+ * This file is part of Bitshuffle
+ * Author: Kiyoshi Masui <kiyo@physics.ubc.ca>
+ * Website: http://www.github.com/kiyo-masui/bitshuffle
+ * Created: 2014
+ *
+ * See LICENSE file for details about copyright and rights to use.
+ *
+ *
  * Header File
  *
- * Worker routines return an int64_t with is the number of bytes processed
+ * Worker routines return an int64_t which is the number of bytes processed
  * if positive or an error code if negative.
  *
  * Error codes:

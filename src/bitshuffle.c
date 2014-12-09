@@ -1,3 +1,14 @@
+/*
+ * Bitshuffle - Filter for improving compression of typed binary data.
+ *
+ * Author: Kiyoshi Masui <kiyo@physics.ubc.ca>
+ * Website: http://www.github.com/kiyo-masui/bitshuffle
+ * Created: 2014
+ *
+ * See LICENSE file for details about copyright and rights to use.
+ *
+ */
+
 #include "bitshuffle.h"
 #include "iochain.h"
 #include "lz4.h"
