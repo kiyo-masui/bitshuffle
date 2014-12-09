@@ -4,13 +4,18 @@ Test that data encoded with earlier versions can still be decoded correctly.
 """
 
 import unittest
+from os import path
 
 import numpy as np
 import h5py
 
+import bitshuffle
 from bitshuffle import h5
 
-OUT_FILE_TEMPLATE = "bitshuffle/tests/data/regression_%s.h5"
+
+TEST_DATA_DIR = path.dirname(bitshuffle.__file__) + "/tests/data"
+
+OUT_FILE_TEMPLATE = TEST_DATA_DIR + "/regression_%s.h5"
 
 VERSIONS = ["0.1.3",]
 
