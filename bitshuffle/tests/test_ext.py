@@ -28,7 +28,7 @@ class TestProfile(unittest.TestCase):
             n *= TIME
         # Almost random bits, but now quite. All bits exercised (to fully test
         # transpose) but still slightly compresible.
-        self.data = random.randint(0, 6, n).astype(np.uint8)
+        self.data = random.randint(0, 200, n).astype(np.uint8)
         self.fun = ext.copy
         self.check = None
         self.check_data = None

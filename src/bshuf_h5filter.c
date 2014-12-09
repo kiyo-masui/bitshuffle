@@ -1,4 +1,5 @@
 #include "bshuf_h5filter.h"
+#include "bitshuffle.h"
 
 
 #define PUSH_ERR(func, minor, str)                                      \

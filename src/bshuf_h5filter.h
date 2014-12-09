@@ -26,8 +26,6 @@
 #define H5Z_class_t_vers 2
 #include "hdf5.h"
 
-#include "bitshuffle.h"
-
 
 #define BSHUF_H5FILTER 32008
 
@@ -38,7 +36,7 @@
 H5Z_class_t bshuf_H5Filter[1];
 
 
-/* ---- bshuf_bitunshuffle ----
+/* ---- bshuf_register_h5filter ----
  *
  * Register the bitshuffle HDF5 filter within the HDF5 library.
  *
