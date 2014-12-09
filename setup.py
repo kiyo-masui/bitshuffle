@@ -23,7 +23,10 @@ if VERSION_DEV:
 
 
 COMPILE_FLAGS = ['-Ofast', '-march=native', '-std=c99', '-fopenmp']
+# Cython breaks strict aliasing rules.
+COMPILE_FLAGS += ["-fno-strict-aliasing"]
 #COMPILE_FLAGS = ['-Ofast', '-march=core2', '-std=c99', '-fopenmp']
+
 MACROS = [
           ('BSHUF_VERSION_MAJOR', VERSION_MAJOR),
           ('BSHUF_VERSION_MINOR', VERSION_MINOR),
@@ -166,12 +169,13 @@ setup(
     #install_requires = ['numpy', 'h5py', 'Cython', 'setuptools>=0.7'],
     install_requires = ['numpy', 'h5py', 'Cython'],
     #extras_require = {'H5':  ["h5py"]},
+    package_data={'': ['bitshuffle/tests/data/*']},
 
     # metadata for upload to PyPI
     author = "Kiyoshi Wesley Masui",
     author_email = "kiyo@physics.ubc.ca",
-    description = "Bit shuffle filter for improving typed data compression.",
-    license = "GPL v2.0",
+    description = "Bitshuffle filter for improving typed data compression.",
+    license = "MIT",
     url = "http://github.com/kiyo-masui/bitshuffle"
 )
 

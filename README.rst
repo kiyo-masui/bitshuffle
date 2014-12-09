@@ -34,14 +34,14 @@ highly correlated to improve data compression. Any correlations that span at
 least 24 elements of the dataset may be exploited to improve compression.
 
 Bitshuffle was designed with performance in mind. On most machines the
-time required for Bitshuffle+LZ4 well below the time required to read or write
-the compressed data to disk. Because it is able to exploit the SSE and AVX
-instruction sets present on modern Intel and AMD processors, on these machines
-compression is only marginally slower than an out-of-cache memory copy.
-On modern x86 processors you can expect Bitshuffle to have a throughput of
-roughly 1 byte per clock cycle, and on the Haswell generation of
+time required for Bitshuffle+LZ4 is insignificant compared to the time required
+to read or write the compressed data to disk. Because it is able to exploit the
+SSE and AVX instruction sets present on modern Intel and AMD processors, on
+these machines compression is only marginally slower than an out-of-cache
+memory copy.  On modern x86 processors you can expect Bitshuffle to have a
+throughput of roughly 1 byte per clock cycle, and on the Haswell generation of
 Intel processors (2013) and later, you can expect up to 2 bytes per clock
-cycle.
+cycle. In addition, Bitshuffle is parallelized using OpenMP.
 
 As a bonus, Bitshuffle ships with a dynamically loaded version of
 `h5py`'s LZF compression filter, such that the filter can be transparently
@@ -120,9 +120,9 @@ in conjunction with HDF5 both inside and outside of python, in the same way as
 any other filter; simply by specifying the filter number ``32008``. Otherwise
 the filter will be available only within python and only after importing
 `bitshuffle.h5`. Reading Bitshuffle encoded datasets will be transparent.
-The filter can added to new datasets either through the `h5py` low level
+The filter can be added to new datasets either through the `h5py` low level
 interface or through the convenience functions provided in
-`bitshuffle.h5`. See the tests for examples.
+`bitshuffle.h5`. See the docstrings and unit tests for examples.
 
 
 Usage from C
@@ -132,4 +132,19 @@ If you wish to use Bitshuffle in your C program and would prefer not to use the
 HDF5 dynamically loaded filter, the C library in the ``src/`` directory is self
 contained and complete.
 
+
+For best results
+----------------
+
+Here are a few tips to help you get the most out of Bitshuffle:
+
+- For multi-dimensional datasets, order your data such that the fastest varying
+  dimension is the one over which your data is most correlated (have
+  values that change the least), or fake this using chunks.
+- To achieve the highest throughput, use a data type that is 64 *bytes* or
+  smaller. If you have a very large compound data type, consider adding a
+  dimension to your datasets instead.
+- To make full use of the SSE2 instruction set, use a data type whose size 
+  is a multiple of 2 bytes. For the AVX2 instruction set, use a data type whose
+  size is a multiple of 4 bytes.
 

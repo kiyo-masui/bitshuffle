@@ -1,3 +1,16 @@
+/*
+ * Dynamically loaded filter plugin for HDF5 LZF filter.
+ *
+ * This file is part of Bitshuffle
+ * Author: Kiyoshi Masui <kiyo@physics.ubc.ca>
+ * Website: http://www.github.com/kiyo-masui/bitshuffle
+ * Created: 2014
+ *
+ * See LICENSE file for details about copyright and rights to use.
+ *
+ */
+
+
 #define H5Z_class_t_vers 2
 #include "lzf_filter.h"
 #include "H5PLextern.h"

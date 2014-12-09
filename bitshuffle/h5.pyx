@@ -1,3 +1,45 @@
+"""
+HDF5 support for Bitshuffle.
+
+To read a dataset that uses the Bitshuffle filter using h5py, simply import
+this module (unless you have installed the Bitshuffle dynamically loaded
+filter, in which case importing this module is unnecessary).
+
+To create a new dataset that includes the Bitshuffle filter, use one of the
+convenience functions provided.
+
+
+Constants
+=========
+
+    H5FILTER : The Bitshuffle HDF5 filter integer identifier.
+    H5_COMPRESS_LZ4 : Filter option flag for LZ4 compression.
+
+Functions
+=========
+
+    create_dataset
+    create_bitshuffle_lzf_dataset
+    create_bitshuffle_compressed_dataset
+
+Examples
+========
+
+    >>> import numpy as np
+    >>> import h5py
+    >>> import bitshuffle.h5
+
+    >>> shape = (123, 456)
+    >>> chunks = (10, 456)
+    >>> dtype = np.float64
+
+    >>> f = h5py.File("tmp_test.h5")
+    >>> bitshuffle.h5.create_bitshuffle_compressed_dataset(
+            f, "some_data", shape, dtype, chunks)
+    >>> f["some_data"][:] = 42
+
+"""
+
 import numpy
 import h5py
 from h5py import h5d, h5s, h5t, h5p, filters
@@ -134,23 +176,23 @@ def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
 
 
 def create_bitshuffle_lzf_dataset(parent, name, shape, dtype, chunks=None,
-                                   maxshape=None, fillvalue=None,
+                                  maxshape=None, fillvalue=None,
                                   track_times=None):
-    """Create dataset with a filter pipeline includind bitshuffle and LZF"""
+    """Create dataset with a filter pipeline including bitshuffle and LZF"""
 
-    filter_pipeline = [BSHUF_H5FILTER, LZF_FILTER]
+    filter_pipeline = [H5FILTER, LZF_FILTER]
     dset_id = create_dataset(parent, name, shape, dtype, chunks=chunks,
                              filter_pipeline=filter_pipeline, maxshape=maxshape,
                              fillvalue=fillvalue, track_times=track_times)
     return dset_id
 
 
-def create_bitshuffle_comressed_dataset(parent, name, shape, dtype, chunks=None,
-                                   maxshape=None, fillvalue=None,
-                                  track_times=None):
+def create_bitshuffle_compressed_dataset(parent, name, shape, dtype,
+                                        chunks=None, maxshape=None,
+                                        fillvalue=None, track_times=None):
     """Create dataset with bitshuffle+internal LZ4 compression."""
 
-    filter_pipeline = [BSHUF_H5FILTER,]
+    filter_pipeline = [H5FILTER,]
     filter_opts = [(0, H5_COMPRESS_LZ4)]
     dset_id = create_dataset(parent, name, shape, dtype, chunks=chunks,
                              filter_pipeline=filter_pipeline,

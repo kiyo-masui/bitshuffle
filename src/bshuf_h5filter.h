@@ -1,5 +1,14 @@
 /*
  * Bitshuffle HDF5 filter
+ *
+ * This file is part of Bitshuffle
+ * Author: Kiyoshi Masui <kiyo@physics.ubc.ca>
+ * Website: http://www.github.com/kiyo-masui/bitshuffle
+ * Created: 2014
+ *
+ * See LICENSE file for details about copyright and rights to use.
+ *
+ *
  * Header File
  *
  * Filter Options
@@ -26,8 +35,6 @@
 #define H5Z_class_t_vers 2
 #include "hdf5.h"
 
-#include "bitshuffle.h"
-
 
 #define BSHUF_H5FILTER 32008
 
@@ -38,7 +45,7 @@
 H5Z_class_t bshuf_H5Filter[1];
 
 
-/* ---- bshuf_bitunshuffle ----
+/* ---- bshuf_register_h5filter ----
  *
  * Register the bitshuffle HDF5 filter within the HDF5 library.
  *
