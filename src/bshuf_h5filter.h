@@ -42,7 +42,7 @@
 #define BSHUF_H5_COMPRESS_LZ4 2
 
 
-H5Z_class_t bshuf_H5Filter[1];
+extern H5Z_class_t bshuf_H5Filter[1];
 
 
 /* ---- bshuf_register_h5filter ----
