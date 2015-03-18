@@ -141,7 +141,7 @@ class install(install_):
                 return
             #from h5py import h5
             #h5version = h5.get_libversion()
-            plugin_build = path.join(self.build_lib, "plugins")
+            plugin_build = path.join(self.build_lib, "plugin")
             try:
                 os.makedirs(self.h5plugin_dir)
             except OSError as e:
