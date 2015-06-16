@@ -40,6 +40,9 @@
 #define BSHUF_VERSION_POINT 0
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* --- bshuf_using_SSE2 ----
  *
@@ -218,5 +221,8 @@ int64_t bshuf_compress_lz4(void* in, void* out, const size_t size, const size_t
 int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size);
 
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif  // BITSHUFFLE_H
