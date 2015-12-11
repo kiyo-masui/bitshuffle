@@ -1,0 +1,18 @@
+language: python
+os: linux
+# To test filter plugins, need hdf5 1.8.11+, present in Trusty.
+dist: trusty
+# Required to get Trusty.
+sudo: true
+python:
+    - "2.7"
+addons:
+    apt:
+        packages:
+            - libhdf5-serial-dev
+            - hdf5-tools
+install:
+    - "pip install -r requirements.txt"
+    # Make sure sudo gets correct version of python.
+    - "export PYBIN=`which python` ; sudo $PYBIN setup.py install --h5plugin"
+script: nosetests

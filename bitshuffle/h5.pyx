@@ -40,6 +40,8 @@ Examples
 
 """
 
+from __future__ import absolute_import
+
 import numpy
 import h5py
 from h5py import h5d, h5s, h5t, h5p, filters

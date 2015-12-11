@@ -3,6 +3,8 @@ Wrappers for public and private bitshuffle routines
 
 """
 
+from __future__ import absolute_import
+
 import numpy as np
 
 cimport numpy as np

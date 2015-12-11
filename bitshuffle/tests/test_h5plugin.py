@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import unittest
 import os
 import glob
@@ -9,7 +11,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 
 # TODO: Plugin path discovery.
-os.environ["HDF5_PLUGIN_PATH"] = "/Users/kiyo/working/bitshuffle/plugin"
+#os.environ["HDF5_PLUGIN_PATH"] = "/Users/kiyo/working/bitshuffle/plugin"
 
 
 class TestFilterPlugins(unittest.TestCase):
@@ -40,8 +42,22 @@ class TestFilterPlugins(unittest.TestCase):
         h5dump = Popen(['h5dump', fname],
                        stdout=PIPE, stderr=STDOUT)
         stdout, nothing = h5dump.communicate()
-        #print stdout
+        print stdout
         err = h5dump.returncode
+        
+        h5dump = Popen(['ls', '/usr/local/hdf5/lib/plugin'],
+                       stdout=PIPE, stderr=STDOUT)
+        stdout, nothing = h5dump.communicate()
+        print stdout
+        err1 = h5dump.returncode
+        
+        h5dump = Popen(['h5dump', '-H', '-p', fname],
+                       stdout=PIPE, stderr=STDOUT)
+        stdout, nothing = h5dump.communicate()
+        print stdout
+        err1 = h5dump.returncode
+
+        
         self.assertEqual(err, 0)
 
         f = h5py.File(fname, 'r')
