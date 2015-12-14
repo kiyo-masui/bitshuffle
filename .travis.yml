@@ -15,4 +15,6 @@ install:
     - "pip install -r requirements.txt"
     # Make sure sudo gets correct version of python.
     - "export PYBIN=`which python` ; sudo $PYBIN setup.py install --h5plugin"
-script: cd ..; nosetests bitshuffle
+# Can't be somewhere that has a 'bitshuffle' directory as nose will use that
+# copy instead of installed package.
+script: cd ~; nosetests bitshuffle

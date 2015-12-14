@@ -17,9 +17,19 @@ plugin_dir = os.path.join(os.path.dirname(bitshuffle.__file__),
 os.environ["HDF5_PLUGIN_PATH"] = plugin_dir
 
 
+H5VERSION = h5py.h5.get_libversion()
+if (H5VERSION[0] < 1 or (H5VERSION[0] == 1
+    and (H5VERSION[1] < 8 or (H5VERSION[1] == 8 and H5VERSION[2] < 11)))):
+    H51811P = False
+else:
+    H51811P = True
+
+
 class TestFilterPlugins(unittest.TestCase):
 
     def test_plugins(self):
+        if not H51811P:
+            return
         shape = (32 * 1024,)
         chunks = (4 * 1024,)
         dtype = np.int64
@@ -76,6 +86,8 @@ class TestFilterPlugins(unittest.TestCase):
         self.assertTrue(False)
 
     #def test_h5py_hl(self):
+    #    if not H51811P:
+    #        return
     #    # Does not appear to be supported by h5py.
     #    fname = "tmp_test_h5py_hl.h5"
     #    f = h5py.File(fname)
