@@ -1,4 +1,6 @@
 from __future__ import absolute_import, division, print_function
+# I didn't import unicode_literals. They break setuptools or Cython in python
+# 2.7, but python 3 seems to be happy with them.
 
 import os
 import sys

@@ -1,11 +1,13 @@
 language: python
 os: linux
-# To test filter plugins, need hdf5 1.8.11+, present in Trusty.
-dist: trusty
+# To test filter plugins, need hdf5 1.8.11+, present in Trusty but not Precise.
+#dist: trusty
 # Required to get Trusty.
-sudo: true
+#sudo: true
 python:
     - "2.7"
+    - "3.3"
+    - "3.4"
     - "3.5"
 addons:
     apt:
@@ -13,6 +15,8 @@ addons:
             - libhdf5-serial-dev
             - hdf5-tools
 install:
+    # Force Cython to be istalled before h5py.
+    - "pip install Cython>=0.19"
     - "pip install -r requirements.txt"
     # Installing the plugin to arbitrary directory to check the install script.
     - "python setup.py install --h5plugin --h5plugin-dir ~/hdf5/lib"

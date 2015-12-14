@@ -1,5 +1,4 @@
-from __future__ import absolute_import, division, print_function
-
+from __future__ import absolute_import, division, print_function, unicode_literals
 import unittest
 import os, os.path
 import glob
@@ -47,7 +46,7 @@ class TestFilterPlugins(unittest.TestCase):
                       None, None, None)
         dcpl.set_filter(32008, h5z.FLAG_MANDATORY)
         dcpl.set_filter(32000, h5z.FLAG_MANDATORY)
-        dset_id = h5d.create(f.id, "range", tid, sid, dcpl=dcpl)
+        dset_id = h5d.create(f.id, b"range", tid, sid, dcpl=dcpl)
         dset_id.write(h5s.ALL, h5s.ALL, data)
         f.close()
 

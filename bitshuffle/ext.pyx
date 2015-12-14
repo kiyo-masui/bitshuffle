@@ -3,7 +3,7 @@ Wrappers for public and private bitshuffle routines
 
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import numpy as np
 
@@ -20,7 +20,7 @@ cdef int REPEATC = 1
 
 REPEAT = REPEATC
 
-cdef extern from "bitshuffle.h":
+cdef extern from b"bitshuffle.h":
     int bshuf_using_SSE2()
     int bshuf_using_AVX2()
     int bshuf_bitshuffle(void *A, void *B, int size, int elem_size,
@@ -37,7 +37,7 @@ cdef extern from "bitshuffle.h":
     int BSHUF_VERSION_POINT
 
 
-__version__ = "%d.%d.%d" % (BSHUF_VERSION_MAJOR, BSHUF_VERSION_MINOR,
+__version__ = str("%d.%d.%d").format(BSHUF_VERSION_MAJOR, BSHUF_VERSION_MINOR,
         BSHUF_VERSION_POINT)
 
 
