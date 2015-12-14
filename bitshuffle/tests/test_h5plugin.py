@@ -56,24 +56,6 @@ class TestFilterPlugins(unittest.TestCase):
                        stdout=PIPE, stderr=STDOUT)
         stdout, nothing = h5dump.communicate()
         err = h5dump.returncode
-        
-        pdir = os.path.join(os.path.dirname(bitshuffle.__file__),
-                'plugin')
-        print pdir
-
-        h5dump = Popen(['ls', pdir],
-                       stdout=PIPE, stderr=STDOUT)
-        stdout, nothing = h5dump.communicate()
-        print stdout
-        err1 = h5dump.returncode
-        
-        h5dump = Popen(['h5dump', '-H', '-p', fname],
-                       stdout=PIPE, stderr=STDOUT)
-        stdout, nothing = h5dump.communicate()
-        print stdout
-        err1 = h5dump.returncode
-
-        
         self.assertEqual(err, 0)
 
 
@@ -81,9 +63,7 @@ class TestFilterPlugins(unittest.TestCase):
         d = f['range'][:]
         self.assertTrue(np.all(d == data))
         f.close()
-        
-        
-        self.assertTrue(False)
+
 
     #def test_h5py_hl(self):
     #    if not H51811P:
