@@ -1,7 +1,9 @@
 language: python
 os: linux
 # To test filter plugins, need hdf5 1.8.11+, present in Trusty.
-dist: trusty
+dist:
+    - trusty
+    - precise
 # Required to get Trusty.
 sudo: true
 python:
