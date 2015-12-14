@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 import unittest
-import os
+import os, os.path
 import glob
 
 import numpy as np
@@ -9,9 +9,12 @@ import h5py
 from h5py import h5f, h5d, h5z, h5t, h5s, filters
 from subprocess import Popen, PIPE, STDOUT
 
+import bitshuffle
 
-# TODO: Plugin path discovery.
-#os.environ["HDF5_PLUGIN_PATH"] = "/Users/kiyo/working/bitshuffle/plugin"
+
+plugin_dir = os.path.join(os.path.dirname(bitshuffle.__file__),
+                'plugin')
+os.environ["HDF5_PLUGIN_PATH"] = plugin_dir
 
 
 class TestFilterPlugins(unittest.TestCase):
@@ -42,10 +45,13 @@ class TestFilterPlugins(unittest.TestCase):
         h5dump = Popen(['h5dump', fname],
                        stdout=PIPE, stderr=STDOUT)
         stdout, nothing = h5dump.communicate()
-        print stdout
         err = h5dump.returncode
         
-        h5dump = Popen(['ls', '/usr/local/hdf5/lib/plugin'],
+        pdir = os.path.join(os.path.dirname(bitshuffle.__file__),
+                'plugin')
+        print pdir
+
+        h5dump = Popen(['ls', pdir],
                        stdout=PIPE, stderr=STDOUT)
         stdout, nothing = h5dump.communicate()
         print stdout
@@ -60,10 +66,14 @@ class TestFilterPlugins(unittest.TestCase):
         
         self.assertEqual(err, 0)
 
+
         f = h5py.File(fname, 'r')
         d = f['range'][:]
         self.assertTrue(np.all(d == data))
         f.close()
+        
+        
+        self.assertTrue(False)
 
     #def test_h5py_hl(self):
     #    # Does not appear to be supported by h5py.

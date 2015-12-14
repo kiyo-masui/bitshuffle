@@ -79,7 +79,7 @@ h5filter = Extension("bitshuffle.h5",
                    )
 
 
-filter_plugin = Extension("plugin.libh5bshuf",
+filter_plugin = Extension("bitshuffle.plugin.libh5bshuf",
                    ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
                     "src/bitshuffle.c", "lz4/lz4.c"],
                    include_dirs=INCLUDE_DIRS +["src/", "lz4/"] ,
@@ -92,7 +92,7 @@ filter_plugin = Extension("plugin.libh5bshuf",
                    )
 
 
-lzf_plugin = Extension("plugin.libh5LZF",
+lzf_plugin = Extension("bitshuffle.plugin.libh5LZF",
                    ["src/lzf_h5plugin.c", "lzf/lzf_filter.c",
                     "lzf/lzf/lzf_c.c", "lzf/lzf/lzf_d.c"],
                    depends=["lzf/lzf_filter.h",
@@ -141,7 +141,7 @@ class install(install_):
                 return
             #from h5py import h5
             #h5version = h5.get_libversion()
-            plugin_build = path.join(self.build_lib, "plugin")
+            plugin_build = path.join(self.build_lib, "bitshuffle", "plugin")
             try:
                 os.makedirs(self.h5plugin_dir)
             except OSError as e:
@@ -163,15 +163,15 @@ setup(
     name = 'bitshuffle',
     version = VERSION,
 
-    packages = ['bitshuffle'],
+    packages = ['bitshuffle', 'bitshuffle.tests'],
     scripts=[],
     ext_modules = EXTENSIONS,
     cmdclass = {'build_ext': build_ext, 'install': install},
     #cmdclass = {'install': install},
-    #install_requires = ['numpy', 'h5py', 'Cython', 'setuptools>=0.7'],
-    install_requires = ['numpy', 'h5py', 'Cython'],
+    install_requires = ['numpy', 'h5py', 'Cython', 'setuptools>=0.7'],
+    #install_requires = ['numpy', 'h5py', 'Cython'],
     #extras_require = {'H5':  ["h5py"]},
-    package_data={'': ['bitshuffle/tests/data/*']},
+    package_data={'': ['data/*']},
 
     # metadata for upload to PyPI
     author = "Kiyoshi Wesley Masui",
