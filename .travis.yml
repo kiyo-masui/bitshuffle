@@ -6,6 +6,7 @@ dist: trusty
 sudo: true
 python:
     - "2.7"
+    - "3.5"
 addons:
     apt:
         packages:
