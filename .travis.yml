@@ -13,8 +13,8 @@ addons:
             - hdf5-tools
 install:
     - "pip install -r requirements.txt"
-    # Make sure sudo gets correct version of python.
-    - "python setup.py install --h5plugin"
+    # Installing the plugin to arbitrary directory to check the install script.
+    - "python setup.py install --h5plugin --h5plugin-dir ~/hdf5/lib"
 # Can't be somewhere that has a 'bitshuffle' directory as nose will use that
 # copy instead of installed package.
 script: "cd ~; nosetests bitshuffle"
