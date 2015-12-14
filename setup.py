@@ -1,16 +1,16 @@
-from setuptools import setup, Extension
-from setuptools.command.install import install as install_
-from Cython.Distutils import build_ext
-#from Cython.Build import cythonize
-import numpy as np
-# XXX h5py needs to be present to run setup.py. Can't be installed
-# automatically?
-import h5py
+from __future__ import absolute_import, division, print_function
+
 import os
 import sys
 from os import path
 import shutil
 import glob
+from setuptools import setup, Extension
+from setuptools.command.install import install as install_
+
+from Cython.Distutils import build_ext
+import numpy as np
+import h5py
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 2
@@ -137,7 +137,7 @@ class install(install_):
             if H51811P:
                 pass
             else:
-                print "HDF5 < 1.8.11, not installing filter plugins."
+                print("HDF5 < 1.8.11, not installing filter plugins.")
                 return
             #from h5py import h5
             #h5version = h5.get_libversion()
@@ -154,7 +154,7 @@ class install(install_):
             for plugin_lib in plugin_libs:
                 plugin_name = path.split(plugin_lib)[1]
                 shutil.copy2(plugin_lib, path.join(self.h5plugin_dir, plugin_name))
-            print "Installed HDF5 filter plugins to %s" % self.h5plugin_dir
+            print("Installed HDF5 filter plugins to %s" % self.h5plugin_dir)
 
 
 # TODO hdf5 support should be an "extra". Figure out how to set this up.

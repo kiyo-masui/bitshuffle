@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 
 import unittest
 import time
@@ -63,7 +63,7 @@ class TestProfile(unittest.TestCase):
         size = max([size_i, size_o])
         speed = (ext.REPEAT * size / delta_t / 1024**3)   # GB/s
         if TIME:
-            print "%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1./speed, speed)
+            print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1./speed, speed))
         if not self.check is None:
             ans = self.check(self.data).view(np.uint8)
             self.assertTrue(np.all(ans == out.view(np.uint8)))
@@ -474,7 +474,7 @@ class TestOddLengths(unittest.TestCase):
                 dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
                 dbuf = dbuf.view(dtype)
                 for ii in range(self.reps):
-                    n = random.randint(0, self.nmax / 8, 1) * 8
+                    n = random.randint(0, self.nmax // 8, 1) * 8
                     data = dbuf[:n]
                     out = self.fun(data).view(np.uint8)
                     ans = self.check(data).view(np.uint8)

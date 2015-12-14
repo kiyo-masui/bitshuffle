@@ -3,7 +3,7 @@ Test that data encoded with earlier versions can still be decoded correctly.
 
 """
 
-from __future__ import absolute_import
+from __future__ import absolute_import, division, print_function
 
 import unittest
 from os import path
