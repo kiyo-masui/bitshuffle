@@ -40,6 +40,8 @@ Examples
 
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import numpy
 import h5py
 from h5py import h5d, h5s, h5t, h5p, filters
@@ -47,7 +49,7 @@ from h5py import h5d, h5s, h5t, h5p, filters
 cimport cython
 
 
-cdef extern from "bshuf_h5filter.h":
+cdef extern from b"bshuf_h5filter.h":
     int bshuf_register_h5filter()
     int BSHUF_H5FILTER
     int BSHUF_H5_COMPRESS_LZ4
@@ -122,7 +124,7 @@ def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
         return h5p.create(h5p.DATASET_CREATE)
 
     def rq_tuple(tpl, name):
-        """ Check if chunks/maxshape match dataset rank """
+        """Check if chunks/maxshape match dataset rank"""
         if tpl in (None, True):
             return
         try:

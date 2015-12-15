@@ -1,16 +1,18 @@
-from setuptools import setup, Extension
-from setuptools.command.install import install as install_
-from Cython.Distutils import build_ext
-#from Cython.Build import cythonize
-import numpy as np
-# XXX h5py needs to be present to run setup.py. Can't be installed
-# automatically?
-import h5py
+from __future__ import absolute_import, division, print_function
+# I didn't import unicode_literals. They break setuptools or Cython in python
+# 2.7, but python 3 seems to be happy with them.
+
 import os
 import sys
 from os import path
 import shutil
 import glob
+from setuptools import setup, Extension
+from setuptools.command.install import install as install_
+
+from Cython.Distutils import build_ext
+import numpy as np
+import h5py
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 2
@@ -79,7 +81,7 @@ h5filter = Extension("bitshuffle.h5",
                    )
 
 
-filter_plugin = Extension("plugin.libh5bshuf",
+filter_plugin = Extension("bitshuffle.plugin.libh5bshuf",
                    ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
                     "src/bitshuffle.c", "lz4/lz4.c"],
                    include_dirs=INCLUDE_DIRS +["src/", "lz4/"] ,
@@ -92,7 +94,7 @@ filter_plugin = Extension("plugin.libh5bshuf",
                    )
 
 
-lzf_plugin = Extension("plugin.libh5LZF",
+lzf_plugin = Extension("bitshuffle.plugin.libh5LZF",
                    ["src/lzf_h5plugin.c", "lzf/lzf_filter.c",
                     "lzf/lzf/lzf_c.c", "lzf/lzf/lzf_d.c"],
                    depends=["lzf/lzf_filter.h",
@@ -137,11 +139,11 @@ class install(install_):
             if H51811P:
                 pass
             else:
-                print "HDF5 < 1.8.11, not installing filter plugins."
+                print("HDF5 < 1.8.11, not installing filter plugins.")
                 return
             #from h5py import h5
             #h5version = h5.get_libversion()
-            plugin_build = path.join(self.build_lib, "plugin")
+            plugin_build = path.join(self.build_lib, "bitshuffle", "plugin")
             try:
                 os.makedirs(self.h5plugin_dir)
             except OSError as e:
@@ -154,7 +156,7 @@ class install(install_):
             for plugin_lib in plugin_libs:
                 plugin_name = path.split(plugin_lib)[1]
                 shutil.copy2(plugin_lib, path.join(self.h5plugin_dir, plugin_name))
-            print "Installed HDF5 filter plugins to %s" % self.h5plugin_dir
+            print("Installed HDF5 filter plugins to %s" % self.h5plugin_dir)
 
 
 # TODO hdf5 support should be an "extra". Figure out how to set this up.
@@ -163,15 +165,15 @@ setup(
     name = 'bitshuffle',
     version = VERSION,
 
-    packages = ['bitshuffle'],
+    packages = ['bitshuffle', 'bitshuffle.tests'],
     scripts=[],
     ext_modules = EXTENSIONS,
     cmdclass = {'build_ext': build_ext, 'install': install},
     #cmdclass = {'install': install},
-    #install_requires = ['numpy', 'h5py', 'Cython', 'setuptools>=0.7'],
-    install_requires = ['numpy', 'h5py', 'Cython'],
+    install_requires = ['numpy', 'h5py', 'Cython', 'setuptools>=0.7'],
+    #install_requires = ['numpy', 'h5py', 'Cython'],
     #extras_require = {'H5':  ["h5py"]},
-    package_data={'': ['bitshuffle/tests/data/*']},
+    package_data={'': ['data/*']},
 
     # metadata for upload to PyPI
     author = "Kiyoshi Wesley Masui",

@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import unittest
 import time
 import timeit
@@ -17,7 +19,8 @@ BLOCK = 1024
 
 TEST_DTYPES = [np.uint8, np.uint16, np.int32, np.uint64, np.float32,
                np.float64, np.complex128]
-TEST_DTYPES += ['a3', 'a5', 'a6', 'a7', 'a9', 'a11', 'a12', 'a24', 'a48']
+TEST_DTYPES += [b'a3', b'a5', b'a6', b'a7', b'a9', b'a11', b'a12', b'a24',
+                b'a48']
 
 
 class TestProfile(unittest.TestCase):
@@ -61,7 +64,7 @@ class TestProfile(unittest.TestCase):
         size = max([size_i, size_o])
         speed = (ext.REPEAT * size / delta_t / 1024**3)   # GB/s
         if TIME:
-            print "%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1./speed, speed)
+            print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1./speed, speed))
         if not self.check is None:
             ans = self.check(self.data).view(np.uint8)
             self.assertTrue(np.all(ans == out.view(np.uint8)))
@@ -119,7 +122,8 @@ class TestProfile(unittest.TestCase):
     def test_01h_trans_byte_elem_96(self):
         self.case = "byte T elem SSE 96"
         n = self.data.size // 128 * 96
-        dt = np.dtype([('a', 'i4'), ('b', 'i4'), ('c', 'i4')])
+        dt = np.dtype([(str('a'), np.int32), (str('b'), np.int32), 
+                       (str('c'), np.int32)])
         self.data = self.data[:n].view(dt)
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
@@ -127,8 +131,9 @@ class TestProfile(unittest.TestCase):
     def test_01i_trans_byte_elem_80(self):
         self.case = "byte T elem SSE 80"
         n = self.data.size // 128 * 80
-        dt = np.dtype([('a', 'i2'), ('b', 'i2'), ('c', 'i2'), 
-                       ('d', 'i2'), ('e', 'i2')])
+        dt = np.dtype([(str('a'), np.int16), (str('b'), np.int16),
+                       (str('c'), np.int16), (str('d'), np.int16),
+                       (str('e'), np.int16)])
         self.data = self.data[:n].view(dt)
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
@@ -364,7 +369,8 @@ class TestProfile(unittest.TestCase):
                                                 pre_trans.dtype, BLOCK)
         self.check_data = pre_trans
 
-
+"""
+Commented out to prevent nose from finding them.
 class TestDevCases(unittest.TestCase):
 
     def deactivated_test_trans_byte_bitrow_AVX(self):
@@ -425,6 +431,7 @@ class TestDevCases(unittest.TestCase):
         t2 = ext.bitunshuffle(t1)
         #print t2
         self.assertTrue(np.all(t2.view(np.uint8) == d.view(np.uint8)))
+"""
 
 
 class TestOddLengths(unittest.TestCase):
@@ -472,7 +479,7 @@ class TestOddLengths(unittest.TestCase):
                 dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
                 dbuf = dbuf.view(dtype)
                 for ii in range(self.reps):
-                    n = random.randint(0, self.nmax / 8, 1) * 8
+                    n = random.randint(0, self.nmax // 8, 1) * 8
                     data = dbuf[:n]
                     out = self.fun(data).view(np.uint8)
                     ans = self.check(data).view(np.uint8)

@@ -92,8 +92,9 @@ Comparing Bitshuffle to other compression algorithms and HDF5 filters:
 Installation
 ------------
 
-Installation requires HDF5 1.8 or later, HDF5 for python, Numpy and Cython.
-To use the dynamically loaded HDF5 filter requires HDF5 1.8.11 or later.
+Installation requires HDF5 1.8 or later, HDF5 for python (2.7+ or 3.3+), Numpy
+and Cython.  To use the dynamically loaded HDF5 filter requires HDF5 1.8.11 or
+later.
 
 To install::
 
@@ -148,3 +149,10 @@ Here are a few tips to help you get the most out of Bitshuffle:
   is a multiple of 2 bytes. For the AVX2 instruction set, use a data type whose
   size is a multiple of 4 bytes.
 
+
+Citing Bitshuffle
+-----------------
+
+Bitshuffle was initially described in
+http://dx.doi.org/10.1016/j.ascom.2015.07.002, pre-print available at
+http://arxiv.org/abs/1503.00638
