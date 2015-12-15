@@ -89,12 +89,12 @@ Comparing Bitshuffle to other compression algorithms and HDF5 filters:
 .. _MAFISC: http://wr.informatik.uni-hamburg.de/research/projects/icomex/mafisc
 
 
-Installation
-------------
+Installation for Python
+-----------------------
 
-Installation requires HDF5 1.8 or later, HDF5 for python (2.7+ or 3.3+), Numpy
-and Cython.  To use the dynamically loaded HDF5 filter requires HDF5 1.8.11 or
-later.
+Installation requires python 2.7+ or 3.3+, HDF5 1.8 or later, HDF5 for python,
+Numpy and Cython.  To use the dynamically loaded HDF5 filter requires HDF5
+1.8.11 or later.
 
 To install::
 
@@ -110,8 +110,8 @@ try upgrading setuptools.  There is a weird bug where setuptools prior to 0.7
 doesn't work properly with Cython in some cases.
 
 
-Usage
------
+Usage from Python
+-----------------
 
 The `bitshuffle` module contains routines for shuffling and unshuffling
 Numpy arrays.
@@ -130,11 +130,11 @@ Usage from C
 ------------
 
 If you wish to use Bitshuffle in your C program and would prefer not to use the
-HDF5 dynamically loaded filter, the C library in the ``src/`` directory is self
-contained and complete.
+HDF5 dynamically loaded filter, the C library in the ``src/`` directory is
+self-contained and complete.
 
 
-For best results
+For Best Results
 ----------------
 
 Here are a few tips to help you get the most out of Bitshuffle:
@@ -155,4 +155,4 @@ Citing Bitshuffle
 
 Bitshuffle was initially described in
 http://dx.doi.org/10.1016/j.ascom.2015.07.002, pre-print available at
-http://arxiv.org/abs/1503.00638
+http://arxiv.org/abs/1503.00638.
