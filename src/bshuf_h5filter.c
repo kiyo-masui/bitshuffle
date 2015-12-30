@@ -29,6 +29,7 @@ uint32_t bshuf_read_uint32_BE(void* buf);
 herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
 
     herr_t r;
+    size_t ii;
 
     unsigned int elem_size;
 
@@ -44,7 +45,7 @@ herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
     if(r<0) return -1;
 
     // First 3 slots reserved. Move any passed options to higher addresses.
-    for (size_t ii=0; ii < nelements && ii + 3 < nelem_max; ii++) {
+    for (ii=0; ii < nelements && ii + 3 < nelem_max; ii++) {
         values[ii + 3] = tmp_values[ii];
     }
 

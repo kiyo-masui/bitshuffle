@@ -93,18 +93,19 @@ int bshuf_using_AVX2(void) {
 
 /* Transpose of an array of arbitrarily typed elements. */
 #define TRANS_ELEM_TYPE(in, out, lda, ldb, type_t) {                        \
+        size_t ii, jj, kk;                                                  \
         type_t* in_type = (type_t*) in;                                     \
         type_t* out_type = (type_t*) out;                                   \
-        for(size_t ii = 0; ii + 7 < lda; ii += 8) {                         \
-            for(size_t jj = 0; jj < ldb; jj++) {                            \
-                for(size_t kk = 0; kk < 8; kk++) {                          \
+        for(ii = 0; ii + 7 < lda; ii += 8) {                                \
+            for(jj = 0; jj < ldb; jj++) {                                   \
+                for(kk = 0; kk < 8; kk++) {                                 \
                     out_type[jj*lda + ii + kk] =                            \
                         in_type[ii*ldb + kk * ldb + jj];                    \
                 }                                                           \
             }                                                               \
         }                                                                   \
-        for(size_t ii = lda - lda % 8; ii < lda; ii ++) {                   \
-            for(size_t jj = 0; jj < ldb; jj++) {                            \
+        for(ii = lda - lda % 8; ii < lda; ii ++) {                          \
+            for(jj = 0; jj < ldb; jj++) {                                   \
                 out_type[jj*lda + ii] = in_type[ii*ldb + jj];                            \
             }                                                               \
         }                                                                   \
@@ -127,6 +128,7 @@ int64_t bshuf_copy(void* in, void* out, const size_t size,
 int64_t bshuf_trans_byte_elem_remainder(void* in, void* out, const size_t size,
          const size_t elem_size, const size_t start) {
 
+    size_t ii, jj, kk;
     char* in_b = (char*) in;
     char* out_b = (char*) out;
 
@@ -135,16 +137,16 @@ int64_t bshuf_trans_byte_elem_remainder(void* in, void* out, const size_t size,
     if (size > start) {
         // ii loop separated into 2 loops so the compiler can unroll
         // the inner one.
-        for (size_t ii = start; ii + 7 < size; ii += 8) {
-            for (size_t jj = 0; jj < elem_size; jj++) {
-                for (size_t kk = 0; kk < 8; kk++) {
+        for (ii = start; ii + 7 < size; ii += 8) {
+            for (jj = 0; jj < elem_size; jj++) {
+                for (kk = 0; kk < 8; kk++) {
                     out_b[jj * size + ii + kk]
                         = in_b[ii * elem_size + kk * elem_size + jj];
                 }
             }
         }
-        for (size_t ii = size - size % 8; ii < size; ii ++) {
-            for (size_t jj = 0; jj < elem_size; jj++) {
+        for (ii = size - size % 8; ii < size; ii ++) {
+            for (jj = 0; jj < elem_size; jj++) {
                 out_b[jj * size + ii] = in_b[ii * elem_size + jj];
             }
         }
@@ -165,6 +167,7 @@ int64_t bshuf_trans_byte_elem_scal(void* in, void* out, const size_t size,
 int64_t bshuf_trans_bit_byte_remainder(void* in, void* out, const size_t size,
          const size_t elem_size, const size_t start_byte) {
 
+    int ii, kk;
     uint64_t* in_b = in;
     uint8_t* out_b = out;
 
@@ -176,10 +179,10 @@ int64_t bshuf_trans_bit_byte_remainder(void* in, void* out, const size_t size,
     CHECK_MULT_EIGHT(nbyte);
     CHECK_MULT_EIGHT(start_byte);
 
-    for (size_t ii = start_byte / 8; ii < nbyte_bitrow; ii ++) {
+    for (ii = start_byte / 8; ii < nbyte_bitrow; ii ++) {
         x = in_b[ii];
         TRANS_BIT_8X8(x, t);
-        for (int kk = 0; kk < 8; kk ++) {
+        for (kk = 0; kk < 8; kk ++) {
             out_b[kk * nbyte_bitrow + ii] = x;
             x = x >> 8;
         }
@@ -200,10 +203,11 @@ int64_t bshuf_trans_bit_byte_scal(void* in, void* out, const size_t size,
 int64_t bshuf_trans_elem(void* in, void* out, const size_t lda,
         const size_t ldb, const size_t elem_size) {
 
+    size_t ii, jj;
     char* in_b = (char*) in;
     char* out_b = (char*) out;
-    for(size_t ii = 0; ii < lda; ii++) {
-        for(size_t jj = 0; jj < ldb; jj++) {
+    for(ii = 0; ii < lda; ii++) {
+        for(jj = 0; jj < ldb; jj++) {
             memcpy(&out_b[(jj*lda + ii) * elem_size],
                    &in_b[(ii*ldb + jj) * elem_size], elem_size);
         }
@@ -251,6 +255,7 @@ int64_t bshuf_trans_bit_elem_scal(void* in, void* out, const size_t size,
  * the bytes. */
 int64_t bshuf_trans_byte_bitrow_scal(void* in, void* out, const size_t size,
          const size_t elem_size) {
+    size_t ii, jj, kk;
     char* in_b = (char*) in;
     char* out_b = (char*) out;
 
@@ -258,9 +263,9 @@ int64_t bshuf_trans_byte_bitrow_scal(void* in, void* out, const size_t size,
 
     CHECK_MULT_EIGHT(size);
 
-    for (size_t jj = 0; jj < elem_size; jj++) {
-        for (size_t ii = 0; ii < nbyte_row; ii++) {
-            for (size_t kk = 0; kk < 8; kk++) {
+    for (jj = 0; jj < elem_size; jj++) {
+        for (ii = 0; ii < nbyte_row; ii++) {
+            for (kk = 0; kk < 8; kk++) {
                 out_b[ii * 8 * elem_size + jj * 8 + kk] = \
                         in_b[(jj * 8 + kk) * nbyte_row + ii];
             }
@@ -276,6 +281,7 @@ int64_t bshuf_shuffle_bit_eightelem_scal(void* in, void* out,
 
     CHECK_MULT_EIGHT(size);
 
+    size_t ii, jj, kk;
     char* in_b = (char*) in;
     char* out_b = (char*) out;
 
@@ -283,11 +289,11 @@ int64_t bshuf_shuffle_bit_eightelem_scal(void* in, void* out,
 
     uint64_t x, t;
 
-    for (size_t jj = 0; jj < 8 * elem_size; jj += 8) {
-        for (size_t ii = 0; ii + 8 * elem_size - 1 < nbyte; ii += 8 * elem_size) {
+    for (jj = 0; jj < 8 * elem_size; jj += 8) {
+        for (ii = 0; ii + 8 * elem_size - 1 < nbyte; ii += 8 * elem_size) {
             x = *((uint64_t*) &in_b[ii + jj]);
             TRANS_BIT_8X8(x, t);
-            for (size_t kk = 0; kk < 8; kk++) {
+            for (kk = 0; kk < 8; kk++) {
                 *((uint8_t*) &out_b[ii + jj / 8 + kk * elem_size]) = x;
                 x = x >> 8;
             }
@@ -332,11 +338,12 @@ int64_t bshuf_untrans_bit_elem_scal(void* in, void* out, const size_t size,
 /* Transpose bytes within elements for 16 bit elements. */
 int64_t bshuf_trans_byte_elem_SSE_16(void* in, void* out, const size_t size) {
 
+    size_t ii;
     char* in_b = (char*) in;
     char* out_b = (char*) out;
     __m128i a0, b0, a1, b1;
 
-    for (size_t ii=0; ii + 15 < size; ii += 16) {
+    for (ii=0; ii + 15 < size; ii += 16) {
         a0 = _mm_loadu_si128((__m128i *) &in_b[2*ii + 0*16]);
         b0 = _mm_loadu_si128((__m128i *) &in_b[2*ii + 1*16]);
 
@@ -363,11 +370,12 @@ int64_t bshuf_trans_byte_elem_SSE_16(void* in, void* out, const size_t size) {
 /* Transpose bytes within elements for 32 bit elements. */
 int64_t bshuf_trans_byte_elem_SSE_32(void* in, void* out, const size_t size) {
 
+    size_t ii;
     char* in_b = (char*) in;
     char* out_b = (char*) out;
     __m128i a0, b0, c0, d0, a1, b1, c1, d1;
 
-    for (size_t ii=0; ii + 15 < size; ii += 16) {
+    for (ii=0; ii + 15 < size; ii += 16) {
         a0 = _mm_loadu_si128((__m128i *) &in_b[4*ii + 0*16]);
         b0 = _mm_loadu_si128((__m128i *) &in_b[4*ii + 1*16]);
         c0 = _mm_loadu_si128((__m128i *) &in_b[4*ii + 2*16]);
@@ -406,12 +414,13 @@ int64_t bshuf_trans_byte_elem_SSE_32(void* in, void* out, const size_t size) {
 /* Transpose bytes within elements for 64 bit elements. */
 int64_t bshuf_trans_byte_elem_SSE_64(void* in, void* out, const size_t size) {
 
+    size_t ii;
     char* in_b = (char*) in;
     char* out_b = (char*) out;
     __m128i a0, b0, c0, d0, e0, f0, g0, h0;
     __m128i a1, b1, c1, d1, e1, f1, g1, h1;
 
-    for (size_t ii=0; ii + 15 < size; ii += 16) {
+    for (ii=0; ii + 15 < size; ii += 16) {
         a0 = _mm_loadu_si128((__m128i *) &in_b[8*ii + 0*16]);
         b0 = _mm_loadu_si128((__m128i *) &in_b[8*ii + 1*16]);
         c0 = _mm_loadu_si128((__m128i *) &in_b[8*ii + 2*16]);
@@ -537,6 +546,7 @@ int64_t bshuf_trans_byte_elem_SSE(void* in, void* out, const size_t size,
 int64_t bshuf_trans_bit_byte_SSE(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
+    size_t ii, kk;
     char* in_b = (char*) in;
     char* out_b = (char*) out;
     uint16_t* out_ui16;
@@ -550,9 +560,9 @@ int64_t bshuf_trans_bit_byte_SSE(void* in, void* out, const size_t size,
     __m128i xmm;
     int32_t bt;
 
-    for (size_t ii = 0; ii + 15 < nbyte; ii += 16) {
+    for (ii = 0; ii + 15 < nbyte; ii += 16) {
         xmm = _mm_loadu_si128((__m128i *) &in_b[ii]);
-        for (size_t kk = 0; kk < 8; kk++) {
+        for (kk = 0; kk < 8; kk++) {
             bt = _mm_movemask_epi8(xmm);
             xmm = _mm_slli_epi16(xmm, 1);
             out_ui16 = (uint16_t*) &out_b[((7 - kk) * nbyte + ii) / 8];
@@ -593,6 +603,7 @@ int64_t bshuf_trans_bit_elem_SSE(void* in, void* out, const size_t size,
 int64_t bshuf_trans_byte_bitrow_SSE(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
+    size_t ii, jj;
     char* in_b = (char*) in;
     char* out_b = (char*) out;
 
@@ -605,8 +616,8 @@ int64_t bshuf_trans_byte_bitrow_SSE(void* in, void* out, const size_t size,
     __m128i a1, b1, c1, d1, e1, f1, g1, h1;
     __m128 *as, *bs, *cs, *ds, *es, *fs, *gs, *hs;
 
-    for (size_t ii = 0; ii + 7 < nrows; ii += 8) {
-        for (size_t jj = 0; jj + 15 < nbyte_row; jj += 16) {
+    for (ii = 0; ii + 7 < nrows; ii += 8) {
+        for (jj = 0; jj + 15 < nbyte_row; jj += 16) {
             a0 = _mm_loadu_si128((__m128i *) &in_b[(ii + 0)*nbyte_row + jj]);
             b0 = _mm_loadu_si128((__m128i *) &in_b[(ii + 1)*nbyte_row + jj]);
             c0 = _mm_loadu_si128((__m128i *) &in_b[(ii + 2)*nbyte_row + jj]);
@@ -679,7 +690,7 @@ int64_t bshuf_trans_byte_bitrow_SSE(void* in, void* out, const size_t size,
             _mm_storeh_pi((__m64 *) &out_b[(jj + 13) * nrows + ii], *gs);
             _mm_storeh_pi((__m64 *) &out_b[(jj + 15) * nrows + ii], *hs);
         }
-        for (size_t jj = nbyte_row - nbyte_row % 16; jj < nbyte_row; jj ++) {
+        for (jj = nbyte_row - nbyte_row % 16; jj < nbyte_row; jj ++) {
             out_b[jj * nrows + ii + 0] = in_b[(ii + 0)*nbyte_row + jj];
             out_b[jj * nrows + ii + 1] = in_b[(ii + 1)*nbyte_row + jj];
             out_b[jj * nrows + ii + 2] = in_b[(ii + 2)*nbyte_row + jj];
@@ -705,6 +716,7 @@ int64_t bshuf_shuffle_bit_eightelem_SSE(void* in, void* out, const size_t size,
     char* in_b = (char*) in;
     uint16_t* out_ui16 = (uint16_t*) out;
 
+    size_t ii, jj, kk;
     size_t nbyte = elem_size * size;
 
     __m128i xmm;
@@ -713,11 +725,11 @@ int64_t bshuf_shuffle_bit_eightelem_SSE(void* in, void* out, const size_t size,
     if (elem_size % 2) {
         bshuf_shuffle_bit_eightelem_scal(in, out, size, elem_size);
     } else {
-        for (size_t ii = 0; ii + 8 * elem_size - 1 < nbyte;
+        for (ii = 0; ii + 8 * elem_size - 1 < nbyte;
                 ii += 8 * elem_size) {
-            for (size_t jj = 0; jj + 15 < 8 * elem_size; jj += 16) {
+            for (jj = 0; jj + 15 < 8 * elem_size; jj += 16) {
                 xmm = _mm_loadu_si128((__m128i *) &in_b[ii + jj]);
-                for (size_t kk = 0; kk < 8; kk++) {
+                for (kk = 0; kk < 8; kk++) {
                     bt = _mm_movemask_epi8(xmm);
                     xmm = _mm_slli_epi16(xmm, 1);
                     size_t ind = (ii + jj / 8 + (7 - kk) * elem_size);
@@ -824,6 +836,7 @@ int64_t bshuf_shuffle_bit_eightelem_SSE(void* in, void* out, const size_t size,
 int64_t bshuf_trans_bit_byte_AVX(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
+    size_t ii, kk;
     char* in_b = (char*) in;
     char* out_b = (char*) out;
     int32_t* out_i32;
@@ -835,9 +848,9 @@ int64_t bshuf_trans_bit_byte_AVX(void* in, void* out, const size_t size,
     __m256i ymm;
     int32_t bt;
 
-    for (size_t ii = 0; ii + 31 < nbyte; ii += 32) {
+    for (ii = 0; ii + 31 < nbyte; ii += 32) {
         ymm = _mm256_loadu_si256((__m256i *) &in_b[ii]);
-        for (size_t kk = 0; kk < 8; kk++) {
+        for (kk = 0; kk < 8; kk++) {
             bt = _mm256_movemask_epi8(ymm);
             ymm = _mm256_slli_epi16(ymm, 1);
             out_i32 = (int32_t*) &out_b[((7 - kk) * nbyte + ii) / 8];
@@ -878,6 +891,7 @@ int64_t bshuf_trans_bit_elem_AVX(void* in, void* out, const size_t size,
 int64_t bshuf_trans_byte_bitrow_AVX(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
+    size_t hh, ii, jj, kk, mm;
     char* in_b = (char*) in;
     char* out_b = (char*) out;
 
@@ -893,24 +907,24 @@ int64_t bshuf_trans_byte_bitrow_AVX(void* in, void* out, const size_t size,
     __m256i ymm_1[8];
     __m256i ymm_storeage[8][4];
 
-    for (size_t jj = 0; jj + 31 < nbyte_row; jj += 32) {
-        for (size_t ii = 0; ii + 3 < elem_size; ii += 4) {
-            for (size_t hh = 0; hh < 4; hh ++) {
+    for (jj = 0; jj + 31 < nbyte_row; jj += 32) {
+        for (ii = 0; ii + 3 < elem_size; ii += 4) {
+            for (hh = 0; hh < 4; hh ++) {
 
-                for (size_t kk = 0; kk < 8; kk ++){
+                for (kk = 0; kk < 8; kk ++){
                     ymm_0[kk] = _mm256_loadu_si256((__m256i *) &in_b[
                             (ii * 8 + hh * 8 + kk) * nbyte_row + jj]);
                 }
 
-                for (size_t kk = 0; kk < 4; kk ++){
+                for (kk = 0; kk < 4; kk ++){
                     ymm_1[kk] = _mm256_unpacklo_epi8(ymm_0[kk * 2],
                             ymm_0[kk * 2 + 1]);
                     ymm_1[kk + 4] = _mm256_unpackhi_epi8(ymm_0[kk * 2],
                             ymm_0[kk * 2 + 1]);
                 }
 
-                for (size_t kk = 0; kk < 2; kk ++){
-                    for (size_t mm = 0; mm < 2; mm ++){
+                for (kk = 0; kk < 2; kk ++){
+                    for (mm = 0; mm < 2; mm ++){
                         ymm_0[kk * 4 + mm] = _mm256_unpacklo_epi16(
                                 ymm_1[kk * 4 + mm * 2],
                                 ymm_1[kk * 4 + mm * 2 + 1]);
@@ -920,21 +934,21 @@ int64_t bshuf_trans_byte_bitrow_AVX(void* in, void* out, const size_t size,
                     }
                 }
 
-                for (size_t kk = 0; kk < 4; kk ++){
+                for (kk = 0; kk < 4; kk ++){
                     ymm_1[kk * 2] = _mm256_unpacklo_epi32(ymm_0[kk * 2],
                             ymm_0[kk * 2 + 1]);
                     ymm_1[kk * 2 + 1] = _mm256_unpackhi_epi32(ymm_0[kk * 2],
                             ymm_0[kk * 2 + 1]);
                 }
 
-                for (size_t kk = 0; kk < 8; kk ++){
+                for (kk = 0; kk < 8; kk ++){
                     ymm_storeage[kk][hh] = ymm_1[kk];
                 }
             }
 
-            for (size_t mm = 0; mm < 8; mm ++) {
+            for (mm = 0; mm < 8; mm ++) {
 
-                for (size_t kk = 0; kk < 4; kk ++){
+                for (kk = 0; kk < 4; kk ++){
                     ymm_0[kk] = ymm_storeage[mm][kk];
                 }
 
@@ -959,8 +973,8 @@ int64_t bshuf_trans_byte_bitrow_AVX(void* in, void* out, const size_t size,
             }
         }
     }
-    for (size_t ii = 0; ii < nrows; ii ++ ) {
-        for (size_t jj = nbyte_row - nbyte_row % 32; jj < nbyte_row; jj ++) {
+    for (ii = 0; ii < nrows; ii ++ ) {
+        for (jj = nbyte_row - nbyte_row % 32; jj < nbyte_row; jj ++) {
             out_b[jj * nrows + ii] = in_b[ii * nbyte_row + jj];
         }
     }
@@ -979,6 +993,7 @@ int64_t bshuf_shuffle_bit_eightelem_AVX(void* in, void* out, const size_t size,
     char* in_b = (char*) in;
     char* out_b = (char*) out;
 
+    size_t ii, jj, kk;
     size_t nbyte = elem_size * size;
 
     __m256i ymm;
@@ -987,11 +1002,11 @@ int64_t bshuf_shuffle_bit_eightelem_AVX(void* in, void* out, const size_t size,
     if (elem_size % 4) {
         return bshuf_shuffle_bit_eightelem_SSE(in, out, size, elem_size);
     } else {
-        for (size_t jj = 0; jj + 31 < 8 * elem_size; jj += 32) {
-            for (size_t ii = 0; ii + 8 * elem_size - 1 < nbyte;
+        for (jj = 0; jj + 31 < 8 * elem_size; jj += 32) {
+            for (ii = 0; ii + 8 * elem_size - 1 < nbyte;
                     ii += 8 * elem_size) {
                 ymm = _mm256_loadu_si256((__m256i *) &in_b[ii + jj]);
-                for (size_t kk = 0; kk < 8; kk++) {
+                for (kk = 0; kk < 8; kk++) {
                     bt = _mm256_movemask_epi8(ymm);
                     ymm = _mm256_slli_epi16(ymm, 1);
                     size_t ind = (ii + jj / 8 + (7 - kk) * elem_size);
@@ -1102,6 +1117,7 @@ typedef int64_t (*bshufBlockFunDef)(ioc_chain* C_ptr,
 int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, void* in, void* out,
         const size_t size, const size_t elem_size, size_t block_size) {
 
+    size_t ii;
     ioc_chain C;
     ioc_init(&C, in, out);
 
@@ -1114,7 +1130,7 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, void* in, void* out,
     if (block_size < 0 || block_size % BSHUF_BLOCKED_MULT) return -81;
 
     #pragma omp parallel for private(count) reduction(+ : cum_count)
-    for (size_t ii = 0; ii < size / block_size; ii ++) {
+    for (ii = 0; ii < size / block_size; ii ++) {
         count = fun(&C, block_size, elem_size);
         if (count < 0) err = count;
         cum_count += count;
@@ -1182,9 +1198,10 @@ int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr,
 
 /* Write a 64 bit unsigned integer to a buffer in big endian order. */
 void bshuf_write_uint64_BE(void* buf, uint64_t num) {
+    int ii;
     uint8_t* b = buf;
     uint64_t pow28 = 1 << 8;
-    for (int ii = 7; ii >= 0; ii--) {
+    for (ii = 7; ii >= 0; ii--) {
         b[ii] = num % pow28;
         num = num / pow28;
     }
@@ -1193,9 +1210,10 @@ void bshuf_write_uint64_BE(void* buf, uint64_t num) {
 
 /* Read a 64 bit unsigned integer from a buffer big endian order. */
 uint64_t bshuf_read_uint64_BE(void* buf) {
+    int ii;
     uint8_t* b = buf;
     uint64_t num = 0, pow28 = 1 << 8, cp = 1;
-    for (int ii = 7; ii >= 0; ii--) {
+    for (ii = 7; ii >= 0; ii--) {
         num += b[ii] * cp;
         cp *= pow28;
     }
@@ -1205,9 +1223,10 @@ uint64_t bshuf_read_uint64_BE(void* buf) {
 
 /* Write a 32 bit unsigned integer to a buffer in big endian order. */
 void bshuf_write_uint32_BE(void* buf, uint32_t num) {
+    int ii;
     uint8_t* b = buf;
     uint32_t pow28 = 1 << 8;
-    for (int ii = 3; ii >= 0; ii--) {
+    for (ii = 3; ii >= 0; ii--) {
         b[ii] = num % pow28;
         num = num / pow28;
     }
@@ -1216,9 +1235,10 @@ void bshuf_write_uint32_BE(void* buf, uint32_t num) {
 
 /* Read a 32 bit unsigned integer from a buffer big endian order. */
 uint32_t bshuf_read_uint32_BE(void* buf) {
+    int ii;
     uint8_t* b = buf;
     uint32_t num = 0, pow28 = 1 << 8, cp = 1;
-    for (int ii = 3; ii >= 0; ii--) {
+    for (ii = 3; ii >= 0; ii--) {
         num += b[ii] * cp;
         cp *= pow28;
     }
