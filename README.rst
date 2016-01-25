@@ -137,7 +137,7 @@ self-contained and complete.
 Anaconda
 --------
 The conda package can be build via:
-
+::
     conda build conda-recipe
 
 **Note:** this recipe patches the compiler flags in setup.py (replace -Ofast with -ffast-math) as -Ofast does not work with old gcc versions (both flags do the same as far as I know)
