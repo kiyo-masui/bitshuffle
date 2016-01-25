@@ -134,6 +134,14 @@ HDF5 dynamically loaded filter, the C library in the ``src/`` directory is
 self-contained and complete.
 
 
+Anaconda
+--------
+The conda package can be build via:
+
+    conda build conda-recipe
+
+**Note:** this recipe patches the compiler flags in setup.py (replace -Ofast with -ffast-math) as -Ofast does not work with old gcc versions (both flags do the same as far as I know)
+
 For Best Results
 ----------------
 
@@ -145,7 +153,7 @@ Here are a few tips to help you get the most out of Bitshuffle:
 - To achieve the highest throughput, use a data type that is 64 *bytes* or
   smaller. If you have a very large compound data type, consider adding a
   dimension to your datasets instead.
-- To make full use of the SSE2 instruction set, use a data type whose size 
+- To make full use of the SSE2 instruction set, use a data type whose size
   is a multiple of 2 bytes. For the AVX2 instruction set, use a data type whose
   size is a multiple of 4 bytes.
 
