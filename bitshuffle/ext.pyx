@@ -20,7 +20,7 @@ cdef int REPEATC = 1
 
 REPEAT = REPEATC
 
-cdef extern from b"bitshuffle.h":
+cdef extern from b"bshuf_lz4.h":
     int bshuf_using_SSE2()
     int bshuf_using_AVX2()
     int bshuf_bitshuffle(void *A, void *B, int size, int elem_size,
