@@ -168,8 +168,8 @@ int64_t bshuf_trans_bit_byte_remainder(void* in, void* out, const size_t size,
          const size_t elem_size, const size_t start_byte) {
 
     int ii, kk;
-    uint64_t* in_b = in;
-    uint8_t* out_b = out;
+    uint64_t* in_b = (uint64_t*) in;
+    uint8_t* out_b = (uint8_t*) out;
 
     uint64_t x, t;
 
@@ -1199,7 +1199,7 @@ int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr,
 /* Write a 64 bit unsigned integer to a buffer in big endian order. */
 void bshuf_write_uint64_BE(void* buf, uint64_t num) {
     int ii;
-    uint8_t* b = buf;
+    uint8_t* b = (uint8_t*) buf;
     uint64_t pow28 = 1 << 8;
     for (ii = 7; ii >= 0; ii--) {
         b[ii] = num % pow28;
@@ -1211,7 +1211,7 @@ void bshuf_write_uint64_BE(void* buf, uint64_t num) {
 /* Read a 64 bit unsigned integer from a buffer big endian order. */
 uint64_t bshuf_read_uint64_BE(void* buf) {
     int ii;
-    uint8_t* b = buf;
+    uint8_t* b = (uint8_t*) buf;
     uint64_t num = 0, pow28 = 1 << 8, cp = 1;
     for (ii = 7; ii >= 0; ii--) {
         num += b[ii] * cp;
@@ -1224,7 +1224,7 @@ uint64_t bshuf_read_uint64_BE(void* buf) {
 /* Write a 32 bit unsigned integer to a buffer in big endian order. */
 void bshuf_write_uint32_BE(void* buf, uint32_t num) {
     int ii;
-    uint8_t* b = buf;
+    uint8_t* b = (uint8_t*) buf;
     uint32_t pow28 = 1 << 8;
     for (ii = 3; ii >= 0; ii--) {
         b[ii] = num % pow28;
@@ -1236,7 +1236,7 @@ void bshuf_write_uint32_BE(void* buf, uint32_t num) {
 /* Read a 32 bit unsigned integer from a buffer big endian order. */
 uint32_t bshuf_read_uint32_BE(void* buf) {
     int ii;
-    uint8_t* b = buf;
+    uint8_t* b = (uint8_t*) buf;
     uint32_t num = 0, pow28 = 1 << 8, cp = 1;
     for (ii = 3; ii >= 0; ii--) {
         num += b[ii] * cp;
@@ -1272,7 +1272,7 @@ int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr,
         free(tmp_buf_bshuf);
         return count;
     }
-    nbytes = LZ4_compress(tmp_buf_bshuf, tmp_buf_lz4, size * elem_size);
+    nbytes = LZ4_compress((const char*) tmp_buf_bshuf, (char*) tmp_buf_lz4, size * elem_size);
     free(tmp_buf_bshuf);
     CHECK_ERR_FREE_LZ(nbytes, tmp_buf_lz4);
 
@@ -1308,14 +1308,14 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
     if (tmp_buf == NULL) return -1;
 
 #ifdef BSHUF_LZ4_DECOMPRESS_FAST
-    nbytes = LZ4_decompress_fast((char*) in + 4, tmp_buf, size * elem_size);
+    nbytes = LZ4_decompress_fast((const char*) in + 4, (char*) tmp_buf, size * elem_size);
     CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
     if (nbytes != nbytes_from_header) {
         free(tmp_buf);
         return -91;
     }
 #else
-    nbytes = LZ4_decompress_safe((char*) in + 4, tmp_buf, nbytes_from_header,
+    nbytes = LZ4_decompress_safe((const char*) in + 4, (char *) tmp_buf, nbytes_from_header,
                                  size * elem_size);
     CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
     if (nbytes != size * elem_size) {
