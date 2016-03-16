@@ -128,6 +128,7 @@ interface or through the convenience functions provided in
 
 Example
 -------
+::
 
     import h5py
     import numpy
