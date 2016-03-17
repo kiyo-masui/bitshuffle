@@ -126,26 +126,36 @@ interface or through the convenience functions provided in
 `bitshuffle.h5`. See the docstrings and unit tests for examples.
 
 
-Example
--------
+Example h5py
+------------
 ::
 
     import h5py
     import numpy
     import bitshuffle.h5
 
-    filehandle = h5py.File(filename, "w")
+    print(h5py.__version__) # >= '2.5.0'
 
-    block_size = 2048
-    dataset = filehandle.create_dataset("data", (100, 100, 100), maxshape=(None, 100, 100), compression=32008, compression_opts=(block_size, bitshuffle.h5.H5_COMPRESS_LZ4), chunks=(1,100,100), dtype='float32')
+    f = h5py.File(filename, "w")
+
+    # block_size = 0 let Bitshuffle choose its value
+    block_size = 0
+
+    dataset = f.create_dataset(
+        "data",
+        (100, 100, 100),
+        compression=bitshuffle.h5.H5FILTER,
+        compression_opts=(block_size, bitshuffle.h5.H5_COMPRESS_LZ4),
+        dtype='float32',
+        )
 
     # create some random data
-    array = numpy.random.rand(100, 100)
+    array = numpy.random.rand(100, 100, 100)
     array = array.astype('float32')
 
-    dataset[0]=array
+    dataset[:] = array
 
-    filehandle.close()
+    f.close()
 
 
 Usage from C
