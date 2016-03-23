@@ -10,8 +10,8 @@
  *
  */
 
+#include "bitshuffle.h"
 #include "bshuf_h5filter.h"
-#include "bshuf_lz4.h"
 
 
 #define PUSH_ERR(func, minor, str)                                      \
