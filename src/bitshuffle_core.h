@@ -25,8 +25,8 @@
  */
 
 
-#ifndef BITSHUFFLE_H
-#define BITSHUFFLE_H
+#ifndef BITSHUFFLE_CORE_H
+#define BITSHUFFLE_CORE_H
 
 
 #include <stdint.h>
@@ -143,4 +143,4 @@ int64_t bshuf_bitunshuffle(void* in, void* out, const size_t size,
 } // extern "C"
 #endif
 
-#endif  // BITSHUFFLE_H
+#endif  // BITSHUFFLE_CORE_H

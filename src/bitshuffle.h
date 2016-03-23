@@ -25,8 +25,8 @@
  */
 
 
-#ifndef BSHUF_LZ4_H
-#define BSHUF_LZ4_H
+#ifndef BITSHUFFLE_H
+#define BITSHUFFLE_H
 
 
 #include <stdint.h>
@@ -122,4 +122,4 @@ int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
 } // extern "C"
 #endif
 
-#endif  // BSHUF_LZ4_H
+#endif  // BITSHUFFLE_H
