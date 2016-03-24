@@ -46,7 +46,7 @@ INCLUDE_DIRS = []
 LIBRARY_DIRS = []
 if sys.platform == 'darwin':
     # putting here both macports and homebrew paths will generate
-    # "ld: warning: dir not found" at the linking phase 
+    # "ld: warning: dir not found" at the linking phase
     INCLUDE_DIRS += ['/opt/local/include'] # macports
     LIBRARY_DIRS += ['/opt/local/lib']     # macports
     INCLUDE_DIRS += ['/usr/local/include'] # homebrew
@@ -57,11 +57,11 @@ elif sys.platform.startswith('freebsd'):
 
 
 ext_bshuf = Extension("bitshuffle.ext",
-                   ["bitshuffle/ext.pyx", "src/bitshuffle.c", "lz4/lz4.c"],
+                   ["bitshuffle/ext.pyx", "src/bitshuffle.c", "src/bitshuffle_core.c", "src/iochain.c", "lz4/lz4.c"],
                    include_dirs=INCLUDE_DIRS + [np.get_include(), "src/",
                                                 "lz4/"],
                    library_dirs = LIBRARY_DIRS,
-                   depends=["src/bitshuffle.h", "src/iochain.h", "lz4/lz4.h"],
+                   depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h", "lz4/lz4.h"],
                    libraries = ['gomp'],
                    extra_compile_args=COMPILE_FLAGS,
                    define_macros=MACROS,
@@ -70,10 +70,10 @@ ext_bshuf = Extension("bitshuffle.ext",
 
 h5filter = Extension("bitshuffle.h5",
                    ["bitshuffle/h5.pyx", "src/bshuf_h5filter.c",
-                    "src/bitshuffle.c", "lz4/lz4.c"],
+                    "src/bitshuffle.c", "src/bitshuffle_core.c", "src/iochain.c", "lz4/lz4.c"],
                    include_dirs=INCLUDE_DIRS + ["src/", "lz4/"],
                    library_dirs = LIBRARY_DIRS,
-                   depends=["src/bitshuffle.h", "src/iochain.h",
+                   depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h",
                             'src/bshuf_h5filter.h', "lz4/lz4.h"],
                    libraries = ['hdf5', 'gomp'],
                    extra_compile_args=COMPILE_FLAGS,
@@ -83,10 +83,10 @@ h5filter = Extension("bitshuffle.h5",
 
 filter_plugin = Extension("bitshuffle.plugin.libh5bshuf",
                    ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
-                    "src/bitshuffle.c", "lz4/lz4.c"],
+                    "src/bitshuffle.c", "src/bitshuffle_core.c", "src/iochain.c", "lz4/lz4.c"],
                    include_dirs=INCLUDE_DIRS +["src/", "lz4/"] ,
                    library_dirs = LIBRARY_DIRS,
-                   depends=["src/bitshuffle.h", "src/iochain.h",
+                   depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h",
                             'src/bshuf_h5filter.h', "lz4/lz4.h"],
                    libraries = ['hdf5', 'gomp'],
                    extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
