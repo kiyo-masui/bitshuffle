@@ -89,11 +89,12 @@ Comparing Bitshuffle to other compression algorithms and HDF5 filters:
 .. _MAFISC: http://wr.informatik.uni-hamburg.de/research/projects/icomex/mafisc
 
 
-Installation
-------------
+Installation for Python
+-----------------------
 
-Installation requires HDF5 1.8 or later, HDF5 for python, Numpy and Cython.
-To use the dynamically loaded HDF5 filter requires HDF5 1.8.11 or later.
+Installation requires python 2.7+ or 3.3+, HDF5 1.8 or later, HDF5 for python,
+Numpy and Cython.  To use the dynamically loaded HDF5 filter requires HDF5
+1.8.11 or later.
 
 To install::
 
@@ -109,8 +110,8 @@ try upgrading setuptools.  There is a weird bug where setuptools prior to 0.7
 doesn't work properly with Cython in some cases.
 
 
-Usage
------
+Usage from Python
+-----------------
 
 The `bitshuffle` module contains routines for shuffling and unshuffling
 Numpy arrays.
@@ -125,15 +126,54 @@ interface or through the convenience functions provided in
 `bitshuffle.h5`. See the docstrings and unit tests for examples.
 
 
+Example h5py
+------------
+::
+
+    import h5py
+    import numpy
+    import bitshuffle.h5
+
+    print(h5py.__version__) # >= '2.5.0'
+
+    f = h5py.File(filename, "w")
+
+    # block_size = 0 let Bitshuffle choose its value
+    block_size = 0
+
+    dataset = f.create_dataset(
+        "data",
+        (100, 100, 100),
+        compression=bitshuffle.h5.H5FILTER,
+        compression_opts=(block_size, bitshuffle.h5.H5_COMPRESS_LZ4),
+        dtype='float32',
+        )
+
+    # create some random data
+    array = numpy.random.rand(100, 100, 100)
+    array = array.astype('float32')
+
+    dataset[:] = array
+
+    f.close()
+
+
 Usage from C
 ------------
 
 If you wish to use Bitshuffle in your C program and would prefer not to use the
-HDF5 dynamically loaded filter, the C library in the ``src/`` directory is self
-contained and complete.
+HDF5 dynamically loaded filter, the C library in the ``src/`` directory is
+self-contained and complete.
 
 
-For best results
+Anaconda
+--------
+The conda package can be build via:
+::
+    conda build conda-recipe
+
+
+For Best Results
 ----------------
 
 Here are a few tips to help you get the most out of Bitshuffle:
@@ -144,7 +184,14 @@ Here are a few tips to help you get the most out of Bitshuffle:
 - To achieve the highest throughput, use a data type that is 64 *bytes* or
   smaller. If you have a very large compound data type, consider adding a
   dimension to your datasets instead.
-- To make full use of the SSE2 instruction set, use a data type whose size 
+- To make full use of the SSE2 instruction set, use a data type whose size
   is a multiple of 2 bytes. For the AVX2 instruction set, use a data type whose
   size is a multiple of 4 bytes.
 
+
+Citing Bitshuffle
+-----------------
+
+Bitshuffle was initially described in
+http://dx.doi.org/10.1016/j.ascom.2015.07.002, pre-print available at
+http://arxiv.org/abs/1503.00638.

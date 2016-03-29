@@ -1,0 +1,4 @@
+setuptools>=0.7
+numpy>=1.6.1
+Cython>=0.19
+h5py>=2.4.0

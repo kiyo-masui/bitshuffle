@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import unittest
 import os
 import glob
@@ -22,7 +24,7 @@ class TestFilter(unittest.TestCase):
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname)
-        h5.create_dataset(f, "range", shape, dtype, chunks,
+        h5.create_dataset(f, b"range", shape, dtype, chunks,
                 filter_pipeline=(32008, 32000),
                 filter_flags=(h5z.FLAG_MANDATORY, h5z.FLAG_MANDATORY),
                 filter_opts=None)
@@ -42,7 +44,7 @@ class TestFilter(unittest.TestCase):
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname)
-        h5.create_dataset(f, "range", shape, dtype, chunks,
+        h5.create_dataset(f, b"range", shape, dtype, chunks,
                 filter_pipeline=(32008, 32000),
                 filter_flags=(h5z.FLAG_MANDATORY, h5z.FLAG_MANDATORY),
                 filter_opts=((680,), ()),
@@ -64,7 +66,7 @@ class TestFilter(unittest.TestCase):
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname)
-        h5.create_dataset(f, "range", shape, dtype, chunks,
+        h5.create_dataset(f, b"range", shape, dtype, chunks,
                 filter_pipeline=(32008,),
                 filter_flags=(h5z.FLAG_MANDATORY,),
                 filter_opts=((0, h5.H5_COMPRESS_LZ4),),
