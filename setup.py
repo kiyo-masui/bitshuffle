@@ -16,10 +16,10 @@ import h5py
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 2
-VERSION_POINT = 2
+VERSION_POINT = 3
 
 # Only unset in the 'release' branch and in tags.
-VERSION_DEV = 0
+VERSION_DEV = 1
 
 VERSION = "%d.%d.%d" % (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
 if VERSION_DEV:
