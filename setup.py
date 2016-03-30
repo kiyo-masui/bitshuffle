@@ -25,8 +25,11 @@ VERSION = "%d.%d.%d" % (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
 if VERSION_DEV:
     VERSION = VERSION + ".dev%d" % VERSION_DEV
 
+if 'darwin' in sys.platform:
+    COMPILE_FLAGS = ['-O3', '-ffast-math', '-march=native', '-std=c99']
+else:
+    COMPILE_FLAGS = ['-O3', '-ffast-math', '-march=native', '-std=c99', '-fopenmp']
 
-COMPILE_FLAGS = ['-O3', '-ffast-math', '-march=native', '-std=c99', '-fopenmp']
 # Cython breaks strict aliasing rules.
 COMPILE_FLAGS += ["-fno-strict-aliasing"]
 #COMPILE_FLAGS = ['-Ofast', '-march=core2', '-std=c99', '-fopenmp']
@@ -182,4 +185,3 @@ setup(
     license = "MIT",
     url = "http://github.com/kiyo-masui/bitshuffle"
 )
-
