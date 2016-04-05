@@ -14,7 +14,7 @@ from Cython.Distutils import build_ext
 import numpy as np
 import h5py
 
-OPENMP_ENABLED = False
+OPENMP_ENABLED = True
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 2
