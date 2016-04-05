@@ -14,6 +14,8 @@ from Cython.Distutils import build_ext
 import numpy as np
 import h5py
 
+OPENMP_ENABLED = False
+
 VERSION_MAJOR = 0
 VERSION_MINOR = 2
 VERSION_POINT = 3
@@ -26,7 +28,12 @@ if VERSION_DEV:
     VERSION = VERSION + ".dev%d" % VERSION_DEV
 
 
-COMPILE_FLAGS = ['-O3', '-ffast-math', '-march=native', '-std=c99', '-fopenmp']
+COMPILE_FLAGS = ['-O3', '-ffast-math', '-march=native', '-std=c99']
+
+# adding OpenMP 
+if OPENMP_ENABLED and 'darwin' not in sys.platform:
+    COMPILE_FLAGS += ['-fopenmp']
+
 # Cython breaks strict aliasing rules.
 COMPILE_FLAGS += ["-fno-strict-aliasing"]
 #COMPILE_FLAGS = ['-Ofast', '-march=core2', '-std=c99', '-fopenmp']
