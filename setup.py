@@ -14,7 +14,7 @@ from Cython.Distutils import build_ext
 import numpy as np
 import h5py
 
-OPENMP_ENABLED = True
+OPENMP_ENABLED = 0
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 2
@@ -27,11 +27,20 @@ VERSION = "%d.%d.%d" % (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
 if VERSION_DEV:
     VERSION = VERSION + ".dev%d" % VERSION_DEV
 
+if os.getenv('OPENMP_ENABLED'):
+    try:
+        OPENMP_ENABLED = int(os.getenv('OPENMP_ENABLED'))
+    except:
+        print("[ERROR] OPENMP_ENABLED variable can be only 0 (disabled) or 1 (enabled)")
+        sys.exit(-1)
 
 COMPILE_FLAGS = ['-O3', '-ffast-math', '-march=native', '-std=c99']
 
 # adding OpenMP 
-if OPENMP_ENABLED and 'darwin' not in sys.platform:
+if OPENMP_ENABLED:
+    print("\n#################################")
+    print("# Compiling with OpenMP support #")
+    print("#################################\n")
     COMPILE_FLAGS += ['-fopenmp']
 
 # Cython breaks strict aliasing rules.
