@@ -1110,8 +1110,10 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, void* in, void* out,
     }
     if (block_size < 0 || block_size % BSHUF_BLOCKED_MULT) return -81;
 
+#if defined(_OPENMP)
     #pragma omp parallel for schedule(dynamic, 1) \
             private(count) reduction(+ : cum_count)
+#endif
     for (ii = 0; ii < size / block_size; ii ++) {
         count = fun(&C, block_size, elem_size);
         if (count < 0) err = count;

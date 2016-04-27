@@ -178,12 +178,9 @@ class build_ext(build_ext_):
         build_ext_.finalize_options(self)
         if self.omp:
             self.libraries += ['gomp']
-    def run(self):
         if self.omp:
             for e in self.extensions:
-                print("Here")
-                e.extra_compile_args += ['-fopenmp', '-Wno-pragmas']
-        build_ext_.run(self)
+                e.extra_compile_args += ['-fopenmp',]
 
 
 
