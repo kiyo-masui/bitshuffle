@@ -127,7 +127,9 @@ the filter will be available only within python and only after importing
 `bitshuffle.h5`. Reading Bitshuffle encoded datasets will be transparent.
 The filter can be added to new datasets either through the `h5py` low level
 interface or through the convenience functions provided in
-`bitshuffle.h5`. See the docstrings and unit tests for examples.
+`bitshuffle.h5`. See the docstrings and unit tests for examples. For `h5py`
+version 2.5.0 and later Bitshuffle can added to new datasets through the
+high level interface, as in the example below.
 
 
 Example h5py
