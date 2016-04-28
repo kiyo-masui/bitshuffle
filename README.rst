@@ -100,6 +100,10 @@ To install::
 
     python setup.py install [--h5plugin [--h5plugin-dir=spam]]
 
+To get finer control of installation options, including whether to compile
+with OpenMP multi-threading, copy the ``setup.cfg.example`` to ``setup.cfg``
+and edit the values therein.
+
 If using the dynamically loaded HDF5 filter (which gives you access to the
 Bitshuffle and LZF filters outside of python), set the environment variable
 ``HDF5_PLUGIN_PATH`` to the value of ``--h5plugin-dir`` or use HDF5's default
@@ -123,7 +127,9 @@ the filter will be available only within python and only after importing
 `bitshuffle.h5`. Reading Bitshuffle encoded datasets will be transparent.
 The filter can be added to new datasets either through the `h5py` low level
 interface or through the convenience functions provided in
-`bitshuffle.h5`. See the docstrings and unit tests for examples.
+`bitshuffle.h5`. See the docstrings and unit tests for examples. For `h5py`
+version 2.5.0 and later Bitshuffle can added to new datasets through the
+high level interface, as in the example below.
 
 
 Example h5py

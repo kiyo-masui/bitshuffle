@@ -9,10 +9,12 @@ import shutil
 import glob
 from setuptools import setup, Extension
 from setuptools.command.install import install as install_
+from setuptools.command.build_ext import build_ext as build_ext_
 
-from Cython.Distutils import build_ext
+from Cython.Build import cythonize
 import numpy as np
 import h5py
+
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 2
@@ -26,10 +28,9 @@ if VERSION_DEV:
     VERSION = VERSION + ".dev%d" % VERSION_DEV
 
 
-COMPILE_FLAGS = ['-O3', '-ffast-math', '-march=native', '-std=c99', '-fopenmp']
+COMPILE_FLAGS = ['-O3', '-ffast-math', '-march=native', '-std=c99']
 # Cython breaks strict aliasing rules.
 COMPILE_FLAGS += ["-fno-strict-aliasing"]
-#COMPILE_FLAGS = ['-Ofast', '-march=core2', '-std=c99', '-fopenmp']
 
 MACROS = [
           ('BSHUF_VERSION_MAJOR', VERSION_MAJOR),
@@ -56,13 +57,23 @@ elif sys.platform.startswith('freebsd'):
     LIBRARY_DIRS += ['/usr/local/lib']     # homebrew
 
 
+# OSX's clang compliler does not support OpenMP.
+if sys.platform == 'darwin':
+    OMP_DEFAULT = False
+else:
+    OMP_DEFAULT = True
+
+INCLUDE_DIRS = [d for d in INCLUDE_DIRS if path.isdir(d)]
+LIBRARY_DIRS = [d for d in LIBRARY_DIRS if path.isdir(d)]
+
+
 ext_bshuf = Extension("bitshuffle.ext",
                    ["bitshuffle/ext.pyx", "src/bitshuffle.c", "src/bitshuffle_core.c", "src/iochain.c", "lz4/lz4.c"],
                    include_dirs=INCLUDE_DIRS + [np.get_include(), "src/",
                                                 "lz4/"],
                    library_dirs = LIBRARY_DIRS,
                    depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h", "lz4/lz4.h"],
-                   libraries = ['gomp'],
+                   libraries = [],
                    extra_compile_args=COMPILE_FLAGS,
                    define_macros=MACROS,
                    )
@@ -75,7 +86,7 @@ h5filter = Extension("bitshuffle.h5",
                    library_dirs = LIBRARY_DIRS,
                    depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h",
                             'src/bshuf_h5filter.h', "lz4/lz4.h"],
-                   libraries = ['hdf5', 'gomp'],
+                   libraries = ['hdf5',],
                    extra_compile_args=COMPILE_FLAGS,
                    define_macros=MACROS,
                    )
@@ -88,7 +99,7 @@ filter_plugin = Extension("bitshuffle.plugin.libh5bshuf",
                    library_dirs = LIBRARY_DIRS,
                    depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h",
                             'src/bshuf_h5filter.h', "lz4/lz4.h"],
-                   libraries = ['hdf5', 'gomp'],
+                   libraries = ['hdf5',],
                    extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
                    define_macros=MACROS,
                    )
@@ -115,7 +126,7 @@ else:
     H51811P = True
     EXTENSIONS = [ext_bshuf, h5filter, filter_plugin, lzf_plugin]
 
-#EXTENSIONS = cythonize(EXTENSIONS)
+EXTENSIONS = cythonize(EXTENSIONS)
 
 
 # Custom installation to include installing dynamic filters.
@@ -159,6 +170,26 @@ class install(install_):
             print("Installed HDF5 filter plugins to %s" % self.h5plugin_dir)
 
 
+# Command line or site.cfg specification of OpenMP.
+class build_ext(build_ext_):
+    user_options = build_ext_.user_options + [
+            ('omp=', None, "Whether to compile with OpenMP threading. Default"
+             " on current system is %s." % str(OMP_DEFAULT))
+            ]
+    boolean_options = build_ext_.boolean_options + ['omp']
+    def initialize_options(self):
+        build_ext_.initialize_options(self)
+        self.omp = OMP_DEFAULT
+    def finalize_options(self):
+        build_ext_.finalize_options(self)
+        if self.omp:
+            print("\n#################################")
+            print("# Compiling with OpenMP support #")
+            print("#################################\n")
+            self.libraries += ['gomp']
+            for e in self.extensions:
+                e.extra_compile_args += ['-fopenmp',]
+
 # TODO hdf5 support should be an "extra". Figure out how to set this up.
 
 setup(
@@ -169,9 +200,7 @@ setup(
     scripts=[],
     ext_modules = EXTENSIONS,
     cmdclass = {'build_ext': build_ext, 'install': install},
-    #cmdclass = {'install': install},
     install_requires = ['numpy', 'h5py', 'Cython', 'setuptools>=0.7'],
-    #install_requires = ['numpy', 'h5py', 'Cython'],
     #extras_require = {'H5':  ["h5py"]},
     package_data={'': ['data/*']},
 
