@@ -182,8 +182,6 @@ class build_ext(build_ext_):
             for e in self.extensions:
                 e.extra_compile_args += ['-fopenmp',]
 
-
-
 # TODO hdf5 support should be an "extra". Figure out how to set this up.
 
 setup(
