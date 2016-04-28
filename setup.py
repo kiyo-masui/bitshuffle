@@ -15,7 +15,6 @@ from Cython.Build import cythonize
 import numpy as np
 import h5py
 
-OMP_DEFAULT = True
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 2
@@ -56,6 +55,13 @@ if sys.platform == 'darwin':
 elif sys.platform.startswith('freebsd'):
     INCLUDE_DIRS += ['/usr/local/include'] # homebrew
     LIBRARY_DIRS += ['/usr/local/lib']     # homebrew
+
+
+# OSX's clang compliler does not support OpenMP.
+if sys.platform == 'darwin':
+    OMP_DEFAULT = False
+else:
+    OMP_DEFAULT = True
 
 INCLUDE_DIRS = [d for d in INCLUDE_DIRS if path.isdir(d)]
 LIBRARY_DIRS = [d for d in LIBRARY_DIRS if path.isdir(d)]
@@ -177,8 +183,10 @@ class build_ext(build_ext_):
     def finalize_options(self):
         build_ext_.finalize_options(self)
         if self.omp:
+            print("\n#################################")
+            print("# Compiling with OpenMP support #")
+            print("#################################\n")
             self.libraries += ['gomp']
-        if self.omp:
             for e in self.extensions:
                 e.extra_compile_args += ['-fopenmp',]
 

@@ -7,4 +7,4 @@ h5plugin-dir = /usr/local/hdf5/lib/plugin
 # Whether to compile with OpenMP multi-threading. Default is system dependant:
 # False on OSX (since the clang compiler does not yet support OpenMP) and True
 # otherwise.
-omp = 0
+omp = 1
