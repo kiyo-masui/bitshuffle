@@ -21,7 +21,7 @@ VERSION_MINOR = 2
 VERSION_POINT = 3
 
 # Only unset in the 'release' branch and in tags.
-VERSION_DEV = 1
+VERSION_DEV = 0
 
 VERSION = "%d.%d.%d" % (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
 if VERSION_DEV:
@@ -224,6 +224,8 @@ setup(
     author_email = "kiyo@physics.ubc.ca",
     description = "Bitshuffle filter for improving typed data compression.",
     license = "MIT",
-    url = "http://github.com/kiyo-masui/bitshuffle"
+    url = "https://github.com/kiyo-masui/bitshuffle",
+    download_url = "https://github.com/kiyo-masui/bitshuffle/tarball/0.2.3",
+    keywords = ['compression', 'hdf5', 'numpy'],
 )
 
