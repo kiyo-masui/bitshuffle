@@ -9,6 +9,7 @@ import shutil
 import glob
 from setuptools import setup, Extension
 from setuptools.command.install import install as install_
+from setuptools.command.develop import develop as develop_
 from setuptools.command.build_ext import build_ext as build_ext_
 
 from Cython.Build import cythonize
@@ -136,6 +137,14 @@ else:
 EXTENSIONS = cythonize(EXTENSIONS)
 
 
+class develop(develop_):
+    def run(self):
+        # Dummy directory for copying build plugins.
+        if not path.isdir('bitshuffle/plugin'):
+            os.mkdir('bitshuffle/plugin')
+        develop_.run(self)
+
+
 # Custom installation to include installing dynamic filters.
 class install(install_):
     user_options = install_.user_options + [
@@ -214,7 +223,7 @@ setup(
     packages = ['bitshuffle', 'bitshuffle.tests'],
     scripts=[],
     ext_modules = EXTENSIONS,
-    cmdclass = {'build_ext': build_ext, 'install': install},
+    cmdclass = {'build_ext': build_ext, 'install': install, 'develop': develop},
     install_requires = ['numpy', 'h5py', 'Cython', 'setuptools>=0.7'],
     #extras_require = {'H5':  ["h5py"]},
     package_data={'': ['data/*']},

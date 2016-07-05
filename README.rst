@@ -174,8 +174,9 @@ self-contained and complete.
 
 Anaconda
 --------
-The conda package can be build via:
-::
+
+The conda package can be build via::
+
     conda build conda-recipe
 
 
