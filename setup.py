@@ -18,7 +18,7 @@ import h5py
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 2
-VERSION_POINT = 3
+VERSION_POINT = 4
 
 # Only unset in the 'release' branch and in tags.
 VERSION_DEV = 1
@@ -224,6 +224,8 @@ setup(
     author_email = "kiyo@physics.ubc.ca",
     description = "Bitshuffle filter for improving typed data compression.",
     license = "MIT",
-    url = "http://github.com/kiyo-masui/bitshuffle"
+    url = "https://github.com/kiyo-masui/bitshuffle",
+    download_url = "https://github.com/kiyo-masui/bitshuffle/tarball/0.2.3",
+    keywords = ['compression', 'hdf5', 'numpy'],
 )
 
