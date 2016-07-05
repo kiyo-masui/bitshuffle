@@ -68,51 +68,58 @@ LIBRARY_DIRS = [d for d in LIBRARY_DIRS if path.isdir(d)]
 
 
 ext_bshuf = Extension("bitshuffle.ext",
-                   ["bitshuffle/ext.pyx", "src/bitshuffle.c", "src/bitshuffle_core.c", "src/iochain.c", "lz4/lz4.c"],
-                   include_dirs=INCLUDE_DIRS + [np.get_include(), "src/",
-                                                "lz4/"],
-                   library_dirs = LIBRARY_DIRS,
-                   depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h", "lz4/lz4.h"],
-                   libraries = [],
-                   extra_compile_args=COMPILE_FLAGS,
-                   define_macros=MACROS,
+                   sources=["bitshuffle/ext.pyx", "src/bitshuffle.c",
+                            "src/bitshuffle_core.c", "src/iochain.c",
+                            "lz4/lz4.c"],
+                   include_dirs=(INCLUDE_DIRS
+                                 + [np.get_include(), "src/", "lz4/"]),
+                   library_dirs=LIBRARY_DIRS,
+                   depends=["src/bitshuffle.h", "src/bitshuffle_core.h",
+                            "src/iochain.h", "lz4/lz4.h"],
+                   libraries=[],
+                   extra_compile_args=list(COMPILE_FLAGS),
+                   define_macros=list(MACROS),
                    )
 
 
 h5filter = Extension("bitshuffle.h5",
-                   ["bitshuffle/h5.pyx", "src/bshuf_h5filter.c",
-                    "src/bitshuffle.c", "src/bitshuffle_core.c", "src/iochain.c", "lz4/lz4.c"],
+                   sources=["bitshuffle/h5.pyx", "src/bshuf_h5filter.c",
+                            "src/bitshuffle.c", "src/bitshuffle_core.c",
+                            "src/iochain.c", "lz4/lz4.c"],
                    include_dirs=INCLUDE_DIRS + ["src/", "lz4/"],
-                   library_dirs = LIBRARY_DIRS,
-                   depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h",
-                            'src/bshuf_h5filter.h', "lz4/lz4.h"],
-                   libraries = ['hdf5',],
-                   extra_compile_args=COMPILE_FLAGS,
-                   define_macros=MACROS,
+                   library_dirs=list(LIBRARY_DIRS),
+                   depends=["src/bitshuffle.h", "src/bitshuffle_core.h", 
+                            "src/iochain.h", "src/bshuf_h5filter.h",
+                            "lz4/lz4.h"],
+                   libraries=['hdf5',],
+                   extra_compile_args=list(COMPILE_FLAGS),
+                   define_macros=list(MACROS),
                    )
 
 
 filter_plugin = Extension("bitshuffle.plugin.libh5bshuf",
-                   ["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
-                    "src/bitshuffle.c", "src/bitshuffle_core.c", "src/iochain.c", "lz4/lz4.c"],
-                   include_dirs=INCLUDE_DIRS +["src/", "lz4/"] ,
-                   library_dirs = LIBRARY_DIRS,
-                   depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h",
-                            'src/bshuf_h5filter.h', "lz4/lz4.h"],
-                   libraries = ['hdf5',],
+                   sources=["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
+                            "src/bitshuffle.c", "src/bitshuffle_core.c",
+                            "src/iochain.c", "lz4/lz4.c"],
+                   include_dirs=INCLUDE_DIRS + ["src/", "lz4/"] ,
+                   library_dirs=list(LIBRARY_DIRS),
+                   depends=["src/bitshuffle.h", "src/bitshuffle_core.h",
+                            "src/iochain.h", 'src/bshuf_h5filter.h',
+                            "lz4/lz4.h"],
+                   libraries=['hdf5',],
                    extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
-                   define_macros=MACROS,
+                   define_macros=list(MACROS),
                    )
 
 
 lzf_plugin = Extension("bitshuffle.plugin.libh5LZF",
-                   ["src/lzf_h5plugin.c", "lzf/lzf_filter.c",
-                    "lzf/lzf/lzf_c.c", "lzf/lzf/lzf_d.c"],
-                   depends=["lzf/lzf_filter.h",
-                            "lzf/lzf/lzf.h", "lzf/lzf/lzfP.h"],
-                   include_dirs = INCLUDE_DIRS + ["lzf/", "lzf/lzf/"],
-                   library_dirs = LIBRARY_DIRS,
-                   libraries = ['hdf5'],
+                   sources=["src/lzf_h5plugin.c", "lzf/lzf_filter.c",
+                            "lzf/lzf/lzf_c.c", "lzf/lzf/lzf_d.c"],
+                   depends=["lzf/lzf_filter.h", "lzf/lzf/lzf.h",
+                            "lzf/lzf/lzfP.h"],
+                   include_dirs=INCLUDE_DIRS + ["lzf/", "lzf/lzf/"],
+                   library_dirs=list(LIBRARY_DIRS),
+                   libraries=['hdf5'],
                    extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS,
                    )
 
@@ -132,7 +139,8 @@ EXTENSIONS = cythonize(EXTENSIONS)
 # Custom installation to include installing dynamic filters.
 class install(install_):
     user_options = install_.user_options + [
-        ('h5plugin', None, 'Install HDF5 filter plugins for use outside of python.'),
+        ('h5plugin', None,
+         'Install HDF5 filter plugins for use outside of python.'),
         ('h5plugin-dir=', None,
          'Where to install filter plugins. Default %s.' % H5PLUGINS_DEFAULT),
     ]
@@ -166,7 +174,8 @@ class install(install_):
             plugin_libs = glob.glob(path.join(plugin_build, "*"))
             for plugin_lib in plugin_libs:
                 plugin_name = path.split(plugin_lib)[1]
-                shutil.copy2(plugin_lib, path.join(self.h5plugin_dir, plugin_name))
+                shutil.copy2(plugin_lib,
+                        path.join(self.h5plugin_dir, plugin_name))
             print("Installed HDF5 filter plugins to %s" % self.h5plugin_dir)
 
 
@@ -181,14 +190,20 @@ class build_ext(build_ext_):
         build_ext_.initialize_options(self)
         self.omp = OMP_DEFAULT
     def finalize_options(self):
+        # For some reason this gets run twice. Careful to print messages and
+        # add arguments only one time.
         build_ext_.finalize_options(self)
         if self.omp:
-            print("\n#################################")
-            print("# Compiling with OpenMP support #")
-            print("#################################\n")
+            if not hasattr(self, "_printed_omp_message"):
+                self._printed_omp_message = True
+                print("\n#################################")
+                print("# Compiling with OpenMP support #")
+                print("#################################\n")
             self.libraries += ['gomp']
             for e in self.extensions:
-                e.extra_compile_args += ['-fopenmp',]
+                if '-fopenmp' not in e.extra_compile_args:
+                    e.extra_compile_args += ['-fopenmp',]
+
 
 # TODO hdf5 support should be an "extra". Figure out how to set this up.
 
