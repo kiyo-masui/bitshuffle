@@ -479,7 +479,7 @@ class TestOddLengths(unittest.TestCase):
                 dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
                 dbuf = dbuf.view(dtype)
                 for ii in range(self.reps):
-                    n = random.randint(0, self.nmax // 8, 1) * 8
+                    n = random.randint(0, self.nmax // 8, 1)[0] * 8
                     data = dbuf[:n]
                     out = self.fun(data).view(np.uint8)
                     ans = self.check(data).view(np.uint8)
@@ -508,7 +508,7 @@ class TestBitShuffleCircle(unittest.TestCase):
             dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
             dbuf = dbuf.view(dtype)
             for ii in range(reps):
-                n = random.randint(0, nmax, 1)
+                n = random.randint(0, nmax, 1)[0]
                 data = dbuf[:n]
                 shuff = ext.bitshuffle(data)
                 out = ext.bitunshuffle(shuff)
@@ -525,7 +525,7 @@ class TestBitShuffleCircle(unittest.TestCase):
             dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
             dbuf = dbuf.view(dtype)
             for ii in range(reps):
-                n = random.randint(0, nmax, 1)
+                n = random.randint(0, nmax, 1)[0]
                 data = dbuf[:n]
                 shuff = ext.compress_lz4(data)
                 out = ext.decompress_lz4(shuff, data.shape, data.dtype)
