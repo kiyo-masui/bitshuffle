@@ -17,7 +17,7 @@ addons:
 install:
     # Force Cython to be istalled before h5py.
     - "pip install Cython>=0.19"
-    - "pip install -r requirements.txt"
+    - "pip install --no-use-wheel -r requirements.txt"
     # Installing the plugin to arbitrary directory to check the install script.
     - "python setup.py install --h5plugin --h5plugin-dir ~/hdf5/lib"
 # Can't be somewhere that has a 'bitshuffle' directory as nose will use that
