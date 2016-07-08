@@ -22,7 +22,7 @@ VERSION_MINOR = 2
 VERSION_POINT = 4
 
 # Only unset in the 'release' branch and in tags.
-VERSION_DEV = 3
+VERSION_DEV = 0
 
 VERSION = "%d.%d.%d" % (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
 if VERSION_DEV:
