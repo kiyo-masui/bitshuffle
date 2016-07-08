@@ -1,4 +1,8 @@
-recursive-include src *.h *.c *.pyx
-recursive-include bitshuffle *.h *.c *.pyx
+recursive-include src *.h *.c
+recursive-include bitshuffle *.pyx
 recursive-include lz4 *.h *.c
 recursive-include lzf *.h *.c
+include setup.cfg.example
+include LICENSE
+exclude setup.cfg
+
