@@ -1,0 +1,4 @@
+recursive-include src *.h *.c *.pyx
+recursive-include bitshuffle *.h *.c *.pyx
+recursive-include lz4 *.h *.c
+recursive-include lzf *.h *.c
