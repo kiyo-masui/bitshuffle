@@ -13,9 +13,18 @@
 #include "bitshuffle_core.h"
 #include "bitshuffle_internals.h"
 #include "lz4.h"
+#if defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)   /* C99 */
+# include <stdint.h>
+#else
+  typedef unsigned char       uint8_t;
+  typedef unsigned short      uint16_t;
+  typedef unsigned int        uint32_t;
+  typedef signed int        int32_t;
+  typedef unsigned long long  uint64_t;
+  typedef long long           int64_t;
+#endif
 
 #include <stdio.h>
-#include <stdint.h>
 #include <string.h>
 
 
@@ -30,23 +39,26 @@
 
 
 /* Bitshuffle and compress a single block. */
-int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr,
+int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr, \
         const size_t size, const size_t elem_size) {
 
     int64_t nbytes, count;
+    void *tmp_buf_bshuf;
+    void *tmp_buf_lz4;
+    size_t this_iter;
+    void *in, *out;
 
-    void* tmp_buf_bshuf = malloc(size * elem_size);
+    tmp_buf_bshuf = malloc(size * elem_size);
     if (tmp_buf_bshuf == NULL) return -1;
 
-    void* tmp_buf_lz4 = malloc(LZ4_compressBound(size * elem_size));
+    tmp_buf_lz4 = malloc(LZ4_compressBound(size * elem_size));
     if (tmp_buf_lz4 == NULL){
         free(tmp_buf_bshuf);
         return -1;
     }
 
-    size_t this_iter;
 
-    void *in = ioc_get_in(C_ptr, &this_iter);
+    in = ioc_get_in(C_ptr, &this_iter);
     ioc_set_next_in(C_ptr, &this_iter, (void*) ((char*) in + size * elem_size));
 
     count = bshuf_trans_bit_elem(in, tmp_buf_bshuf, size, elem_size);
@@ -59,7 +71,7 @@ int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr,
     free(tmp_buf_bshuf);
     CHECK_ERR_FREE_LZ(nbytes, tmp_buf_lz4);
 
-    void *out = ioc_get_out(C_ptr, &this_iter);
+    out = ioc_get_out(C_ptr, &this_iter);
     ioc_set_next_out(C_ptr, &this_iter, (void *) ((char *) out + nbytes + 4));
 
     bshuf_write_uint32_BE(out, nbytes);
@@ -76,18 +88,20 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size) {
 
     int64_t nbytes, count;
-
+    void *in, *out, *tmp_buf;
     size_t this_iter;
-    void *in = ioc_get_in(C_ptr, &this_iter);
-    int32_t nbytes_from_header = bshuf_read_uint32_BE(in);
+    int32_t nbytes_from_header;
+
+    in = ioc_get_in(C_ptr, &this_iter);
+    nbytes_from_header = bshuf_read_uint32_BE(in);
     ioc_set_next_in(C_ptr, &this_iter,
             (void*) ((char*) in + nbytes_from_header + 4));
 
-    void *out = ioc_get_out(C_ptr, &this_iter);
+    out = ioc_get_out(C_ptr, &this_iter);
     ioc_set_next_out(C_ptr, &this_iter,
             (void *) ((char *) out + size * elem_size));
 
-    void* tmp_buf = malloc(size * elem_size);
+    tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return -1;
 
 #ifdef BSHUF_LZ4_DECOMPRESS_FAST

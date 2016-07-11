@@ -219,10 +219,11 @@ int64_t bshuf_trans_bit_elem_scal(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
     int64_t count;
+    void *tmp_buf;
 
     CHECK_MULT_EIGHT(size);
 
-    void* tmp_buf = malloc(size * elem_size);
+    tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return -1;
 
     count = bshuf_trans_byte_elem_scal(in, out, size, elem_size);
@@ -241,11 +242,14 @@ int64_t bshuf_trans_bit_elem_scal(void* in, void* out, const size_t size,
  * the bytes. */
 int64_t bshuf_trans_byte_bitrow_scal(void* in, void* out, const size_t size,
          const size_t elem_size) {
-    size_t ii, jj, kk;
-    char* in_b = (char*) in;
-    char* out_b = (char*) out;
+    size_t ii, jj, kk, nbyte_row;
+    char *in_b, *out_b;
 
-    size_t nbyte_row = size / 8;
+
+    in_b = (char*) in;
+    out_b = (char*) out;
+
+    nbyte_row = size / 8;
 
     CHECK_MULT_EIGHT(size);
 
@@ -262,18 +266,21 @@ int64_t bshuf_trans_byte_bitrow_scal(void* in, void* out, const size_t size,
 
 
 /* Shuffle bits within the bytes of eight element blocks. */
-int64_t bshuf_shuffle_bit_eightelem_scal(void* in, void* out,
+int64_t bshuf_shuffle_bit_eightelem_scal(void* in, void* out, \
         const size_t size, const size_t elem_size) {
+
+    size_t ii, jj, kk;
+    char *in_b, *out_b;
+    uint64_t x, t;
+    size_t nbyte;
+
 
     CHECK_MULT_EIGHT(size);
 
-    size_t ii, jj, kk;
-    char* in_b = (char*) in;
-    char* out_b = (char*) out;
+    in_b = (char*) in;
+    out_b = (char*) out;
 
-    size_t nbyte = elem_size * size;
-
-    uint64_t x, t;
+    nbyte = elem_size * size;
 
     for (jj = 0; jj < 8 * elem_size; jj += 8) {
         for (ii = 0; ii + 8 * elem_size - 1 < nbyte; ii += 8 * elem_size) {
@@ -294,10 +301,11 @@ int64_t bshuf_untrans_bit_elem_scal(void* in, void* out, const size_t size,
          const size_t elem_size) {
 
     int64_t count;
+    void *tmp_buf;
 
     CHECK_MULT_EIGHT(size);
 
-    void* tmp_buf = malloc(size * elem_size);
+    tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return -1;
 
     count = bshuf_trans_byte_bitrow_scal(in, tmp_buf, size, elem_size);
@@ -325,8 +333,9 @@ int64_t bshuf_untrans_bit_elem_scal(void* in, void* out, const size_t size,
 int64_t bshuf_trans_byte_elem_SSE_16(void* in, void* out, const size_t size) {
 
     size_t ii;
-    char* in_b = (char*) in;
-    char* out_b = (char*) out;
+    char *in_b, *out_b;
+    in_b = (char*) in;
+    out_b = (char*) out;
     __m128i a0, b0, a1, b1;
 
     for (ii=0; ii + 15 < size; ii += 16) {
@@ -357,8 +366,9 @@ int64_t bshuf_trans_byte_elem_SSE_16(void* in, void* out, const size_t size) {
 int64_t bshuf_trans_byte_elem_SSE_32(void* in, void* out, const size_t size) {
 
     size_t ii;
-    char* in_b = (char*) in;
-    char* out_b = (char*) out;
+    char *in_b, *out_b;
+    in_b = (char*) in;
+    out_b = (char*) out;
     __m128i a0, b0, c0, d0, a1, b1, c1, d1;
 
     for (ii=0; ii + 15 < size; ii += 16) {
@@ -1095,15 +1105,22 @@ int64_t bshuf_untrans_bit_elem(void* in, void* out, const size_t size,
 
 /* Wrap a function for processing a single block to process an entire buffer in
  * parallel. */
-int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, void* in, void* out,
+int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, void* in, void* out, \
         const size_t size, const size_t elem_size, size_t block_size) {
 
     size_t ii;
+    int64_t err = 0;
+    int64_t count, cum_count=0;
+    size_t last_block_size;
+    size_t leftover_bytes;
+    size_t this_iter;
+    char *last_in;
+    char *last_out;
+
+
     ioc_chain C;
     ioc_init(&C, in, out);
 
-    int64_t err = 0, count, cum_count = 0;
-    size_t last_block_size;
 
     if (block_size == 0) {
         block_size = bshuf_default_block_size(elem_size);
@@ -1130,11 +1147,11 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, void* in, void* out,
 
     if (err < 0) return err;
 
-    size_t leftover_bytes = size % BSHUF_BLOCKED_MULT * elem_size;
-    size_t this_iter;
-    char *last_in = (char *) ioc_get_in(&C, &this_iter);
+    leftover_bytes = size % BSHUF_BLOCKED_MULT * elem_size;
+    this_iter;
+    last_in = (char *) ioc_get_in(&C, &this_iter);
     ioc_set_next_in(&C, &this_iter, (void *) (last_in + leftover_bytes));
-    char *last_out = (char *) ioc_get_out(&C, &this_iter);
+    last_out = (char *) ioc_get_out(&C, &this_iter);
     ioc_set_next_out(&C, &this_iter, (void *) (last_out + leftover_bytes));
 
     memcpy(last_out, last_in, leftover_bytes);
@@ -1146,36 +1163,49 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, void* in, void* out,
 
 
 /* Bitshuffle a single block. */
-int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr,
+int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
         const size_t size, const size_t elem_size) {
 
     size_t this_iter;
-    void *in = ioc_get_in(C_ptr, &this_iter);
+    void *in;
+    void *out;
+    int64_t count;
+
+
+    
+    in = ioc_get_in(C_ptr, &this_iter);
     ioc_set_next_in(C_ptr, &this_iter,
             (void*) ((char*) in + size * elem_size));
-    void *out = ioc_get_out(C_ptr, &this_iter);
+    out = ioc_get_out(C_ptr, &this_iter);
     ioc_set_next_out(C_ptr, &this_iter,
             (void *) ((char *) out + size * elem_size));
 
-    int64_t count = bshuf_trans_bit_elem(in, out, size, elem_size);
+    count = bshuf_trans_bit_elem(in, out, size, elem_size);
     return count;
 }
 
 
 /* Bitunshuffle a single block. */
-int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr,
+int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr, \
         const size_t size, const size_t elem_size) {
 
 
     size_t this_iter;
-    void *in = ioc_get_in(C_ptr, &this_iter);
+    void *in;
+    void *out;
+    int64_t count;
+
+
+
+
+    in = ioc_get_in(C_ptr, &this_iter);
     ioc_set_next_in(C_ptr, &this_iter,
             (void*) ((char*) in + size * elem_size));
-    void *out = ioc_get_out(C_ptr, &this_iter);
+    out = ioc_get_out(C_ptr, &this_iter);
     ioc_set_next_out(C_ptr, &this_iter,
             (void *) ((char *) out + size * elem_size));
 
-    int64_t count = bshuf_untrans_bit_elem(in, out, size, elem_size);
+    count = bshuf_untrans_bit_elem(in, out, size, elem_size);
     return count;
 }
 
