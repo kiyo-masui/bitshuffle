@@ -28,8 +28,6 @@
 #ifndef BITSHUFFLE_H
 #define BITSHUFFLE_H
 
-
-#include <stdint.h>
 #include <stdlib.h>
 #include "bitshuffle_core.h"
 
