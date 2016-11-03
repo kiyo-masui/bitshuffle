@@ -46,16 +46,16 @@ extern "C" {
 
 /* ---- Utility functions for internal use only ---- */
 
-int64_t bshuf_trans_bit_elem(void* in, void* out, const size_t size,
+int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size,
         const size_t elem_size);
 
 /* Read a 32 bit unsigned integer from a buffer big endian order. */
-uint32_t bshuf_read_uint32_BE(void* buf);
+uint32_t bshuf_read_uint32_BE(const void* buf);
 
 /* Write a 32 bit unsigned integer to a buffer in big endian order. */
 void bshuf_write_uint32_BE(void* buf, uint32_t num);
 
-int64_t bshuf_untrans_bit_elem(void* in, void* out, const size_t size,
+int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
         const size_t elem_size);
 
 /* Function definition for worker functions that process a single block. */
