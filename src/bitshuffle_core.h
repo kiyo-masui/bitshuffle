@@ -117,7 +117,7 @@ size_t bshuf_default_block_size(const size_t elem_size);
  *  number of bytes processed, negative error-code if failed.
  *
  */
-int64_t bshuf_bitshuffle(void* in, void* out, const size_t size,
+int64_t bshuf_bitshuffle(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size);
 
 
@@ -145,7 +145,7 @@ int64_t bshuf_bitshuffle(void* in, void* out, const size_t size,
  *  number of bytes processed, negative error-code if failed.
  *
  */
-int64_t bshuf_bitunshuffle(void* in, void* out, const size_t size,
+int64_t bshuf_bitunshuffle(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size);
 
 #ifdef __cplusplus
