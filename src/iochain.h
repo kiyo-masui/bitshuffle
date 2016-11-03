@@ -76,7 +76,7 @@ typedef struct ioc_chain {
 } ioc_chain;
 
 
-void ioc_init(ioc_chain *C, void *in_ptr_0, void *out_ptr_0);
+void ioc_init(ioc_chain *C, const void *in_ptr_0, void *out_ptr_0);
 void ioc_destroy(ioc_chain *C);
 void * ioc_get_in(ioc_chain *C, size_t *this_iter);
 void ioc_set_next_in(ioc_chain *C, size_t* this_iter, void* in_ptr);
