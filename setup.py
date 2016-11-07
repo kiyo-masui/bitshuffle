@@ -18,8 +18,8 @@ import h5py
 
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 2
-VERSION_POINT = 5
+VERSION_MINOR = 3
+VERSION_POINT = 0
 
 # Only unset in the 'release' branch and in tags.
 VERSION_DEV = 1
@@ -159,7 +159,9 @@ class install(install_):
         self.h5plugin_dir = H5PLUGINS_DEFAULT
     def finalize_options(self):
         install_.finalize_options(self)
-        assert self.h5plugin or not self.h5plugin, "Invalid h5plugin argument."
+        if self.h5plugin not in ('0', '1', True, False):
+            raise ValueError("Invalid h5plugin argument. Mut be '0' or '1'.")
+        self.h5plugin = int(self.h5plugin)
         self.h5plugin_dir = path.abspath(self.h5plugin_dir)
     def run(self):
         install_.run(self)
@@ -202,6 +204,10 @@ class build_ext(build_ext_):
         # For some reason this gets run twice. Careful to print messages and
         # add arguments only one time.
         build_ext_.finalize_options(self)
+        if self.omp not in ('0', '1', True, False):
+            raise ValueError("Invalid omp argument. Mut be '0' or '1'.")
+        self.omp = int(self.omp)
+
         if self.omp:
             if not hasattr(self, "_printed_omp_message"):
                 self._printed_omp_message = True
