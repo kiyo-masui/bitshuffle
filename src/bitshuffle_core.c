@@ -159,17 +159,31 @@ int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t s
 
     uint64_t x, t;
 
+    uint64_t e=1;
+    int little_endian = *(uint8_t *) &e == 1;
+
     size_t nbyte = elem_size * size;
     size_t nbyte_bitrow = nbyte / 8;
+    size_t bit_row_skip, bit_row_offset;
 
     CHECK_MULT_EIGHT(nbyte);
     CHECK_MULT_EIGHT(start_byte);
+
+
+    if (little_endian) {
+        bit_row_skip = nbyte_bitrow;
+        bit_row_offset = 0;
+    } else {
+        bit_row_skip = -nbyte_bitrow;
+        bit_row_offset = 8 * nbyte_bitrow;
+    }
+
 
     for (ii = start_byte / 8; ii < nbyte_bitrow; ii ++) {
         x = in_b[ii];
         TRANS_BIT_8X8(x, t);
         for (kk = 0; kk < 8; kk ++) {
-            out_b[kk * nbyte_bitrow + ii] = x;
+            out_b[bit_row_offset + kk * bit_row_skip + ii] = x;
             x = x >> 8;
         }
     }
