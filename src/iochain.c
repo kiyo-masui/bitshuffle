@@ -14,7 +14,7 @@
 #include "iochain.h"
 
 
-void ioc_init(ioc_chain *C, void *in_ptr_0, void *out_ptr_0) {
+void ioc_init(ioc_chain *C, const void *in_ptr_0, void *out_ptr_0) {
 #ifdef _OPENMP
     omp_init_lock(&C->next_lock);
     for (size_t ii = 0; ii < IOC_SIZE; ii ++) {
@@ -39,7 +39,7 @@ void ioc_destroy(ioc_chain *C) {
 }
 
 
-void * ioc_get_in(ioc_chain *C, size_t *this_iter) {
+const void * ioc_get_in(ioc_chain *C, size_t *this_iter) {
 #ifdef _OPENMP
     omp_set_lock(&C->next_lock);
     #pragma omp flush

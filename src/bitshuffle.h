@@ -81,7 +81,7 @@ size_t bshuf_compress_lz4_bound(const size_t size,
  *  number of bytes used in output buffer, negative error-code if failed.
  *
  */
-int64_t bshuf_compress_lz4(void* in, void* out, const size_t size, const size_t
+int64_t bshuf_compress_lz4(const void* in, void* out, const size_t size, const size_t
         elem_size, size_t block_size);
 
 
@@ -113,7 +113,7 @@ int64_t bshuf_compress_lz4(void* in, void* out, const size_t size, const size_t
  *  number of bytes consumed in *input* buffer, negative error-code if failed.
  *
  */
-int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
+int64_t bshuf_decompress_lz4(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size);
 
 #ifdef __cplusplus

@@ -36,7 +36,8 @@ int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr, \
     void *tmp_buf_bshuf;
     void *tmp_buf_lz4;
     size_t this_iter;
-    void *in, *out;
+    const void *in;
+    void *out;
 
     tmp_buf_bshuf = malloc(size * elem_size);
     if (tmp_buf_bshuf == NULL) return -1;
@@ -78,7 +79,8 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size) {
 
     int64_t nbytes, count;
-    void *in, *out, *tmp_buf;
+    void *out, *tmp_buf;
+    const void *in;
     size_t this_iter;
     int32_t nbytes_from_header;
 
@@ -134,7 +136,7 @@ size_t bshuf_compress_lz4_bound(const size_t size,
     if (block_size == 0) {
         block_size = bshuf_default_block_size(elem_size);
     }
-    if (block_size < 0 || block_size % BSHUF_BLOCKED_MULT) return -81;
+    if (block_size % BSHUF_BLOCKED_MULT) return -81;
 
     // Note that each block gets a 4 byte header.
     // Size of full blocks.
@@ -148,14 +150,14 @@ size_t bshuf_compress_lz4_bound(const size_t size,
 }
 
 
-int64_t bshuf_compress_lz4(void* in, void* out, const size_t size,
+int64_t bshuf_compress_lz4(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
     return bshuf_blocked_wrap_fun(&bshuf_compress_lz4_block, in, out, size,
             elem_size, block_size);
 }
 
 
-int64_t bshuf_decompress_lz4(void* in, void* out, const size_t size,
+int64_t bshuf_decompress_lz4(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
     return bshuf_blocked_wrap_fun(&bshuf_decompress_lz4_block, in, out, size,
             elem_size, block_size);
