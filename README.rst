@@ -172,6 +172,36 @@ HDF5 dynamically loaded filter, the C library in the ``src/`` directory is
 self-contained and complete.
 
 
+Usage from Java
+------------
+
+You can use Bitshuffle even in Java and the routines for shuffling and unshuffling
+are ported into `snappy-java`_. To use the routines, you need to add the following
+dependency to your pom.xml:
+::
+
+    <dependency>
+      <groupId>org.xerial.snappy</groupId>
+      <artifactId>snappy-java</artifactId>
+      <version>1.1.3.0</version>
+      <type>jar</type>
+      <scope>compile</scope>
+    </dependency>
+
+First, import org.xerial.snapy.BitShuffle in your Java code:
+::
+
+    import org.xerial.snappy.BitShuffle;
+
+Then, you use them like this:
+::
+    int[] data = new int[] {1, 3, 34, 43, 34};
+    byte[] shuffledData = BitShuffle.bitShuffle(data);
+    int[] result = BitShuffle.bitUnShuffleIntArray(shuffledData);
+
+.. _`snappy-java`: https://github.com/xerial/snappy-java
+
+
 Anaconda
 --------
 
