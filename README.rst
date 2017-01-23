@@ -183,9 +183,7 @@ dependency to your pom.xml:
     <dependency>
       <groupId>org.xerial.snappy</groupId>
       <artifactId>snappy-java</artifactId>
-      <version>1.1.3.0</version>
-      <type>jar</type>
-      <scope>compile</scope>
+      <version>1.1.3-M1</version>
     </dependency>
 
 First, import org.xerial.snapy.BitShuffle in your Java code:
