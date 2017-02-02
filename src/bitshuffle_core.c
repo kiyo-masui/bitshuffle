@@ -153,19 +153,19 @@ int64_t bshuf_trans_byte_elem_scal(const void* in, void* out, const size_t size,
 int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t size,
          const size_t elem_size, const size_t start_byte) {
 
+    int ii, kk;
     const uint64_t* in_b = (const uint64_t*) in;
     uint8_t* out_b = (uint8_t*) out;
 
     uint64_t x, t;
 
-    size_t ii, kk;
+    uint64_t e=1;
+    int little_endian = *(uint8_t *) &e == 1;
+
     size_t nbyte = elem_size * size;
     size_t nbyte_bitrow = nbyte / 8;
     size_t bit_row_offset;
     int64_t bit_row_skip;
-
-    uint64_t e=1;
-    int little_endian = *(uint8_t *) &e == 1;
 
     CHECK_MULT_EIGHT(nbyte);
     CHECK_MULT_EIGHT(start_byte);
@@ -175,7 +175,7 @@ int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t s
         bit_row_offset = 0;
     } else {
         bit_row_skip = -nbyte_bitrow;
-        bit_row_offset = 7 * nbyte_bitrow;
+        bit_row_offset = 8 * nbyte_bitrow;
     }
 
     for (ii = start_byte / 8; ii < nbyte_bitrow; ii ++) {
@@ -283,30 +283,17 @@ int64_t bshuf_trans_byte_bitrow_scal(const void* in, void* out, const size_t siz
 int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
         const size_t size, const size_t elem_size) {
 
+    size_t ii, jj, kk;
     const char *in_b;
     char *out_b;
     uint64_t x, t;
-    size_t ii, jj, kk;
-    size_t nbyte, out_index;
+    size_t nbyte;
 
-    uint64_t e=1;
-    int little_endian = *(uint8_t *) &e == 1;
-
-    size_t elem_offset;
-    uint64_t elem_skip;
 
     CHECK_MULT_EIGHT(size);
 
     in_b = (const char*) in;
     out_b = (char*) out;
-
-    if (little_endian) {
-        elem_skip = elem_size;
-        elem_offset = 0;
-    } else {
-        elem_skip = -elem_size;
-        elem_offset = 7 * elem_size;
-    }
 
     nbyte = elem_size * size;
 
@@ -315,8 +302,7 @@ int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
             x = *((uint64_t*) &in_b[ii + jj]);
             TRANS_BIT_8X8(x, t);
             for (kk = 0; kk < 8; kk++) {
-                out_index = ii + jj / 8 + elem_offset + kk * elem_skip;
-                *((uint8_t*) &out_b[out_index]) = x;
+                *((uint8_t*) &out_b[ii + jj / 8 + kk * elem_size]) = x;
                 x = x >> 8;
             }
         }
