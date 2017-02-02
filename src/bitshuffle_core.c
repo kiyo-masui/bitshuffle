@@ -180,6 +180,9 @@ int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t s
 
     uint64_t x, t;
 
+    uint64_t e=1;
+    const int big_endian = *(uint8_t *) &e == 0;
+
     size_t nbyte = elem_size * size;
     size_t nbyte_bitrow = nbyte / 8;
 
@@ -188,6 +191,7 @@ int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t s
 
     for (ii = start_byte / 8; ii < nbyte_bitrow; ii ++) {
         x = in_b[ii];
+        if (big_endian) BSWAP_64(x);
         TRANS_BIT_8X8(x, t);
         for (kk = 0; kk < 8; kk ++) {
             out_b[kk * nbyte_bitrow + ii] = x;
@@ -297,6 +301,8 @@ int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
     uint64_t x, t;
     size_t nbyte;
 
+    uint64_t e=1;
+    const int big_endian = *(uint8_t *) &e == 0;
 
     CHECK_MULT_EIGHT(size);
 
@@ -308,6 +314,7 @@ int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
     for (jj = 0; jj < 8 * elem_size; jj += 8) {
         for (ii = 0; ii + 8 * elem_size - 1 < nbyte; ii += 8 * elem_size) {
             x = *((uint64_t*) &in_b[ii + jj]);
+            if (big_endian) BSWAP_64(x);
             TRANS_BIT_8X8(x, t);
             for (kk = 0; kk < 8; kk++) {
                 *((uint8_t*) &out_b[ii + jj / 8 + kk * elem_size]) = x;
