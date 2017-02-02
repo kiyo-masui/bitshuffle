@@ -65,8 +65,29 @@ int bshuf_using_AVX2(void) {
  *
  */
 
+
+
+/* Reverse bytes in a quad word, used on big endian machines */
+// List of conditions (OS, compiler, etc.) for which byteswap.h is known to
+// be present. Only matters for BE machines.
+#if defined (__linux__)
+#include <byteswap.h>
+#define BSWAP_64(x) x = bswap_64(x)
+#else
+// Custom implementation. 13 instructions.
+#define BSWAP_64(x) {                                                       \
+        x = ((x & 0x00FF00FF00FF00FFLL) << 8)                               \
+            | ((x & 0xFF00FF00FF00FF00LL) >> 8);                            \
+        x = ((x & 0x0000FFFF0000FFFFLL) << 16)                              \
+            | ((x & 0xFFFF0000FFFF0000LL) >> 16);                           \
+        x = (x << 32) | (x  >> 32);                                         \
+    }
+#endif
+
+
 /* Transpose 8x8 bit array packed into a single quadword *x*.
  * *t* is workspace. */
+// From Hacker's Delight. 18 instructions.
 #define TRANS_BIT_8X8(x, t) {                                               \
         t = (x ^ (x >> 7)) & 0x00AA00AA00AA00AALL;                          \
         x = x ^ t ^ (t << 7);                                               \
@@ -80,7 +101,7 @@ int bshuf_using_AVX2(void) {
 /* Transpose of an array of arbitrarily typed elements. */
 #define TRANS_ELEM_TYPE(in, out, lda, ldb, type_t) {                        \
         size_t ii, jj, kk;                                                  \
-        const type_t* in_type = (const type_t*) in;                                 \
+        const type_t* in_type = (const type_t*) in;                         \
         type_t* out_type = (type_t*) out;                                   \
         for(ii = 0; ii + 7 < lda; ii += 8) {                                \
             for(jj = 0; jj < ldb; jj++) {                                   \
@@ -92,7 +113,7 @@ int bshuf_using_AVX2(void) {
         }                                                                   \
         for(ii = lda - lda % 8; ii < lda; ii ++) {                          \
             for(jj = 0; jj < ldb; jj++) {                                   \
-                out_type[jj*lda + ii] = in_type[ii*ldb + jj];                            \
+                out_type[jj*lda + ii] = in_type[ii*ldb + jj];               \
             }                                                               \
         }                                                                   \
     }
@@ -159,6 +180,9 @@ int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t s
 
     uint64_t x, t;
 
+    uint64_t e=1;
+    const int big_endian = *(uint8_t *) &e == 0;
+
     size_t nbyte = elem_size * size;
     size_t nbyte_bitrow = nbyte / 8;
 
@@ -167,6 +191,7 @@ int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t s
 
     for (ii = start_byte / 8; ii < nbyte_bitrow; ii ++) {
         x = in_b[ii];
+        if (big_endian) BSWAP_64(x);
         TRANS_BIT_8X8(x, t);
         for (kk = 0; kk < 8; kk ++) {
             out_b[kk * nbyte_bitrow + ii] = x;
@@ -276,6 +301,8 @@ int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
     uint64_t x, t;
     size_t nbyte;
 
+    uint64_t e=1;
+    const int big_endian = *(uint8_t *) &e == 0;
 
     CHECK_MULT_EIGHT(size);
 
@@ -287,6 +314,7 @@ int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
     for (jj = 0; jj < 8 * elem_size; jj += 8) {
         for (ii = 0; ii + 8 * elem_size - 1 < nbyte; ii += 8 * elem_size) {
             x = *((uint64_t*) &in_b[ii + jj]);
+            if (big_endian) BSWAP_64(x);
             TRANS_BIT_8X8(x, t);
             for (kk = 0; kk < 8; kk++) {
                 *((uint8_t*) &out_b[ii + jj / 8 + kk * elem_size]) = x;
