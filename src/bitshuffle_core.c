@@ -76,6 +76,16 @@ int bshuf_using_AVX2(void) {
         x = x ^ t ^ (t << 28);                                              \
     }
 
+/* Transpose 8x8 bit array along the diagonal from upper right
+   to lower left */
+#define TRANS_BIT_8X8_BE(x, t) {                                            \
+        t = (x ^ (x >> 9)) & 0x0055005500550055LL;                          \
+        x = x ^ t ^ (t << 9);                                               \
+        t = (x ^ (x >> 18)) & 0x0000333300003333LL;                         \
+        x = x ^ t ^ (t << 18);                                              \
+        t = (x ^ (x >> 36)) & 0x000000000F0F0F0FLL;                         \
+        x = x ^ t ^ (t << 36);                                              \
+    }
 
 /* Transpose of an array of arbitrarily typed elements. */
 #define TRANS_ELEM_TYPE(in, out, lda, ldb, type_t) {                        \
@@ -180,7 +190,11 @@ int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t s
 
     for (ii = start_byte / 8; ii < nbyte_bitrow; ii ++) {
         x = in_b[ii];
-        TRANS_BIT_8X8(x, t);
+        if (little_endian) {
+	    TRANS_BIT_8X8(x, t);
+	} else {
+	    TRANS_BIT_8X8_BE(x, t);
+	}
         for (kk = 0; kk < 8; kk ++) {
             out_b[bit_row_offset + kk * bit_row_skip + ii] = x;
             x = x >> 8;
@@ -313,7 +327,11 @@ int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
     for (jj = 0; jj < 8 * elem_size; jj += 8) {
         for (ii = 0; ii + 8 * elem_size - 1 < nbyte; ii += 8 * elem_size) {
             x = *((uint64_t*) &in_b[ii + jj]);
-            TRANS_BIT_8X8(x, t);
+	    if (little_endian) {
+		TRANS_BIT_8X8(x, t);
+	    } else {
+		TRANS_BIT_8X8_BE(x, t);
+	    }
             for (kk = 0; kk < 8; kk++) {
                 out_index = ii + jj / 8 + elem_offset + kk * elem_skip;
                 *((uint8_t*) &out_b[out_index]) = x;
