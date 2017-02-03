@@ -171,30 +171,22 @@ int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t s
     size_t ii, kk;
     size_t nbyte = elem_size * size;
     size_t nbyte_bitrow = nbyte / 8;
-    size_t bit_row_offset;
-    int64_t bit_row_skip;
 
     uint64_t e=1;
-    int little_endian = *(uint8_t *) &e == 1;
+    const int little_endian = *(uint8_t *) &e == 1;
+    const size_t bit_row_skip = little_endian ? nbyte_bitrow : -nbyte_bitrow;
+    const int64_t bit_row_offset = little_endian ? 0 : 7 * nbyte_bitrow;
 
     CHECK_MULT_EIGHT(nbyte);
     CHECK_MULT_EIGHT(start_byte);
 
-    if (little_endian) {
-        bit_row_skip = nbyte_bitrow;
-        bit_row_offset = 0;
-    } else {
-        bit_row_skip = -nbyte_bitrow;
-        bit_row_offset = 7 * nbyte_bitrow;
-    }
-
     for (ii = start_byte / 8; ii < nbyte_bitrow; ii ++) {
         x = in_b[ii];
         if (little_endian) {
-	    TRANS_BIT_8X8(x, t);
-	} else {
-	    TRANS_BIT_8X8_BE(x, t);
-	}
+            TRANS_BIT_8X8(x, t);
+        } else {
+            TRANS_BIT_8X8_BE(x, t);
+        }
         for (kk = 0; kk < 8; kk ++) {
             out_b[bit_row_offset + kk * bit_row_skip + ii] = x;
             x = x >> 8;
@@ -304,34 +296,25 @@ int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
     size_t nbyte, out_index;
 
     uint64_t e=1;
-    int little_endian = *(uint8_t *) &e == 1;
-
-    size_t elem_offset;
-    uint64_t elem_skip;
+    const int little_endian = *(uint8_t *) &e == 1;
+    const size_t elem_skip = little_endian ? elem_size : -elem_size;
+    const uint64_t elem_offset = little_endian ? 0 : 7 * elem_size;
 
     CHECK_MULT_EIGHT(size);
 
     in_b = (const char*) in;
     out_b = (char*) out;
 
-    if (little_endian) {
-        elem_skip = elem_size;
-        elem_offset = 0;
-    } else {
-        elem_skip = -elem_size;
-        elem_offset = 7 * elem_size;
-    }
-
     nbyte = elem_size * size;
 
     for (jj = 0; jj < 8 * elem_size; jj += 8) {
         for (ii = 0; ii + 8 * elem_size - 1 < nbyte; ii += 8 * elem_size) {
             x = *((uint64_t*) &in_b[ii + jj]);
-	    if (little_endian) {
-		TRANS_BIT_8X8(x, t);
-	    } else {
-		TRANS_BIT_8X8_BE(x, t);
-	    }
+            if (little_endian) {
+                TRANS_BIT_8X8(x, t);
+            } else {
+                TRANS_BIT_8X8_BE(x, t);
+            }
             for (kk = 0; kk < 8; kk++) {
                 out_index = ii + jj / 8 + elem_offset + kk * elem_skip;
                 *((uint8_t*) &out_b[out_index]) = x;
