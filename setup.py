@@ -19,7 +19,7 @@ import h5py
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 3
-VERSION_POINT = 0
+VERSION_POINT = 1
 
 # Only unset in the 'release' branch and in tags.
 VERSION_DEV = 1
@@ -232,7 +232,7 @@ setup(
     cmdclass = {'build_ext': build_ext, 'install': install, 'develop': develop},
     install_requires = ['numpy', 'h5py', 'Cython', 'setuptools>=0.7'],
     #extras_require = {'H5':  ["h5py"]},
-    package_data={'': ['data/*']},
+    package_data = {'': ['data/*']},
 
     # metadata for upload to PyPI
     author = "Kiyoshi Wesley Masui",
@@ -240,7 +240,7 @@ setup(
     description = "Bitshuffle filter for improving typed data compression.",
     license = "MIT",
     url = "https://github.com/kiyo-masui/bitshuffle",
-    #download_url = "https://github.com/kiyo-masui/bitshuffle/tarball/0.2.3",
+    download_url = "https://github.com/kiyo-masui/bitshuffle/tarball/%s" % VERSION,
     keywords = ['compression', 'hdf5', 'numpy'],
 )
 
