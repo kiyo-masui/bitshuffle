@@ -173,12 +173,11 @@ self-contained and complete.
 
 
 Usage from Java
-------------
+---------------
 
 You can use Bitshuffle even in Java and the routines for shuffling and unshuffling
 are ported into `snappy-java`_. To use the routines, you need to add the following
-dependency to your pom.xml:
-::
+dependency to your pom.xml::
 
     <dependency>
       <groupId>org.xerial.snappy</groupId>
@@ -186,13 +185,12 @@ dependency to your pom.xml:
       <version>1.1.3-M1</version>
     </dependency>
 
-First, import org.xerial.snapy.BitShuffle in your Java code:
-::
+First, import org.xerial.snapy.BitShuffle in your Java code::
 
     import org.xerial.snappy.BitShuffle;
 
-Then, you use them like this:
-::
+Then, you use them like this::
+
     int[] data = new int[] {1, 3, 34, 43, 34};
     byte[] shuffledData = BitShuffle.bitShuffle(data);
     int[] result = BitShuffle.bitUnShuffleIntArray(shuffledData);
