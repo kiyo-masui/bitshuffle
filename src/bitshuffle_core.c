@@ -76,6 +76,16 @@ int bshuf_using_AVX2(void) {
         x = x ^ t ^ (t << 28);                                              \
     }
 
+/* Transpose 8x8 bit array along the diagonal from upper right
+   to lower left */
+#define TRANS_BIT_8X8_BE(x, t) {                                            \
+        t = (x ^ (x >> 9)) & 0x0055005500550055LL;                          \
+        x = x ^ t ^ (t << 9);                                               \
+        t = (x ^ (x >> 18)) & 0x0000333300003333LL;                         \
+        x = x ^ t ^ (t << 18);                                              \
+        t = (x ^ (x >> 36)) & 0x000000000F0F0F0FLL;                         \
+        x = x ^ t ^ (t << 36);                                              \
+    }
 
 /* Transpose of an array of arbitrarily typed elements. */
 #define TRANS_ELEM_TYPE(in, out, lda, ldb, type_t) {                        \
@@ -153,23 +163,32 @@ int64_t bshuf_trans_byte_elem_scal(const void* in, void* out, const size_t size,
 int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t size,
          const size_t elem_size, const size_t start_byte) {
 
-    int ii, kk;
     const uint64_t* in_b = (const uint64_t*) in;
     uint8_t* out_b = (uint8_t*) out;
 
     uint64_t x, t;
 
+    size_t ii, kk;
     size_t nbyte = elem_size * size;
     size_t nbyte_bitrow = nbyte / 8;
+
+    uint64_t e=1;
+    const int little_endian = *(uint8_t *) &e == 1;
+    const size_t bit_row_skip = little_endian ? nbyte_bitrow : -nbyte_bitrow;
+    const int64_t bit_row_offset = little_endian ? 0 : 7 * nbyte_bitrow;
 
     CHECK_MULT_EIGHT(nbyte);
     CHECK_MULT_EIGHT(start_byte);
 
     for (ii = start_byte / 8; ii < nbyte_bitrow; ii ++) {
         x = in_b[ii];
-        TRANS_BIT_8X8(x, t);
+        if (little_endian) {
+            TRANS_BIT_8X8(x, t);
+        } else {
+            TRANS_BIT_8X8_BE(x, t);
+        }
         for (kk = 0; kk < 8; kk ++) {
-            out_b[kk * nbyte_bitrow + ii] = x;
+            out_b[bit_row_offset + kk * bit_row_skip + ii] = x;
             x = x >> 8;
         }
     }
@@ -270,12 +289,16 @@ int64_t bshuf_trans_byte_bitrow_scal(const void* in, void* out, const size_t siz
 int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
         const size_t size, const size_t elem_size) {
 
-    size_t ii, jj, kk;
     const char *in_b;
     char *out_b;
     uint64_t x, t;
-    size_t nbyte;
+    size_t ii, jj, kk;
+    size_t nbyte, out_index;
 
+    uint64_t e=1;
+    const int little_endian = *(uint8_t *) &e == 1;
+    const size_t elem_skip = little_endian ? elem_size : -elem_size;
+    const uint64_t elem_offset = little_endian ? 0 : 7 * elem_size;
 
     CHECK_MULT_EIGHT(size);
 
@@ -287,9 +310,14 @@ int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
     for (jj = 0; jj < 8 * elem_size; jj += 8) {
         for (ii = 0; ii + 8 * elem_size - 1 < nbyte; ii += 8 * elem_size) {
             x = *((uint64_t*) &in_b[ii + jj]);
-            TRANS_BIT_8X8(x, t);
+            if (little_endian) {
+                TRANS_BIT_8X8(x, t);
+            } else {
+                TRANS_BIT_8X8_BE(x, t);
+            }
             for (kk = 0; kk < 8; kk++) {
-                *((uint8_t*) &out_b[ii + jj / 8 + kk * elem_size]) = x;
+                out_index = ii + jj / 8 + elem_offset + kk * elem_skip;
+                *((uint8_t*) &out_b[out_index]) = x;
                 x = x >> 8;
             }
         }

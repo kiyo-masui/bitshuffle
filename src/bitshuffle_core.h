@@ -45,8 +45,8 @@
 // These are usually set in the setup.py.
 #ifndef BSHUF_VERSION_MAJOR
 #define BSHUF_VERSION_MAJOR 0
-#define BSHUF_VERSION_MINOR 2
-#define BSHUF_VERSION_POINT 5
+#define BSHUF_VERSION_MINOR 3
+#define BSHUF_VERSION_POINT 0
 #endif
 
 #ifdef __cplusplus
