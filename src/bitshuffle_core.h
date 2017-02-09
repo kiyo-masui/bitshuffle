@@ -28,8 +28,9 @@
 #ifndef BITSHUFFLE_CORE_H
 #define BITSHUFFLE_CORE_H
 
-#if defined (__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)   /* C99 */
-# include <stdint.h>
+// We assume GNU g++ defining `__cplusplus` has stdint.h
+#if (defined (__STDC_VERSION__) && __STDC_VERSION__ >= 199900L) || defined(__cplusplus)
+#include <stdint.h>
 #else
   typedef unsigned char       uint8_t;
   typedef unsigned short      uint16_t;
