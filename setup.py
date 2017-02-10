@@ -19,7 +19,7 @@ import h5py
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 3
-VERSION_POINT = 2
+VERSION_POINT = 3
 
 # Only unset in the 'release' branch and in tags.
 VERSION_DEV = 1

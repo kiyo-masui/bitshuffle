@@ -47,7 +47,7 @@
 #ifndef BSHUF_VERSION_MAJOR
 #define BSHUF_VERSION_MAJOR 0
 #define BSHUF_VERSION_MINOR 3
-#define BSHUF_VERSION_POINT 2
+#define BSHUF_VERSION_POINT 3
 #endif
 
 #ifdef __cplusplus
