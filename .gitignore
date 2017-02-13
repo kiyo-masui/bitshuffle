@@ -71,3 +71,7 @@ doc/generated
 *.swp
 *.swo
 
+# Generated files
+bitshuffle/ext.c
+bitshuffle/h5.c
+
