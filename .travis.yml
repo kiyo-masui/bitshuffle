@@ -6,9 +6,9 @@ os: linux
 #sudo: true
 python:
     - "2.7"
-    - "3.3"
     - "3.4"
     - "3.5"
+    - "3.6"
 addons:
     apt:
         packages:
