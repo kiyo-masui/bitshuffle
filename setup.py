@@ -47,11 +47,6 @@ if sys.platform == 'darwin':
 else:
     OMP_DEFAULT = True
 
-
-if not spawn.find_executable("pkg-config"):
-    raise ValueError("pkg-config must be installed")
-
-
 FALLBACK_CONFIG = {
     'include_dirs': [],
     'library_dirs': [],
@@ -89,7 +84,7 @@ def pkgconfig(*packages, **kw):
     for package in packages:
         try:
             subprocess.check_output(["pkg-config", package])
-        except subprocess.CalledProcessError:
+        except (subprocess.CalledProcessError, OSError):
             print("Can't find %s with pkg-config fallback to "
                   "static config" % package)
             for distutils_key in flag_map:
