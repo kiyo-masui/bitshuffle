@@ -247,10 +247,12 @@ class build_ext(build_ext_):
                 print("\n#################################")
                 print("# Compiling with OpenMP support #")
                 print("#################################\n")
-            self.libraries += ['gomp']
+            # More portable to pass -fopenmp to linker.
+            # self.libraries += ['gomp']
             for e in self.extensions:
                 if '-fopenmp' not in e.extra_compile_args:
                     e.extra_compile_args += ['-fopenmp']
+                    e.extra_link_args += ['-fopenmp']
 
         # Required only by old version of setuptools < 18.0
         from Cython.Build import cythonize
