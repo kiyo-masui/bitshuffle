@@ -250,6 +250,7 @@ class build_ext(build_ext_):
             for e in self.extensions:
                 if '-fopenmp' not in e.extra_compile_args:
                     e.extra_compile_args += ['-fopenmp']
+                if '-fopenmp' not in e.extra_link_args:
                     e.extra_link_args += ['-fopenmp']
 
         # Required only by old version of setuptools < 18.0
