@@ -100,7 +100,7 @@ def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
 
     tmp_shape = maxshape if maxshape is not None else shape
     # Validate chunk shape
-    chunks_larger = (-numpy.array([ i>=j 
+    chunks_larger = (numpy.array([ not i>=j
                      for i,j in zip(tmp_shape,chunks) if i is not None])).any()
     if isinstance(chunks, tuple) and chunks_larger:
         errmsg = ("Chunk shape must not be greater than data shape in any "
