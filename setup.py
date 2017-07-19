@@ -2,8 +2,6 @@ from __future__ import absolute_import, division, print_function
 # I didn't import unicode_literals. They break setuptools or Cython in python
 # 2.7, but python 3 seems to be happy with them.
 
-from distutils import ccompiler
-from distutils import spawn
 import glob
 import os
 from os import path
@@ -260,6 +258,7 @@ class build_ext(build_ext_):
         for ext in self.extensions:
             ext._needs_stub = False
 
+
 # Don't install numpy/cython/hdf5 if not needed
 for cmd in ["sdist", "clean",
             "--help", "--help-commands", "--version"]:
@@ -292,6 +291,7 @@ setup(
     description="Bitshuffle filter for improving typed data compression.",
     license="MIT",
     url="https://github.com/kiyo-masui/bitshuffle",
-    download_url="https://github.com/kiyo-masui/bitshuffle/tarball/%s" % VERSION,
+    download_url=("https://github.com/kiyo-masui/bitshuffle/tarball/%s"
+                  % VERSION),
     keywords=['compression', 'hdf5', 'numpy'],
 )
