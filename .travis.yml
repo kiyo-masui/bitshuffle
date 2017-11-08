@@ -19,13 +19,12 @@ install:
     # Ensures the system hdf5 headers/libs will be used whatever its version
     - "export HDF5_DIR=/usr/lib"
     # Force Cython to be istalled before h5py.
-    - "pip install Cython>=0.19"
-    - "pip install --no-binary=h5py -r requirements.txt"
+    - "pip install -r requirements.txt"
     # Installing the plugin to arbitrary directory to check the install script.
     - "python setup.py install --h5plugin --h5plugin-dir ~/hdf5/lib"
     # Ensure it's installable and usable in virtualenv
     - "virtualenv ~/venv"
-    - "travis_wait 30 ~/venv/bin/pip -v install --no-binary=h5py ."
+    - "travis_wait 30 ~/venv/bin/pip -v install ."
     - "~/venv/bin/pip -v install nose"
 # Can't be somewhere that has a 'bitshuffle' directory as nose will use that
 # copy instead of installed package.
