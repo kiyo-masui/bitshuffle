@@ -2,8 +2,6 @@ from __future__ import absolute_import, division, print_function
 # I didn't import unicode_literals. They break setuptools or Cython in python
 # 2.7, but python 3 seems to be happy with them.
 
-from distutils import ccompiler
-from distutils import spawn
 import glob
 import os
 from os import path
@@ -247,16 +245,20 @@ class build_ext(build_ext_):
                 print("\n#################################")
                 print("# Compiling with OpenMP support #")
                 print("#################################\n")
-            self.libraries += ['gomp']
+            # More portable to pass -fopenmp to linker.
+            # self.libraries += ['gomp']
             for e in self.extensions:
                 if '-fopenmp' not in e.extra_compile_args:
                     e.extra_compile_args += ['-fopenmp']
+                if '-fopenmp' not in e.extra_link_args:
+                    e.extra_link_args += ['-fopenmp']
 
         # Required only by old version of setuptools < 18.0
         from Cython.Build import cythonize
         self.extensions = cythonize(self.extensions)
         for ext in self.extensions:
             ext._needs_stub = False
+
 
 # Don't install numpy/cython/hdf5 if not needed
 for cmd in ["sdist", "clean",
@@ -269,6 +271,7 @@ else:
 
 with open('requirements.txt') as f:
     requires = f.read().splitlines()
+    requires = [r.split()[0] for r in requires]
 
 # TODO hdf5 support should be an "extra". Figure out how to set this up.
 setup(
@@ -290,6 +293,7 @@ setup(
     description="Bitshuffle filter for improving typed data compression.",
     license="MIT",
     url="https://github.com/kiyo-masui/bitshuffle",
-    download_url="https://github.com/kiyo-masui/bitshuffle/tarball/%s" % VERSION,
+    download_url=("https://github.com/kiyo-masui/bitshuffle/tarball/%s"
+                  % VERSION),
     keywords=['compression', 'hdf5', 'numpy'],
 )
