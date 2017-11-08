@@ -271,6 +271,7 @@ else:
 
 with open('requirements.txt') as f:
     requires = f.read().splitlines()
+    requires = [r.split()[0] for r in requires]
 
 # TODO hdf5 support should be an "extra". Figure out how to set this up.
 setup(

@@ -18,9 +18,7 @@ install:
     - "pip install -U pip virtualenv"
     # Ensures the system hdf5 headers/libs will be used whatever its version
     - "export HDF5_DIR=/usr/lib"
-    # Force Cython to be istalled before h5py.
-    - "pip install Cython>=0.19"
-    - "pip install --no-binary=h5py -r requirements.txt"
+    - "pip install -r requirements.txt"
     # Installing the plugin to arbitrary directory to check the install script.
     - "python setup.py install --h5plugin --h5plugin-dir ~/hdf5/lib"
     # Ensure it's installable and usable in virtualenv
