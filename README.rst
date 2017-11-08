@@ -47,9 +47,12 @@ As a bonus, Bitshuffle ships with a dynamically loaded version of
 `h5py`'s LZF compression filter, such that the filter can be transparently
 used outside of python and in command line utilities such as ``h5dump``.
 
-.. [1] Chosen to fit comfortably within L1 cache as well as be well matched window of the LZF compression library.
+.. [1] Chosen to fit comfortably within L1 cache as well as be well matched
+       window of the LZF compression library.
 
-.. [2] Over applying bitshuffle to the full dataset then applying LZ4 compression, this has the tremendous advantage that the block is already in the L1 cache.
+.. [2] Over applying bitshuffle to the full dataset then applying LZ4
+       compression, this has the tremendous advantage that the block is
+       already in the L1 cache.
 
 .. _`dynamically loaded filters`: http://www.hdfgroup.org/HDF5/doc/Advanced/DynamicallyLoadedFilters/HDF5DynamicallyLoadedFilters.pdf
 
@@ -92,9 +95,11 @@ Comparing Bitshuffle to other compression algorithms and HDF5 filters:
 Installation for Python
 -----------------------
 
-Installation requires python 2.7+ or 3.3+, HDF5 1.8 or later, HDF5 for python,
-Numpy and Cython.  To use the dynamically loaded HDF5 filter requires HDF5
-1.8.11 or later.
+Installation requires python 2.7+ or 3.3+, HDF5 1.8.4 or later, HDF5 for python
+(h5py), Numpy and Cython. Bitshuffle must be linked against the same version of
+HDF5 as h5py, which in practice means h5py must be built from source_ rather
+than pre-built wheels [3]_. To use the dynamically loaded HDF5 filter requires
+HDF5 1.8.11 or later.
 
 To install::
 
@@ -112,6 +117,11 @@ search location of ``/usr/local/hdf5/lib/plugin``.
 If you get an error about missing source files when building the extensions,
 try upgrading setuptools.  There is a weird bug where setuptools prior to 0.7
 doesn't work properly with Cython in some cases.
+
+.. _source: http://docs.h5py.org/en/latest/build.html#source-installation
+
+.. [3] Typically you will be able to install Bitshuffle, but there will be
+       errors when creating and reading datasets.
 
 
 Usage from Python
