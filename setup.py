@@ -273,6 +273,9 @@ with open('requirements.txt') as f:
     requires = f.read().splitlines()
     requires = [r.split()[0] for r in requires]
 
+with open('README.rst') as r:
+    long_description = r.read()
+
 # TODO hdf5 support should be an "extra". Figure out how to set this up.
 setup(
     name='bitshuffle',
@@ -291,6 +294,7 @@ setup(
     author="Kiyoshi Wesley Masui",
     author_email="kiyo@physics.ubc.ca",
     description="Bitshuffle filter for improving typed data compression.",
+    long_description=long_description,
     license="MIT",
     url="https://github.com/kiyo-masui/bitshuffle",
     download_url=("https://github.com/kiyo-masui/bitshuffle/tarball/%s"
