@@ -16,7 +16,7 @@ import sys
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 3
-VERSION_POINT = 4
+VERSION_POINT = 5
 
 # Only unset in the 'release' branch and in tags.
 VERSION_DEV = 1
