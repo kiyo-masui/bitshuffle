@@ -53,7 +53,10 @@ FALLBACK_CONFIG = {
     'extra_link_args': [],
 }
 
-if sys.platform == 'darwin':
+if 'HDF5_DIR' in os.environ:
+    FALLBACK_CONFIG['include_dirs'] += [os.environ['HDF5_DIR'] + '/include']  # macports
+    FALLBACK_CONFIG['library_dirs'] += [os.environ['HDF5_DIR'] + '/lib']      # macports
+elif sys.platform == 'darwin':
     # putting here both macports and homebrew paths will generate
     # "ld: warning: dir not found" at the linking phase
     FALLBACK_CONFIG['include_dirs'] += ['/opt/local/include']  # macports
