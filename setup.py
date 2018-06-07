@@ -243,6 +243,19 @@ class build_ext(build_ext_):
         import numpy as np
         ext_bshuf.include_dirs.append(np.get_include())
 
+        # Required only by old version of setuptools < 18.0
+        from Cython.Build import cythonize
+        self.extensions = cythonize(self.extensions)
+        for ext in self.extensions:
+            ext._needs_stub = False
+
+    def build_extensions(self):
+        c = self.compiler.compiler_type
+
+        if self.omp not in ('0', '1', True, False):
+            raise ValueError("Invalid omp argument. Mut be '0' or '1'.")
+        self.omp = int(self.omp)
+
         if self.omp:
             if not hasattr(self, "_printed_omp_message"):
                 self._printed_omp_message = True
@@ -251,17 +264,17 @@ class build_ext(build_ext_):
                 print("#################################\n")
             # More portable to pass -fopenmp to linker.
             # self.libraries += ['gomp']
+            if self.compiler.compiler_type == 'msvc':
+                openmpflag = '/openmp'
+            else:
+                openmpflag = '-fopenmp'
             for e in self.extensions:
-                if '-fopenmp' not in e.extra_compile_args:
-                    e.extra_compile_args += ['-fopenmp']
-                if '-fopenmp' not in e.extra_link_args:
-                    e.extra_link_args += ['-fopenmp']
+                if openmpflag not in e.extra_compile_args:
+                    e.extra_compile_args += [openmpflag]
+                if openmpflag not in e.extra_link_args:
+                    e.extra_link_args += [openmpflag]
 
-        # Required only by old version of setuptools < 18.0
-        from Cython.Build import cythonize
-        self.extensions = cythonize(self.extensions)
-        for ext in self.extensions:
-            ext._needs_stub = False
+        build_ext_.build_extensions(self)
 
 
 # Don't install numpy/cython/hdf5 if not needed
