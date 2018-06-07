@@ -74,6 +74,8 @@ FALLBACK_CONFIG['include_dirs'] = [d for d in FALLBACK_CONFIG['include_dirs']
 FALLBACK_CONFIG['library_dirs'] = [d for d in FALLBACK_CONFIG['library_dirs']
                                    if path.isdir(d)]
 
+FALLBACK_CONFIG['extra_compile_args'] = ['-DH5_BUILT_AS_DYNAMIC_LIB']
+
 
 def pkgconfig(*packages, **kw):
     config = kw.setdefault('config', {})
