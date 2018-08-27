@@ -33,9 +33,9 @@
 #endif
 
 #if defined(_OPENMP) && defined(_MSC_VER)
-typedef uint64_t omp_size_t
+typedef uint64_t omp_size_t;
 #else
-typedef size_t omp_size_t
+typedef size_t omp_size_t;
 #endif
 
 // Macros.
