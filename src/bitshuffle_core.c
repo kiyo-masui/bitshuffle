@@ -33,7 +33,7 @@
 #endif
 
 #if defined(_OPENMP) && defined(_MSC_VER)
-typedef uint64_t omp_size_t;
+typedef int64_t omp_size_t;
 #else
 typedef size_t omp_size_t;
 #endif
@@ -1143,7 +1143,7 @@ int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
 int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, \
         const size_t size, const size_t elem_size, size_t block_size) {
 
-    omp_size_t ii;
+    omp_size_t ii = 0;
     int64_t err = 0;
     int64_t count, cum_count=0;
     size_t last_block_size;
