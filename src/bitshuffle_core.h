@@ -18,6 +18,7 @@
  *      -1    : Failed to allocate memory.
  *      -11   : Missing SSE.
  *      -12   : Missing AVX.
+ *      -13   : Missing Arm Neon.
  *      -80   : Input size not a multiple of 8.
  *      -81   : block_size not multiple of 8.
  *      -91   : Decompression error, wrong number of bytes processed.

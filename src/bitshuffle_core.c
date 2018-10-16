@@ -813,52 +813,52 @@ int64_t bshuf_untrans_bit_elem_NEON(const void* in, void* out, const size_t size
 
 int64_t bshuf_untrans_bit_elem_NEON(const void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return -11;
+    return -13;
 }
 
 
 int64_t bshuf_trans_bit_elem_NEON(const void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return -11;
+    return -13;
 }
 
 
 int64_t bshuf_trans_byte_bitrow_NEON(const void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return -11;
+    return -13;
 }
 
 
 int64_t bshuf_trans_bit_byte_NEON(const void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return -11;
+    return -13;
 }
 
 
 int64_t bshuf_trans_byte_elem_NEON(const void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return -11;
+    return -13;
 }
 
 
 int64_t bshuf_trans_byte_elem_NEON_64(const void* in, void* out, const size_t size) {
-    return -11;
+    return -13;
 }
 
 
 int64_t bshuf_trans_byte_elem_NEON_32(const void* in, void* out, const size_t size) {
-    return -11;
+    return -13;
 }
 
 
 int64_t bshuf_trans_byte_elem_NEON_16(const void* in, void* out, const size_t size) {
-    return -11;
+    return -13;
 }
 
 
 int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t size,
          const size_t elem_size) {
-    return -11;
+    return -13;
 }
 
 
