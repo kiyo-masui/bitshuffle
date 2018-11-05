@@ -37,6 +37,11 @@
 #include <arm_neon.h>
 #endif
 
+#if defined(_OPENMP) && defined(_MSC_VER)
+typedef int64_t omp_size_t;
+#else
+typedef size_t omp_size_t;
+#endif
 
 // Macros.
 #define CHECK_MULT_EIGHT(n) if (n % 8) return -80;
@@ -1662,7 +1667,7 @@ int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
 int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, \
         const size_t size, const size_t elem_size, size_t block_size) {
 
-    long long ii; // msvc openmp pragma doesn't like size_t type
+    omp_size_t ii = 0;
     int64_t err = 0;
     int64_t count, cum_count=0;
     size_t last_block_size;
@@ -1685,7 +1690,7 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, 
     #pragma omp parallel for schedule(dynamic, 1) \
             private(count) reduction(+ : cum_count)
 #endif
-    for (ii = 0; ii < size / block_size; ii ++) {
+    for (ii = 0; ii < (omp_size_t)( size / block_size ); ii ++) {
         count = fun(&C, block_size, elem_size);
         if (count < 0) err = count;
         cum_count += count;
