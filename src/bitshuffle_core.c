@@ -1662,7 +1662,7 @@ int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
 int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, \
         const size_t size, const size_t elem_size, size_t block_size) {
 
-    size_t ii;
+    long long ii; // msvc openmp pragma doesn't like size_t type
     int64_t err = 0;
     int64_t count, cum_count=0;
     size_t last_block_size;
