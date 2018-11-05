@@ -21,6 +21,7 @@ cdef int REPEATC = 1
 REPEAT = REPEATC
 
 cdef extern from b"bitshuffle.h":
+    int bshuf_using_NEON()
     int bshuf_using_SSE2()
     int bshuf_using_AVX2()
     int bshuf_bitshuffle(void *A, void *B, int size, int elem_size,
@@ -45,20 +46,26 @@ __version__ = str("%d.%d.%d").format(BSHUF_VERSION_MAJOR, BSHUF_VERSION_MINOR,
 cdef extern int bshuf_copy(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_elem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_elem_SSE(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_trans_byte_elem_NEON(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_byte_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_byte_SSE(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_trans_bit_byte_NEON(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_byte_AVX(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bitrow_eight(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_elem_AVX(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_elem_SSE(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_trans_bit_elem_NEON(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_elem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_bitrow_SSE(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_trans_byte_bitrow_NEON(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_bitrow_AVX(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_byte_bitrow_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_shuffle_bit_eightelem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_shuffle_bit_eightelem_SSE(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_shuffle_bit_eightelem_NEON(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_shuffle_bit_eightelem_AVX(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_untrans_bit_elem_SSE(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_untrans_bit_elem_NEON(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_untrans_bit_elem_AVX(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_untrans_bit_elem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_elem(void *A, void *B, int size, int elem_size)
@@ -66,6 +73,14 @@ cdef extern int bshuf_untrans_bit_elem(void *A, void *B, int size, int elem_size
 
 
 ctypedef int (*Cfptr) (void *A, void *B, int size, int elem_size)
+
+
+def using_NEON():
+    """Whether compiled using Arm NEON instructions."""
+    if bshuf_using_NEON():
+        return True
+    else:
+        return False
 
 
 def using_SSE2():
@@ -144,12 +159,20 @@ def trans_byte_elem_SSE(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_byte_elem_SSE, arr)
 
 
+def trans_byte_elem_NEON(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_trans_byte_elem_NEON, arr)
+
+
 def trans_bit_byte_scal(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_bit_byte_scal, arr)
 
 
 def trans_bit_byte_SSE(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_bit_byte_SSE, arr)
+
+
+def trans_bit_byte_NEON(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_trans_bit_byte_NEON, arr)
 
 
 def trans_bit_byte_AVX(np.ndarray arr not None):
@@ -172,8 +195,16 @@ def trans_bit_elem_SSE(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_bit_elem_SSE, arr)
 
 
+def trans_bit_elem_NEON(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_trans_bit_elem_NEON, arr)
+
+
 def trans_byte_bitrow_SSE(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_trans_byte_bitrow_SSE, arr)
+
+
+def trans_byte_bitrow_NEON(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_trans_byte_bitrow_NEON, arr)
 
 
 def trans_byte_bitrow_AVX(np.ndarray arr not None):
@@ -192,12 +223,20 @@ def shuffle_bit_eightelem_SSE(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_shuffle_bit_eightelem_SSE, arr)
 
 
+def shuffle_bit_eightelem_NEON(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_shuffle_bit_eightelem_NEON, arr)
+
+
 def shuffle_bit_eightelem_AVX(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_shuffle_bit_eightelem_AVX, arr)
 
 
 def untrans_bit_elem_SSE(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_untrans_bit_elem_SSE, arr)
+
+
+def untrans_bit_elem_NEON(np.ndarray arr not None):
+    return _wrap_C_fun(&bshuf_untrans_bit_elem_NEON, arr)
 
 
 def untrans_bit_elem_AVX(np.ndarray arr not None):

@@ -16,7 +16,7 @@ import sys
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 3
-VERSION_POINT = 4
+VERSION_POINT = 5
 
 # Only unset in the 'release' branch and in tags.
 VERSION_DEV = 0
@@ -28,7 +28,9 @@ if VERSION_DEV:
 
 COMPILE_FLAGS = ['-O3', '-ffast-math', '-march=native', '-std=c99']
 # Cython breaks strict aliasing rules.
-COMPILE_FLAGS += ["-fno-strict-aliasing"]
+COMPILE_FLAGS += ['-fno-strict-aliasing']
+COMPILE_FLAGS += ['-fPIC']
+COMPILE_FLAGS_MSVC = ['/Ox', '/fp:fast']
 
 MACROS = [
     ('BSHUF_VERSION_MAJOR', VERSION_MAJOR),
@@ -53,7 +55,10 @@ FALLBACK_CONFIG = {
     'extra_link_args': [],
 }
 
-if sys.platform == 'darwin':
+if 'HDF5_DIR' in os.environ:
+    FALLBACK_CONFIG['include_dirs'] += [os.environ['HDF5_DIR'] + '/include']  # macports
+    FALLBACK_CONFIG['library_dirs'] += [os.environ['HDF5_DIR'] + '/lib']      # macports
+elif sys.platform == 'darwin':
     # putting here both macports and homebrew paths will generate
     # "ld: warning: dir not found" at the linking phase
     FALLBACK_CONFIG['include_dirs'] += ['/opt/local/include']  # macports
@@ -68,6 +73,8 @@ FALLBACK_CONFIG['include_dirs'] = [d for d in FALLBACK_CONFIG['include_dirs']
                                    if path.isdir(d)]
 FALLBACK_CONFIG['library_dirs'] = [d for d in FALLBACK_CONFIG['library_dirs']
                                    if path.isdir(d)]
+
+FALLBACK_CONFIG['extra_compile_args'] = ['-DH5_BUILT_AS_DYNAMIC_LIB']
 
 
 def pkgconfig(*packages, **kw):
@@ -108,7 +115,6 @@ ext_bshuf = Extension(
     depends=["src/bitshuffle.h", "src/bitshuffle_core.h",
              "src/iochain.h", "lz4/lz4.h"],
     libraries=[],
-    extra_compile_args=COMPILE_FLAGS,
     define_macros=MACROS,
 )
 
@@ -122,8 +128,7 @@ h5filter = Extension(
              "lz4/lz4.h"],
     define_macros=MACROS,
     **pkgconfig("hdf5", config=dict(
-        include_dirs=["src/", "lz4/"],
-        extra_compile_args=COMPILE_FLAGS))
+        include_dirs=["src/", "lz4/"]))
 )
 
 filter_plugin = Extension(
@@ -136,8 +141,7 @@ filter_plugin = Extension(
              "lz4/lz4.h"],
     define_macros=MACROS,
     **pkgconfig("hdf5", config=dict(
-        include_dirs=["src/", "lz4/"],
-        extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS))
+        include_dirs=["src/", "lz4/"]))
 )
 
 lzf_plugin = Extension(
@@ -147,15 +151,15 @@ lzf_plugin = Extension(
     depends=["lzf/lzf_filter.h", "lzf/lzf/lzf.h",
              "lzf/lzf/lzfP.h"],
     **pkgconfig("hdf5", config=dict(
-        include_dirs=["lzf/", "lzf/lzf/"],
-        extra_compile_args=['-fPIC', '-g'] + COMPILE_FLAGS))
+        include_dirs=["lzf/", "lzf/lzf/"]))
 )
 
 
 EXTENSIONS = [ext_bshuf, h5filter]
 # Check for plugin hdf5 plugin support (hdf5 >= 1.8.11)
 HDF5_PLUGIN_SUPPORT = False
-for p in ["/usr/include"] + pkgconfig("hdf5")["include_dirs"]:
+CPATHS = os.environ['CPATH'].split(':') if 'CPATH' in os.environ else []
+for p in ["/usr/include"] + pkgconfig("hdf5")["include_dirs"] + CPATHS:
     if os.path.exists(os.path.join(p, "H5PLextern.h")):
         HDF5_PLUGIN_SUPPORT = True
 
@@ -239,6 +243,19 @@ class build_ext(build_ext_):
         import numpy as np
         ext_bshuf.include_dirs.append(np.get_include())
 
+        # Required only by old version of setuptools < 18.0
+        from Cython.Build import cythonize
+        self.extensions = cythonize(self.extensions)
+        for ext in self.extensions:
+            ext._needs_stub = False
+
+    def build_extensions(self):
+        c = self.compiler.compiler_type
+
+        if self.omp not in ('0', '1', True, False):
+            raise ValueError("Invalid omp argument. Mut be '0' or '1'.")
+        self.omp = int(self.omp)
+
         if self.omp:
             if not hasattr(self, "_printed_omp_message"):
                 self._printed_omp_message = True
@@ -247,17 +264,20 @@ class build_ext(build_ext_):
                 print("#################################\n")
             # More portable to pass -fopenmp to linker.
             # self.libraries += ['gomp']
+            if self.compiler.compiler_type == 'msvc':
+                openmpflag = '/openmp'
+                compileflags = COMPILE_FLAGS_MSVC
+            else:
+                openmpflag = '-fopenmp'
+                compileflags = COMPILE_FLAGS
             for e in self.extensions:
-                if '-fopenmp' not in e.extra_compile_args:
-                    e.extra_compile_args += ['-fopenmp']
-                if '-fopenmp' not in e.extra_link_args:
-                    e.extra_link_args += ['-fopenmp']
+                e.extra_compile_args = list(set(e.extra_compile_args).union(compileflags))
+                if openmpflag not in e.extra_compile_args:
+                    e.extra_compile_args += [openmpflag]
+                if openmpflag not in e.extra_link_args:
+                    e.extra_link_args += [openmpflag]
 
-        # Required only by old version of setuptools < 18.0
-        from Cython.Build import cythonize
-        self.extensions = cythonize(self.extensions)
-        for ext in self.extensions:
-            ext._needs_stub = False
+        build_ext_.build_extensions(self)
 
 
 # Don't install numpy/cython/hdf5 if not needed
