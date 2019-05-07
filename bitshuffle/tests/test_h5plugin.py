@@ -35,19 +35,14 @@ class TestFilterPlugins(unittest.TestCase):
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname)
-        tid = h5t.py_create(dtype, logical=1)
-        sid = h5s.create_simple(shape, shape)
-        # Different API's for different h5py versions.
-        try:
-            dcpl = filters.generate_dcpl(shape, dtype, chunks, None, None,
-                      None, None, None, None)
-        except TypeError:
-            dcpl = filters.generate_dcpl(shape, dtype, chunks, None, None,
-                      None, None, None)
-        dcpl.set_filter(32008, h5z.FLAG_MANDATORY)
-        dcpl.set_filter(32000, h5z.FLAG_MANDATORY)
-        dset_id = h5d.create(f.id, b"range", tid, sid, dcpl=dcpl)
-        dset_id.write(h5s.ALL, h5s.ALL, data)
+        f = h5py.File(fname)
+        dset = f.create_dataset("range",
+                shape=shape,
+                dtype=dtype,
+                chunks=chunks,
+                compression=32008,
+                )
+        dset[:] = data
         f.close()
 
         # Make sure the filters are working outside of h5py by calling h5dump
@@ -62,16 +57,6 @@ class TestFilterPlugins(unittest.TestCase):
         d = f['range'][:]
         self.assertTrue(np.all(d == data))
         f.close()
-
-
-    #def test_h5py_hl(self):
-    #    if not H51811P:
-    #        return
-    #    # Does not appear to be supported by h5py.
-    #    fname = "tmp_test_h5py_hl.h5"
-    #    f = h5py.File(fname)
-    #    f.create_dataset("range", np.arange(1024, dtype=np.int64),
-    #            compression=32008)
 
     def tearDown(self):
         files = glob.glob("tmp_test_*")
