@@ -5,10 +5,9 @@ dist: trusty
 # Required to get Trusty.
 #sudo: true
 python:
-    - "2.7"
-    - "3.4"
     - "3.5"
     - "3.6"
+    - "3.7"
 addons:
     apt:
         packages:
