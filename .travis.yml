@@ -1,23 +1,19 @@
 language: python
 os: linux
-# To test filter plugins, need hdf5 1.8.11+, present in Trusty but not Precise.
-dist: trusty
-# Required to get Trusty.
-#sudo: true
 python:
-    - "2.7"
-    - "3.4"
     - "3.5"
     - "3.6"
+    - "3.7"
 addons:
     apt:
         packages:
             - libhdf5-serial-dev
             - hdf5-tools
+            - pkg-config
 install:
     - "pip install -U pip virtualenv"
     # Ensures the system hdf5 headers/libs will be used whatever its version
-    - "export HDF5_DIR=/usr/lib"
+    #- "export HDF5_DIR=/usr/lib"
     - "pip install -r requirements.txt"
     # Installing the plugin to arbitrary directory to check the install script.
     - "python setup.py install --h5plugin --h5plugin-dir ~/hdf5/lib"
