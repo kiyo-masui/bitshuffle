@@ -126,10 +126,13 @@ h5filter = Extension(
     depends=["src/bitshuffle.h", "src/bitshuffle_core.h",
              "src/iochain.h", "src/bshuf_h5filter.h",
              "lz4/lz4.h"],
-    define_macros=MACROS,
+    define_macros=MACROS + [('H5_USE_18_API', None)],
     **pkgconfig("hdf5", config=dict(
         include_dirs=["src/", "lz4/"]))
 )
+if not sys.platform.startswith('win'):
+    h5filter.sources.append('src/hdf5_dl.c')
+    h5filter.libraries.remove('hdf5')
 
 filter_plugin = Extension(
     "bitshuffle.plugin.libh5bshuf",
