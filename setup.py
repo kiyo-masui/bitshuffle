@@ -26,7 +26,7 @@ if VERSION_DEV:
     VERSION = VERSION + ".dev%d" % VERSION_DEV
 
 
-COMPILE_FLAGS = ['-O3', '-ffast-math', '-march=native', '-std=c99']
+COMPILE_FLAGS = ['-O3', '-ffast-math', '-std=c99']
 # Cython breaks strict aliasing rules.
 COMPILE_FLAGS += ['-fno-strict-aliasing']
 COMPILE_FLAGS += ['-fPIC']
@@ -40,6 +40,7 @@ MACROS = [
 
 
 H5PLUGINS_DEFAULT = '/usr/local/hdf5/lib/plugin'
+MARCH_DEFAULT = 'native'
 
 # OSX's clang compliler does not support OpenMP.
 if sys.platform == 'darwin':
@@ -223,13 +224,16 @@ class install(install_):
 class build_ext(build_ext_):
     user_options = build_ext_.user_options + [
         ('omp=', None, "Whether to compile with OpenMP threading. Default"
-         " on current system is %s." % str(OMP_DEFAULT))
+         " on current system is %s." % str(OMP_DEFAULT)),
+        ('march=', None,
+         'Generate instructions for a specific machine type. Default is %s.' % MARCH_DEFAULT),
     ]
     boolean_options = build_ext_.boolean_options + ['omp']
 
     def initialize_options(self):
         build_ext_.initialize_options(self)
         self.omp = OMP_DEFAULT
+        self.march = MARCH_DEFAULT
 
     def finalize_options(self):
         # For some reason this gets run twice. Careful to print messages and
@@ -269,7 +273,7 @@ class build_ext(build_ext_):
                 compileflags = COMPILE_FLAGS_MSVC
             else:
                 openmpflag = '-fopenmp'
-                compileflags = COMPILE_FLAGS
+                compileflags = COMPILE_FLAGS + ['-march=%s' % self.march]
             for e in self.extensions:
                 e.extra_compile_args = list(set(e.extra_compile_args).union(compileflags))
                 if openmpflag not in e.extra_compile_args:
