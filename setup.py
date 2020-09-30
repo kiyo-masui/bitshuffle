@@ -13,6 +13,7 @@ from setuptools.command.install import install as install_
 import shutil
 import subprocess
 import sys
+import platform
 
 
 VERSION_MAJOR = 0
@@ -318,8 +319,14 @@ class build_ext(build_ext_):
                 openmpflag = "/openmp"
                 compileflags = COMPILE_FLAGS_MSVC
             else:
-                openmpflag = "-fopenmp"
-                compileflags = COMPILE_FLAGS + ["-march=%s" % self.march]
+                openmpflag = '-fopenmp'
+                archi = platform.machine() 
+                if archi in ('i386', 'x86_64'):
+                    compileflags = COMPILE_FLAGS + ['-march=%s' % self.march]
+                else:
+                    compileflags = COMPILE_FLAGS + ['-mcpu=%s' % self.march]
+                    if archi == 'ppc64le':
+                        compileflags = COMPILE_FLAGS + ["-DNO_WARN_X86_INTRINSICS"]
             for e in self.extensions:
                 e.extra_compile_args = list(
                     set(e.extra_compile_args).union(compileflags)
