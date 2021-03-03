@@ -34,8 +34,7 @@ class TestFilterPlugins(unittest.TestCase):
         dtype = np.int64
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
-        f = h5py.File(fname)
-        f = h5py.File(fname)
+        f = h5py.File(fname, "w")
         dset = f.create_dataset("range",
                 shape=shape,
                 dtype=dtype,
