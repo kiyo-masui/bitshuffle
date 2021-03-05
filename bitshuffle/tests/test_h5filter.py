@@ -23,7 +23,7 @@ class TestFilter(unittest.TestCase):
         dtype = np.int64
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
-        f = h5py.File(fname)
+        f = h5py.File(fname, "w")
         h5.create_dataset(f, b"range", shape, dtype, chunks,
                 filter_pipeline=(32008, 32000),
                 filter_flags=(h5z.FLAG_MANDATORY, h5z.FLAG_MANDATORY),
@@ -43,7 +43,7 @@ class TestFilter(unittest.TestCase):
         dtype = np.int64
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
-        f = h5py.File(fname)
+        f = h5py.File(fname, "w")
         h5.create_dataset(f, b"range", shape, dtype, chunks,
                 filter_pipeline=(32008, 32000),
                 filter_flags=(h5z.FLAG_MANDATORY, h5z.FLAG_MANDATORY),
@@ -65,7 +65,7 @@ class TestFilter(unittest.TestCase):
         dtype = np.int64
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
-        f = h5py.File(fname)
+        f = h5py.File(fname, "w")
         h5.create_dataset(f, b"range", shape, dtype, chunks,
                 filter_pipeline=(32008,),
                 filter_flags=(h5z.FLAG_MANDATORY,),
