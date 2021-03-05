@@ -67,6 +67,18 @@ extern "C" {
 int bshuf_using_SSE2(void);
 
 
+/* ---- bshuf_using_NEON ----
+ *
+ * Whether routines where compiled with the NEON instruction set.
+ *
+ * Returns
+ * -------
+ *  1 if using NEON, 0 otherwise.
+ *
+ */
+int bshuf_using_NEON(void);
+
+
 /* ---- bshuf_using_AVX2 ----
  *
  * Whether routines where compiled with the AVX2 instruction set.
