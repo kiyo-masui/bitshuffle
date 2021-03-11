@@ -16,7 +16,6 @@ os.environ["HDF5_PLUGIN_PATH"] = ""
 
 
 class TestFilter(unittest.TestCase):
-
     def test_filter(self):
         shape = (32 * 1024 + 783,)
         chunks = (4 * 1024 + 23,)
@@ -24,16 +23,22 @@ class TestFilter(unittest.TestCase):
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname, "w")
-        h5.create_dataset(f, b"range", shape, dtype, chunks,
-                filter_pipeline=(32008, 32000),
-                filter_flags=(h5z.FLAG_MANDATORY, h5z.FLAG_MANDATORY),
-                filter_opts=None)
+        h5.create_dataset(
+            f,
+            b"range",
+            shape,
+            dtype,
+            chunks,
+            filter_pipeline=(32008, 32000),
+            filter_flags=(h5z.FLAG_MANDATORY, h5z.FLAG_MANDATORY),
+            filter_opts=None,
+        )
         f["range"][:] = data
 
         f.close()
 
-        f = h5py.File(fname, 'r')
-        d = f['range'][:]
+        f = h5py.File(fname, "r")
+        d = f["range"][:]
         self.assertTrue(np.all(d == data))
         f.close()
 
@@ -44,18 +49,23 @@ class TestFilter(unittest.TestCase):
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname, "w")
-        h5.create_dataset(f, b"range", shape, dtype, chunks,
-                filter_pipeline=(32008, 32000),
-                filter_flags=(h5z.FLAG_MANDATORY, h5z.FLAG_MANDATORY),
-                filter_opts=((680,), ()),
-                )
+        h5.create_dataset(
+            f,
+            b"range",
+            shape,
+            dtype,
+            chunks,
+            filter_pipeline=(32008, 32000),
+            filter_flags=(h5z.FLAG_MANDATORY, h5z.FLAG_MANDATORY),
+            filter_opts=((680,), ()),
+        )
         f["range"][:] = data
 
         f.close()
-        #os.system('h5dump -H -p tmp_test_filters.h5')
+        # os.system('h5dump -H -p tmp_test_filters.h5')
 
-        f = h5py.File(fname, 'r')
-        d = f['range'][:]
+        f = h5py.File(fname, "r")
+        d = f["range"][:]
         self.assertTrue(np.all(d == data))
         f.close()
 
@@ -66,18 +76,23 @@ class TestFilter(unittest.TestCase):
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname, "w")
-        h5.create_dataset(f, b"range", shape, dtype, chunks,
-                filter_pipeline=(32008,),
-                filter_flags=(h5z.FLAG_MANDATORY,),
-                filter_opts=((0, h5.H5_COMPRESS_LZ4),),
-                )
+        h5.create_dataset(
+            f,
+            b"range",
+            shape,
+            dtype,
+            chunks,
+            filter_pipeline=(32008,),
+            filter_flags=(h5z.FLAG_MANDATORY,),
+            filter_opts=((0, h5.H5_COMPRESS_LZ4),),
+        )
         f["range"][:] = data
 
         f.close()
-        #os.system('h5dump -H -p tmp_test_filters.h5')
+        # os.system('h5dump -H -p tmp_test_filters.h5')
 
-        f = h5py.File(fname, 'r')
-        d = f['range'][:]
+        f = h5py.File(fname, "r")
+        d = f["range"][:]
         self.assertTrue(np.all(d == data))
         f.close()
 

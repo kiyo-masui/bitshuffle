@@ -19,11 +19,12 @@ TEST_DATA_DIR = path.dirname(bitshuffle.__file__) + "/tests/data"
 
 OUT_FILE_TEMPLATE = TEST_DATA_DIR + "/regression_%s.h5"
 
-VERSIONS = ["0.1.3",]
+VERSIONS = [
+    "0.1.3",
+]
 
 
 class TestAll(unittest.TestCase):
-
     def test_regression(self):
         for version in VERSIONS:
             file_name = OUT_FILE_TEMPLATE % version
@@ -32,8 +33,7 @@ class TestAll(unittest.TestCase):
             g_comp = f["compressed"]
 
             for dset_name in g_comp.keys():
-                self.assertTrue(np.all(g_comp[dset_name][:]
-                                       == g_orig[dset_name][:]))
+                self.assertTrue(np.all(g_comp[dset_name][:] == g_orig[dset_name][:]))
 
 
 if __name__ == "__main__":
