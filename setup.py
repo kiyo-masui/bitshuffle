@@ -347,7 +347,7 @@ with open("README.rst") as r:
 setup(
     name="bitshuffle",
     version=VERSION,
-    packages=["bitshuffle", "bitshuffle.tests"],
+    packages=["bitshuffle", "bitshuffle"],
     scripts=[],
     ext_modules=EXTENSIONS,
     cmdclass={"build_ext": build_ext, "install": install, "develop": develop},

@@ -1,0 +1,40 @@
+name: bitshuffle-ci-build
+on:
+  pull_request:
+    branches:
+    - master
+  push:
+    branches:
+    - master
+
+jobs:
+  run-tests:
+
+    strategy:
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.9]
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Install apt dependencies
+      run: |
+          sudo apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install pip dependencies
+      run: |
+        pip install Cython
+        pip install -r requirements.txt
+        pip install pytest
+
+        # Installing the plugin to arbitrary directory to check the install script.
+        python setup.py install --h5plugin --h5plugin-dir ~/hdf5/lib
+
+    - name: Run tests
+      run: pytest .
