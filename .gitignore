@@ -75,3 +75,5 @@ doc/generated
 bitshuffle/ext.c
 bitshuffle/h5.c
 
+# ItelliJ
+.idea
