@@ -6,8 +6,7 @@ import glob
 
 import numpy as np
 import h5py
-from h5py import h5f, h5d, h5z, h5t, h5s, filters
-from subprocess import Popen, PIPE, STDOUT
+from h5py import h5z
 
 from bitshuffle import h5
 

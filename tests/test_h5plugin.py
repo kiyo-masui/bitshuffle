@@ -1,11 +1,10 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 import unittest
-import os, os.path
+import os
 import glob
 
 import numpy as np
 import h5py
-from h5py import h5f, h5d, h5z, h5t, h5s, filters
 from subprocess import Popen, PIPE, STDOUT
 
 import bitshuffle

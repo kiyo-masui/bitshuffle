@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import unittest
 import time
-import timeit
 
 import numpy as np
 from numpy import random
@@ -68,10 +67,10 @@ class TestProfile(unittest.TestCase):
         speed = ext.REPEAT * size / delta_t / 1024 ** 3  # GB/s
         if TIME:
             print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1.0 / speed, speed))
-        if not self.check is None:
+        if self.check is not None:
             ans = self.check(self.data).view(np.uint8)
             self.assertTrue(np.all(ans == out.view(np.uint8)))
-        if not self.check_data is None:
+        if self.check_data is not None:
             ans = self.check_data.view(np.uint8)
             self.assertTrue(np.all(ans == out.view(np.uint8)))
 
