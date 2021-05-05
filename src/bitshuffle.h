@@ -35,6 +35,10 @@
 extern "C" {
 #endif
 
+/*
+ * ---- LZ4 Interface ----
+ */
+
 /* ---- bshuf_compress_lz4_bound ----
  *
  * Bound on size of data compressed with *bshuf_compress_lz4*.
@@ -114,6 +118,90 @@ int64_t bshuf_compress_lz4(const void* in, void* out, const size_t size, const s
  *
  */
 int64_t bshuf_decompress_lz4(const void* in, void* out, const size_t size,
+        const size_t elem_size, size_t block_size);
+
+/*
+ * ---- ZSTD Interface ----
+ */
+
+/* ---- bshuf_compress_zstd_bound ----
+ *
+ * Bound on size of data compressed with *bshuf_compress_zstd*.
+ *
+ * Parameters
+ * ----------
+ *  size : number of elements in input
+ *  elem_size : element size of typed data
+ *  block_size : Process in blocks of this many elements. Pass 0 to
+ *  select automatically (recommended).
+ *
+ * Returns
+ * -------
+ *  Bound on compressed data size.
+ *
+ */
+size_t bshuf_compress_zstd_bound(const size_t size,
+        const size_t elem_size, size_t block_size);
+
+/* ---- bshuf_compress_zstd ----
+ *
+ * Bitshuffled and compress the data using zstd.
+ *
+ * Transpose within elements, in blocks of data of *block_size* elements then
+ * compress the blocks using ZSTD.  In the output buffer, each block is prefixed
+ * by a 4 byte integer giving the compressed size of that block.
+ *
+ * Output buffer must be large enough to hold the compressed data.  This could
+ * be in principle substantially larger than the input buffer.  Use the routine
+ * *bshuf_compress_zstd_bound* to get an upper limit.
+ *
+ * Parameters
+ * ----------
+ *  in : input buffer, must be of size * elem_size bytes
+ *  out : output buffer, must be large enough to hold data.
+ *  size : number of elements in input
+ *  elem_size : element size of typed data
+ *  block_size : Process in blocks of this many elements. Pass 0 to
+ *  select automatically (recommended).
+ *
+ * Returns
+ * -------
+ *  number of bytes used in output buffer, negative error-code if failed.
+ *
+ */
+int64_t bshuf_compress_zstd(const void* in, void* out, const size_t size, const size_t
+        elem_size, size_t block_size);
+
+
+/* ---- bshuf_decompress_zstd ----
+ *
+ * Undo compression and bitshuffling.
+ *
+ * Decompress data then un-bitshuffle it in blocks of *block_size* elements.
+ *
+ * To properly unshuffle bitshuffled data, *size*, *elem_size* and *block_size*
+ * must patch the parameters used to compress the data.
+ *
+ * NOT TO BE USED WITH UNTRUSTED DATA: This routine uses the function
+ * ZSTD_decompress_fast from ZSTD, which does not protect against maliciously
+ * formed datasets. By modifying the compressed data, this function could be
+ * coerced into leaving the boundaries of the input buffer.
+ *
+ * Parameters
+ * ----------
+ *  in : input buffer
+ *  out : output buffer, must be of size * elem_size bytes
+ *  size : number of elements in input
+ *  elem_size : element size of typed data
+ *  block_size : Process in blocks of this many elements. Pass 0 to
+ *  select automatically (recommended).
+ *
+ * Returns
+ * -------
+ *  number of bytes consumed in *input* buffer, negative error-code if failed.
+ *
+ */
+int64_t bshuf_decompress_zstd(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size);
 
 #ifdef __cplusplus
