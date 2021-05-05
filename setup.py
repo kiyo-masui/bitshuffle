@@ -111,10 +111,11 @@ ext_bshuf = Extension(
     "bitshuffle.ext",
     sources=["bitshuffle/ext.pyx", "src/bitshuffle.c",
              "src/bitshuffle_core.c", "src/iochain.c",
-             "lz4/lz4.c"],
-    include_dirs=["src/", "lz4/"],
+             "lz4/lz4.c", "zstd/compress/zstd_compress.c",
+             "zstd/decompress/zstd_decompress.c"],
+    include_dirs=["src/", "lz4/", "zstd/"],
     depends=["src/bitshuffle.h", "src/bitshuffle_core.h",
-             "src/iochain.h", "lz4/lz4.h"],
+             "src/iochain.h", "lz4/lz4.h", "zstd/zstd.h"],
     libraries=[],
     define_macros=MACROS,
 )
@@ -123,26 +124,30 @@ h5filter = Extension(
     "bitshuffle.h5",
     sources=["bitshuffle/h5.pyx", "src/bshuf_h5filter.c",
              "src/bitshuffle.c", "src/bitshuffle_core.c",
-             "src/iochain.c", "lz4/lz4.c"],
+             "src/iochain.c", "lz4/lz4.c", 
+             "zstd/compress/zstd_compress.c",
+             "zstd/decompress/zstd_decompress.c"],
     depends=["src/bitshuffle.h", "src/bitshuffle_core.h",
              "src/iochain.h", "src/bshuf_h5filter.h",
-             "lz4/lz4.h"],
+             "lz4/lz4.h", "zstd/zstd.h"],
     define_macros=MACROS,
     **pkgconfig("hdf5", config=dict(
-        include_dirs=["src/", "lz4/"]))
+        include_dirs=["src/", "lz4/", "zstd/"]))
 )
 
 filter_plugin = Extension(
     "bitshuffle.plugin.libh5bshuf",
     sources=["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
              "src/bitshuffle.c", "src/bitshuffle_core.c",
-             "src/iochain.c", "lz4/lz4.c"],
+             "src/iochain.c", "lz4/lz4.c",
+             "zstd/compress/zstd_compress.c",
+             "zstd/decompress/zstd_decompress.c"],
     depends=["src/bitshuffle.h", "src/bitshuffle_core.h",
              "src/iochain.h", 'src/bshuf_h5filter.h',
-             "lz4/lz4.h"],
+             "lz4/lz4.h", "zstd/zstd.h"],
     define_macros=MACROS,
     **pkgconfig("hdf5", config=dict(
-        include_dirs=["src/", "lz4/"]))
+        include_dirs=["src/", "lz4/", "zstd/"]))
 )
 
 lzf_plugin = Extension(
