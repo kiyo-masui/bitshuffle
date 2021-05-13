@@ -111,6 +111,7 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
         return 0;
     }
     elem_size = cd_values[2];
+    const int comp_lvl = cd_values[5]; 
 
     // User specified block size.
     if (cd_nelmts > 3) block_size = cd_values[3];
@@ -186,7 +187,7 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
             }
             else if (cd_values[4] == BSHUF_H5_COMPRESS_ZSTD) {
                 err = bshuf_compress_zstd(in_buf, (char*) out_buf + 12, size,
-                        elem_size, block_size); 
+                        elem_size, block_size, comp_lvl); 
             }
             nbytes_out = err + 12;
         } 
