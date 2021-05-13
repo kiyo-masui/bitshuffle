@@ -35,7 +35,7 @@ cdef extern from b"bitshuffle.h":
             int block_size)
     int bshuf_compress_zstd_bound(int size, int elem_size, int block_size)
     int bshuf_compress_zstd(void *A, void *B, int size, int elem_size,
-            int block_size)
+            int block_size, const int comp_lvl)
     int bshuf_decompress_zstd(void *A, void *B, int size, int elem_size,
             int block_size)
     int BSHUF_VERSION_MAJOR
@@ -453,13 +453,13 @@ def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def compress_zstd(np.ndarray arr not None, int block_size=0):
+def compress_zstd(np.ndarray arr not None, int block_size=0, int comp_lvl=1):
     """Bitshuffle then compress an array using LZ4.
 
     Parameters
     ----------
     arr : numpy array
-        Data to ne processed.
+        Data to be processed.
     block_size : positive integer
         Block size in number of elements. By default, block size is chosen
         automatically.
@@ -492,7 +492,7 @@ def compress_zstd(np.ndarray arr not None, int block_size=0):
     cdef void* arr_ptr = <void*> &arr_flat[0]
     cdef void* out_ptr = <void*> &out_flat[0]
     for ii in range(REPEATC):
-        count = bshuf_compress_zstd(arr_ptr, out_ptr, size, itemsize, block_size)
+        count = bshuf_compress_zstd(arr_ptr, out_ptr, size, itemsize, block_size, comp_lvl)
     if count < 0:
         msg = "Failed. Error code %d."
         excp = RuntimeError(msg % count, count)

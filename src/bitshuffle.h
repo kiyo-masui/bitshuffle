@@ -163,6 +163,7 @@ size_t bshuf_compress_zstd_bound(const size_t size,
  *  elem_size : element size of typed data
  *  block_size : Process in blocks of this many elements. Pass 0 to
  *  select automatically (recommended).
+ *  comp_lvl : compression level applied
  *
  * Returns
  * -------
@@ -170,7 +171,7 @@ size_t bshuf_compress_zstd_bound(const size_t size,
  *
  */
 int64_t bshuf_compress_zstd(const void* in, void* out, const size_t size, const size_t
-        elem_size, size_t block_size);
+        elem_size, size_t block_size, const int comp_lvl);
 
 
 /* ---- bshuf_decompress_zstd ----

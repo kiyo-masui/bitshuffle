@@ -31,7 +31,7 @@
 
 /* Bitshuffle and compress a single block. */
 int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr, \
-        const size_t size, const size_t elem_size) {
+        const size_t size, const size_t elem_size, const int option) {
 
     int64_t nbytes, count;
     void *tmp_buf_bshuf;
@@ -77,7 +77,7 @@ int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr, \
 
 /* Decompress and bitunshuffle a single block. */
 int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
-        const size_t size, const size_t elem_size) {
+        const size_t size, const size_t elem_size, const int option) {
 
     int64_t nbytes, count;
     void *out, *tmp_buf;
@@ -124,9 +124,8 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
 
 /* Bitshuffle and compress a single block. */
 int64_t bshuf_compress_zstd_block(ioc_chain *C_ptr, \
-        const size_t size, const size_t elem_size) {
+        const size_t size, const size_t elem_size, const int comp_lvl) {
 
-    const int compression_level = 1;
     int64_t nbytes, count;
     void *tmp_buf_bshuf;
     void *tmp_buf_zstd;
@@ -153,7 +152,7 @@ int64_t bshuf_compress_zstd_block(ioc_chain *C_ptr, \
         free(tmp_buf_bshuf);
         return count;
     }
-    nbytes = ZSTD_compress(tmp_buf_zstd, tmp_buf_zstd_size, (const void*)tmp_buf_bshuf,  size * elem_size, compression_level);
+    nbytes = ZSTD_compress(tmp_buf_zstd, tmp_buf_zstd_size, (const void*)tmp_buf_bshuf,  size * elem_size, comp_lvl);
     free(tmp_buf_bshuf);
     CHECK_ERR_FREE_LZ(nbytes, tmp_buf_zstd);
 
@@ -171,7 +170,7 @@ int64_t bshuf_compress_zstd_block(ioc_chain *C_ptr, \
 
 /* Decompress and bitunshuffle a single block. */
 int64_t bshuf_decompress_zstd_block(ioc_chain *C_ptr,
-        const size_t size, const size_t elem_size) {
+        const size_t size, const size_t elem_size, const int option) {
 
     int64_t nbytes, count;
     void *out, *tmp_buf;
@@ -236,14 +235,14 @@ size_t bshuf_compress_lz4_bound(const size_t size,
 int64_t bshuf_compress_lz4(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
     return bshuf_blocked_wrap_fun(&bshuf_compress_lz4_block, in, out, size,
-            elem_size, block_size);
+            elem_size, block_size, 0/*option*/);
 }
 
 
 int64_t bshuf_decompress_lz4(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
     return bshuf_blocked_wrap_fun(&bshuf_decompress_lz4_block, in, out, size,
-            elem_size, block_size);
+            elem_size, block_size, 0/*option*/);
 }
 
 size_t bshuf_compress_zstd_bound(const size_t size,
@@ -269,15 +268,15 @@ size_t bshuf_compress_zstd_bound(const size_t size,
 
 
 int64_t bshuf_compress_zstd(const void* in, void* out, const size_t size,
-        const size_t elem_size, size_t block_size) {
+        const size_t elem_size, size_t block_size, const int comp_lvl) {
     return bshuf_blocked_wrap_fun(&bshuf_compress_zstd_block, in, out, size,
-            elem_size, block_size);
+            elem_size, block_size, comp_lvl);
 }
 
 
 int64_t bshuf_decompress_zstd(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
     return bshuf_blocked_wrap_fun(&bshuf_decompress_zstd_block, in, out, size,
-            elem_size, block_size);
+            elem_size, block_size, 0/*option*/);
 }
 
