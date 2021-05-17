@@ -106,15 +106,10 @@ def pkgconfig(*packages, **kw):
                 opt.extend([i[n:] for i in items])
     return config
 
-zstd_sources = ["zstd/compress/zstd_compress.c",
-                "zstd/compress/zstd_fast.c",
-                "zstd/compress/zstd_double_fast.c",
-                "zstd/decompress/zstd_decompress.c"
-                ] 
-
-zstd_headers = ["zstd/zstd.h",
-                "zstd/compress/zstd_fast.h"
-                ]
+zstd_headers = ["zstd/zstd.h"]
+zstd_sources = glob.glob('zstd/common/*.c')
+zstd_sources += glob.glob('zstd/compress/*.c')
+zstd_sources += glob.glob('zstd/decompress/*.c')
 
 ext_bshuf = Extension(
     "bitshuffle.ext",
