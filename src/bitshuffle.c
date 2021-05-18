@@ -192,7 +192,7 @@ int64_t bshuf_decompress_zstd_block(ioc_chain *C_ptr,
 
     nbytes = ZSTD_decompress(tmp_buf, size * elem_size, in + 4, nbytes_from_header);
     CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    if (nbytes != nbytes_from_header) {
+    if (nbytes != size * elem_size) {
         free(tmp_buf);
         return -91;
     }
