@@ -27,7 +27,6 @@ class TestAll(unittest.TestCase):
     def test_lz4_regression(self):
         for version in VERSIONS:
             file_name = OUT_FILE_TEMPLATE % ("lz4", version)
-            print(file_name)
             f = h5py.File(file_name)
             g_orig = f["origional"]
             g_comp = f["compressed"]
@@ -38,7 +37,6 @@ class TestAll(unittest.TestCase):
     def test_zstd_regression(self):
         for version in VERSIONS:
             file_name = OUT_FILE_TEMPLATE % ("zstd", version)
-            print(file_name)
             f = h5py.File(file_name)
             g_orig = f["origional"]
             g_comp = f["compressed"]

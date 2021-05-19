@@ -452,7 +452,7 @@ def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def compress_zstd(np.ndarray arr not None, int block_size=0, int comp_lvl=1):
-    """Bitshuffle then compress an array using LZ4.
+    """Bitshuffle then compress an array using ZSTD.
 
     Parameters
     ----------
@@ -461,6 +461,8 @@ def compress_zstd(np.ndarray arr not None, int block_size=0, int comp_lvl=1):
     block_size : positive integer
         Block size in number of elements. By default, block size is chosen
         automatically.
+    comp_lvl : positive integer
+        Compression level applied by ZSTD
 
     Returns
     -------
@@ -501,7 +503,7 @@ def compress_zstd(np.ndarray arr not None, int block_size=0, int comp_lvl=1):
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def decompress_zstd(np.ndarray arr not None, shape, dtype, int block_size=0):
-    """Decompress a buffer using LZ4 then bitunshuffle it yielding an array.
+    """Decompress a buffer using ZSTD then bitunshuffle it yielding an array.
 
     Parameters
     ----------
