@@ -17,16 +17,17 @@ from bitshuffle import h5
 
 TEST_DATA_DIR = path.dirname(bitshuffle.__file__) + "/tests/data"
 
-OUT_FILE_TEMPLATE = TEST_DATA_DIR + "/regression_%s.h5"
+OUT_FILE_TEMPLATE = TEST_DATA_DIR + "/%s_regression_%s.h5"
 
-VERSIONS = ["0.1.3",]
+VERSIONS = ["0.3.6",]
 
 
 class TestAll(unittest.TestCase):
 
-    def test_regression(self):
+    def test_lz4_regression(self):
         for version in VERSIONS:
-            file_name = OUT_FILE_TEMPLATE % version
+            file_name = OUT_FILE_TEMPLATE % ("lz4", version)
+            print(file_name)
             f = h5py.File(file_name)
             g_orig = f["origional"]
             g_comp = f["compressed"]
@@ -34,7 +35,17 @@ class TestAll(unittest.TestCase):
             for dset_name in g_comp.keys():
                 self.assertTrue(np.all(g_comp[dset_name][:]
                                        == g_orig[dset_name][:]))
+    def test_zstd_regression(self):
+        for version in VERSIONS:
+            file_name = OUT_FILE_TEMPLATE % ("zstd", version)
+            print(file_name)
+            f = h5py.File(file_name)
+            g_orig = f["origional"]
+            g_comp = f["compressed"]
 
+            for dset_name in g_comp.keys():
+                self.assertTrue(np.all(g_comp[dset_name][:]
+                                       == g_orig[dset_name][:]))
 
 if __name__ == "__main__":
     unittest.main()
