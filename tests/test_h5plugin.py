@@ -35,11 +35,7 @@ class TestFilterPlugins(unittest.TestCase):
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname, "w")
         dset = f.create_dataset(
-            "range",
-            shape=shape,
-            dtype=dtype,
-            chunks=chunks,
-            compression=32008,
+            "range", shape=shape, dtype=dtype, chunks=chunks, compression=32008
         )
         dset[:] = data
         f.close()

@@ -116,47 +116,73 @@ def pkgconfig(*packages, **kw):
                 opt.extend([i[n:] for i in items])
     return config
 
+
 zstd_headers = ["zstd/zstd.h"]
-zstd_sources = glob.glob('zstd/common/*.c')
-zstd_sources += glob.glob('zstd/compress/*.c')
-zstd_sources += glob.glob('zstd/decompress/*.c')
+zstd_sources = glob.glob("zstd/common/*.c")
+zstd_sources += glob.glob("zstd/compress/*.c")
+zstd_sources += glob.glob("zstd/decompress/*.c")
 
 ext_bshuf = Extension(
     "bitshuffle.ext",
-    sources=["bitshuffle/ext.pyx", "src/bitshuffle.c",
-             "src/bitshuffle_core.c", "src/iochain.c",
-             "lz4/lz4.c"] + zstd_sources,
+    sources=[
+        "bitshuffle/ext.pyx",
+        "src/bitshuffle.c",
+        "src/bitshuffle_core.c",
+        "src/iochain.c",
+        "lz4/lz4.c",
+    ]
+    + zstd_sources,
     include_dirs=["src/", "lz4/", "zstd/"],
-    depends=["src/bitshuffle.h", "src/bitshuffle_core.h",
-             "src/iochain.h", "lz4/lz4.h"] + zstd_headers,
+    depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h", "lz4/lz4.h"]
+    + zstd_headers,
     libraries=[],
     define_macros=MACROS,
 )
 
 h5filter = Extension(
     "bitshuffle.h5",
-    sources=["bitshuffle/h5.pyx", "src/bshuf_h5filter.c",
-             "src/bitshuffle.c", "src/bitshuffle_core.c",
-             "src/iochain.c", "lz4/lz4.c"] + zstd_sources,
-    depends=["src/bitshuffle.h", "src/bitshuffle_core.h",
-             "src/iochain.h", "src/bshuf_h5filter.h",
-             "lz4/lz4.h"] + zstd_headers,
+    sources=[
+        "bitshuffle/h5.pyx",
+        "src/bshuf_h5filter.c",
+        "src/bitshuffle.c",
+        "src/bitshuffle_core.c",
+        "src/iochain.c",
+        "lz4/lz4.c",
+    ]
+    + zstd_sources,
+    depends=[
+        "src/bitshuffle.h",
+        "src/bitshuffle_core.h",
+        "src/iochain.h",
+        "src/bshuf_h5filter.h",
+        "lz4/lz4.h",
+    ]
+    + zstd_headers,
     define_macros=MACROS,
-    **pkgconfig("hdf5", config=dict(
-        include_dirs=["src/", "lz4/", "zstd/"]))
+    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/", "zstd/"]))
 )
 
 filter_plugin = Extension(
     "bitshuffle.plugin.libh5bshuf",
-    sources=["src/bshuf_h5plugin.c", "src/bshuf_h5filter.c",
-             "src/bitshuffle.c", "src/bitshuffle_core.c",
-             "src/iochain.c", "lz4/lz4.c"] + zstd_sources,
-    depends=["src/bitshuffle.h", "src/bitshuffle_core.h",
-             "src/iochain.h", 'src/bshuf_h5filter.h',
-             "lz4/lz4.h"] + zstd_headers,
+    sources=[
+        "src/bshuf_h5plugin.c",
+        "src/bshuf_h5filter.c",
+        "src/bitshuffle.c",
+        "src/bitshuffle_core.c",
+        "src/iochain.c",
+        "lz4/lz4.c",
+    ]
+    + zstd_sources,
+    depends=[
+        "src/bitshuffle.h",
+        "src/bitshuffle_core.h",
+        "src/iochain.h",
+        "src/bshuf_h5filter.h",
+        "lz4/lz4.h",
+    ]
+    + zstd_headers,
     define_macros=MACROS,
-    **pkgconfig("hdf5", config=dict(
-        include_dirs=["src/", "lz4/", "zstd/"]))
+    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/", "zstd/"]))
 )
 
 lzf_plugin = Extension(
