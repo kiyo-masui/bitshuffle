@@ -135,7 +135,6 @@ ext_bshuf = Extension(
 
 h5filter = Extension(
     "bitshuffle.h5",
-<<<<<<< HEAD
     sources=["bitshuffle/h5.pyx", "src/bshuf_h5filter.c",
              "src/bitshuffle.c", "src/bitshuffle_core.c",
              "src/iochain.c", "lz4/lz4.c"] + zstd_sources,
