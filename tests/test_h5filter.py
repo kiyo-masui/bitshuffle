@@ -104,14 +104,14 @@ class TestFilter(unittest.TestCase):
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname, "w")
         h5.create_dataset(f, b"range", shape, dtype, chunks,
-                filter_pipeline=(32008,),
-                filter_flags=(h5z.FLAG_MANDATORY,),
-                filter_opts=((0, h5.H5_COMPRESS_ZSTD, compression_lvl),),
-                )
+                          filter_pipeline=(32008,),
+                          filter_flags=(h5z.FLAG_MANDATORY,),
+                          filter_opts=((0, h5.H5_COMPRESS_ZSTD, compression_lvl),),
+                          )
         f["range"][:] = data
 
         f.close()
-        #os.system('h5dump -H -p tmp_test_filters.h5')
+        # os.system('h5dump -H -p tmp_test_filters.h5')
 
         f = h5py.File(fname, 'r')
         d = f['range'][:]

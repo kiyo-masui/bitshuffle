@@ -12,7 +12,7 @@ from bitshuffle import h5
 from h5py import h5z
 
 BLOCK_SIZE = 64  # Smallish such that datasets have many blocks but are small.
-COMP_LVL = 10 # ZSTD compression level
+COMP_LVL = 10  # ZSTD compression level
 FILTER_PIPELINE = [
     h5.H5FILTER,
 ]
@@ -41,14 +41,14 @@ for dtype in DTYPES:
 
         # Create LZ4 compressed data
         h5.create_dataset(g_comp_lz4, bytes(dset_name, 'utf-8'), shape, dtype, chunks=chunks,
-                filter_pipeline=FILTER_PIPELINE, filter_flags=(h5z.FLAG_MANDATORY,), 
-                filter_opts=FILTER_OPTS[0])
+                          filter_pipeline=FILTER_PIPELINE, filter_flags=(h5z.FLAG_MANDATORY,),
+                          filter_opts=FILTER_OPTS[0])
         g_comp_lz4[dset_name][:] = data
-        
+
         # Create ZSTD compressed data
         h5.create_dataset(g_comp_zstd, bytes(dset_name, 'utf-8'), shape, dtype, chunks=chunks,
-                filter_pipeline=FILTER_PIPELINE, filter_flags=(h5z.FLAG_MANDATORY,), 
-                filter_opts=FILTER_OPTS[1])
+                          filter_pipeline=FILTER_PIPELINE, filter_flags=(h5z.FLAG_MANDATORY,),
+                          filter_opts=FILTER_OPTS[1])
         g_comp_zstd[dset_name][:] = data
 
 f.close()
