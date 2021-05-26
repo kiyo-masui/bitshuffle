@@ -19,7 +19,7 @@ FILTER_OPTS = [
     [(BLOCK_SIZE, h5.H5_COMPRESS_ZSTD, COMP_LVL)],
 ]
 
-OUT_FILE = "bitshuffle/tests/data/regression_%s.h5" % bitshuffle.__version__
+OUT_FILE = "tests/data/regression_%s.h5" % bitshuffle.__version__
 
 DTYPES = ["a1", "a2", "a3", "a4", "a6", "a8", "a10"]
 
