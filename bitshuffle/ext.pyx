@@ -449,6 +449,7 @@ def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
         raise RuntimeError(msg, count)
     return out
 
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def compress_zstd(np.ndarray arr not None, int block_size=0, int comp_lvl=1):
@@ -544,7 +545,7 @@ def decompress_zstd(np.ndarray arr not None, shape, dtype, int block_size=0):
     cdef void* out_ptr = <void*> &out_flat[0]
     for ii in range(REPEATC):
         count = bshuf_decompress_zstd(arr_ptr, out_ptr, size, itemsize,
-                                     block_size)
+                                      block_size)
     if count < 0:
         msg = "Failed. Error code %d."
         excp = RuntimeError(msg % count, count)
