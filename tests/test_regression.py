@@ -18,7 +18,6 @@ TEST_DATA_DIR = pathlib.Path(__file__).parent / "data"
 OUT_FILE_TEMPLATE = "regression_%s.h5"
 
 VERSIONS = ["0.1.3", "0.3.6"]
-OUT_FILE_TEMPLATE = TEST_DATA_DIR + "/regression_%s.h5"
 
 
 class TestAll(unittest.TestCase):
