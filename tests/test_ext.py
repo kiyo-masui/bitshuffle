@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import unittest
 import time
-import timeit
 
 import numpy as np
 from numpy import random
@@ -13,18 +12,23 @@ from bitshuffle import ext
 # If we are doing timeings by what factor to increase workload.
 # Remember to change `ext.REPEATC`.
 TIME = 0
-#TIME = 8    # 8kB blocks same as final blocking. 
+# TIME = 8    # 8kB blocks same as final blocking.
 BLOCK = 1024
 
 
-TEST_DTYPES = [np.uint8, np.uint16, np.int32, np.uint64, np.float32,
-               np.float64, np.complex128]
-TEST_DTYPES += [b'a3', b'a5', b'a6', b'a7', b'a9', b'a11', b'a12', b'a24',
-                b'a48']
+TEST_DTYPES = [
+    np.uint8,
+    np.uint16,
+    np.int32,
+    np.uint64,
+    np.float32,
+    np.float64,
+    np.complex128,
+]
+TEST_DTYPES += [b"a3", b"a5", b"a6", b"a7", b"a9", b"a11", b"a12", b"a24", b"a48"]
 
 
 class TestProfile(unittest.TestCase):
-
     def setUp(self):
         n = 1024  # bytes.
         if TIME:
@@ -50,11 +54,9 @@ class TestProfile(unittest.TestCase):
                 out = self.fun(self.data)
                 delta_ts.append(time.time() - t0)
         except RuntimeError as err:
-            if (len(err.args) > 1 and (err.args[1] == -11)
-                and not ext.using_SSE2()):
+            if len(err.args) > 1 and (err.args[1] == -11) and not ext.using_SSE2():
                 return
-            if (len(err.args) > 1 and (err.args[1] == -12)
-                and not ext.using_AVX2()):
+            if len(err.args) > 1 and (err.args[1] == -12) and not ext.using_AVX2():
                 return
             else:
                 raise
@@ -62,13 +64,13 @@ class TestProfile(unittest.TestCase):
         size_i = self.data.size * self.data.dtype.itemsize
         size_o = out.size * out.dtype.itemsize
         size = max([size_i, size_o])
-        speed = (ext.REPEAT * size / delta_t / 1024**3)   # GB/s
+        speed = ext.REPEAT * size / delta_t / 1024 ** 3  # GB/s
         if TIME:
-            print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1./speed, speed))
-        if not self.check is None:
+            print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1.0 / speed, speed))
+        if self.check is not None:
             ans = self.check(self.data).view(np.uint8)
             self.assertTrue(np.all(ans == out.view(np.uint8)))
-        if not self.check_data is None:
+        if self.check_data is not None:
             ans = self.check_data.view(np.uint8)
             self.assertTrue(np.all(ans == out.view(np.uint8)))
 
@@ -122,8 +124,9 @@ class TestProfile(unittest.TestCase):
     def test_01h_trans_byte_elem_96(self):
         self.case = "byte T elem SSE 96"
         n = self.data.size // 128 * 96
-        dt = np.dtype([(str('a'), np.int32), (str('b'), np.int32), 
-                       (str('c'), np.int32)])
+        dt = np.dtype(
+            [(str("a"), np.int32), (str("b"), np.int32), (str("c"), np.int32)]
+        )
         self.data = self.data[:n].view(dt)
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
@@ -131,9 +134,15 @@ class TestProfile(unittest.TestCase):
     def test_01i_trans_byte_elem_80(self):
         self.case = "byte T elem SSE 80"
         n = self.data.size // 128 * 80
-        dt = np.dtype([(str('a'), np.int16), (str('b'), np.int16),
-                       (str('c'), np.int16), (str('d'), np.int16),
-                       (str('e'), np.int16)])
+        dt = np.dtype(
+            [
+                (str("a"), np.int16),
+                (str("b"), np.int16),
+                (str("c"), np.int16),
+                (str("d"), np.int16),
+                (str("e"), np.int16),
+            ]
+        )
         self.data = self.data[:n].view(dt)
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
@@ -359,15 +368,17 @@ class TestProfile(unittest.TestCase):
     def test_10c_compress_64(self):
         self.case = "compress 64"
         self.data = self.data.view(np.float64)
-        self.fun = lambda x:ext.compress_lz4(x, BLOCK)
+        self.fun = lambda x: ext.compress_lz4(x, BLOCK)
 
     def test_10d_decompress_64(self):
         self.case = "decompress 64"
         pre_trans = self.data.view(np.float64)
         self.data = ext.compress_lz4(pre_trans, BLOCK)
-        self.fun = lambda x: ext.decompress_lz4(x, pre_trans.shape,
-                                                pre_trans.dtype, BLOCK)
+        self.fun = lambda x: ext.decompress_lz4(
+            x, pre_trans.shape, pre_trans.dtype, BLOCK
+        )
         self.check_data = pre_trans
+
 
 """
 Commented out to prevent nose from finding them.
@@ -435,11 +446,10 @@ class TestDevCases(unittest.TestCase):
 
 
 class TestOddLengths(unittest.TestCase):
-
     def setUp(self):
         self.reps = 10
         self.nmax = 128 * 8
-        #self.nmax = 4 * 8    # XXX
+        # self.nmax = 4 * 8    # XXX
         self.fun = ext.copy
         self.check = lambda x: x
 
@@ -485,11 +495,9 @@ class TestOddLengths(unittest.TestCase):
                     ans = self.check(data).view(np.uint8)
                     self.assertTrue(np.all(out == ans))
         except RuntimeError as err:
-            if (len(err.args) > 1 and (err.args[1] == -11)
-                and not ext.using_SSE2()):
+            if len(err.args) > 1 and (err.args[1] == -11) and not ext.using_SSE2():
                 return
-            if (len(err.args) > 1 and (err.args[1] == -12)
-                and not ext.using_AVX2()):
+            if len(err.args) > 1 and (err.args[1] == -12) and not ext.using_AVX2():
                 return
             else:
                 raise
@@ -513,8 +521,7 @@ class TestBitShuffleCircle(unittest.TestCase):
                 shuff = ext.bitshuffle(data)
                 out = ext.bitunshuffle(shuff)
                 self.assertTrue(out.dtype is data.dtype)
-                self.assertTrue(np.all(data.view(np.uint8)
-                                       == out.view(np.uint8)))
+                self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
 
     def test_circle_with_compression(self):
         nmax = 100000
@@ -530,11 +537,11 @@ class TestBitShuffleCircle(unittest.TestCase):
                 shuff = ext.compress_lz4(data)
                 out = ext.decompress_lz4(shuff, data.shape, data.dtype)
                 self.assertTrue(out.dtype is data.dtype)
-                self.assertTrue(np.all(data.view(np.uint8)
-                                       == out.view(np.uint8)))
+                self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
 
 
 # Python implementations for checking results.
+
 
 def trans_byte_elem(arr):
     dtype = arr.dtype
@@ -546,7 +553,7 @@ def trans_byte_elem(arr):
     out_buf = np.empty((itemsize, nelem), dtype=np.uint8)
     for ii in range(nelem):
         for jj in range(itemsize):
-            out_buf[jj,ii] = in_buf[ii,jj]
+            out_buf[jj, ii] = in_buf[ii, jj]
     return out_buf.flat[:].view(dtype)
 
 
@@ -558,10 +565,10 @@ def trans_bit_byte(arr):
     bits.shape = (n * itemsize, 8)
     # We have to reverse the order of the bits both for unpacking and packing,
     # since we want to call the least significant bit the first bit.
-    bits = bits[:,::-1]
+    bits = bits[:, ::-1]
     bits_shuff = (bits.T).copy()
     bits_shuff.shape = (n * itemsize, 8)
-    bits_shuff = bits_shuff[:,::-1]
+    bits_shuff = bits_shuff[:, ::-1]
     arr_bt = np.packbits(bits_shuff.flat[:])
     return arr_bt.view(dtype)
 
@@ -574,14 +581,13 @@ def trans_bit_elem(arr):
     bits.shape = (n * itemsize, 8)
     # We have to reverse the order of the bits both for unpacking and packing,
     # since we want to call the least significant bit the first bit.
-    bits = bits[:,::-1].copy()
+    bits = bits[:, ::-1].copy()
     bits.shape = (n, itemsize * 8)
     bits_shuff = (bits.T).copy()
     bits_shuff.shape = (n * itemsize, 8)
-    bits_shuff = bits_shuff[:,::-1]
+    bits_shuff = bits_shuff[:, ::-1]
     arr_bt = np.packbits(bits_shuff.flat[:])
     return arr_bt.view(dtype)
-
 
 
 if __name__ == "__main__":

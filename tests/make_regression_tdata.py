@@ -11,14 +11,16 @@ import bitshuffle
 from bitshuffle import h5
 from h5py import h5z
 
-BLOCK_SIZE = 64   # Smallish such that datasets have many blocks but are small.
+BLOCK_SIZE = 64  # Smallish such that datasets have many blocks but are small.
 COMP_LVL = 10 # ZSTD compression level
-FILTER_PIPELINE = [h5.H5FILTER,]
+FILTER_PIPELINE = [
+    h5.H5FILTER,
+]
 FILTER_OPTS = [[(BLOCK_SIZE, h5.H5_COMPRESS_LZ4)], [(BLOCK_SIZE, h5.H5_COMPRESS_ZSTD, COMP_LVL)]]
 
 OUT_FILE = "bitshuffle/tests/data/regression_%s.h5" % bitshuffle.__version__
 
-DTYPES = ['a1', 'a2', 'a3', 'a4', 'a6', 'a8', 'a10']
+DTYPES = ["a1", "a2", "a3", "a4", "a6", "a8", "a10"]
 
 f = h5py.File(OUT_FILE, 'w')
 g_orig = f.create_group("origional")
@@ -26,7 +28,7 @@ g_comp_lz4 = f.create_group("compressed")
 g_comp_zstd = f.create_group("compressed_zstd")
 
 for dtype in DTYPES:
-    for rep in ['a', 'b', 'c']:
+    for rep in ["a", "b", "c"]:
         dset_name = "%s_%s" % (dtype, rep)
         dtype = np.dtype(dtype)
         n_elem = 3 * BLOCK_SIZE + random.randint(0, BLOCK_SIZE)

@@ -19,5 +19,28 @@ Functions
 from __future__ import absolute_import
 
 
-from bitshuffle.ext import (__version__, bitshuffle, bitunshuffle, using_NEON, using_SSE2,
-                            using_AVX2, compress_lz4, decompress_lz4, compress_zstd, decompress_zstd)
+from bitshuffle.ext import (
+    __version__,
+    bitshuffle,
+    bitunshuffle,
+    using_NEON,
+    using_SSE2,
+    using_AVX2,
+    compress_lz4,
+    decompress_lz4,
+    compress_zstd,
+    decompress_zstd,
+)
+
+__all__ = [
+    "__version__",
+    "bitshuffle",
+    "bitunshuffle",
+    "using_NEON",
+    "using_SSE2",
+    "using_AVX2",
+    "compress_lz4",
+    "decompress_lz4",
+    "compress_zstd",
+    "decompress_zstd",
+]

@@ -1,31 +1,30 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 import unittest
-import os, os.path
+import os
 import glob
 
 import numpy as np
 import h5py
-from h5py import h5f, h5d, h5z, h5t, h5s, filters
 from subprocess import Popen, PIPE, STDOUT
 
 import bitshuffle
 
 
-plugin_dir = os.path.join(os.path.dirname(bitshuffle.__file__),
-                'plugin')
+plugin_dir = os.path.join(os.path.dirname(bitshuffle.__file__), "plugin")
 os.environ["HDF5_PLUGIN_PATH"] = plugin_dir
 
 
 H5VERSION = h5py.h5.get_libversion()
-if (H5VERSION[0] < 1 or (H5VERSION[0] == 1
-    and (H5VERSION[1] < 8 or (H5VERSION[1] == 8 and H5VERSION[2] < 11)))):
+if H5VERSION[0] < 1 or (
+    H5VERSION[0] == 1
+    and (H5VERSION[1] < 8 or (H5VERSION[1] == 8 and H5VERSION[2] < 11))
+):
     H51811P = False
 else:
     H51811P = True
 
 
 class TestFilterPlugins(unittest.TestCase):
-
     def test_plugins(self):
         if not H51811P:
             return
@@ -35,25 +34,24 @@ class TestFilterPlugins(unittest.TestCase):
         data = np.arange(shape[0])
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname, "w")
-        dset = f.create_dataset("range",
-                shape=shape,
-                dtype=dtype,
-                chunks=chunks,
-                compression=32008,
-                )
+        dset = f.create_dataset(
+            "range",
+            shape=shape,
+            dtype=dtype,
+            chunks=chunks,
+            compression=32008,
+        )
         dset[:] = data
         f.close()
 
         # Make sure the filters are working outside of h5py by calling h5dump
-        h5dump = Popen(['h5dump', fname],
-                       stdout=PIPE, stderr=STDOUT)
+        h5dump = Popen(["h5dump", fname], stdout=PIPE, stderr=STDOUT)
         stdout, nothing = h5dump.communicate()
         err = h5dump.returncode
         self.assertEqual(err, 0)
 
-
-        f = h5py.File(fname, 'r')
-        d = f['range'][:]
+        f = h5py.File(fname, "r")
+        d = f["range"][:]
         self.assertTrue(np.all(d == data))
         f.close()
 

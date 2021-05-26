@@ -16,7 +16,7 @@ np.import_array()
 
 # Repeat each calculation this many times. For timing.
 cdef int REPEATC = 1
-#cdef int REPEATC = 32
+# cdef int REPEATC = 32
 
 REPEAT = REPEATC
 
@@ -25,25 +25,25 @@ cdef extern from b"bitshuffle.h":
     int bshuf_using_SSE2()
     int bshuf_using_AVX2()
     int bshuf_bitshuffle(void *A, void *B, int size, int elem_size,
-            int block_size)
+                         int block_size)
     int bshuf_bitunshuffle(void *A, void *B, int size, int elem_size,
-            int block_size)
+                           int block_size)
     int bshuf_compress_lz4_bound(int size, int elem_size, int block_size)
     int bshuf_compress_lz4(void *A, void *B, int size, int elem_size,
-            int block_size)
+                           int block_size)
     int bshuf_decompress_lz4(void *A, void *B, int size, int elem_size,
-            int block_size)
+                             int block_size)
     int bshuf_compress_zstd_bound(int size, int elem_size, int block_size)
     int bshuf_compress_zstd(void *A, void *B, int size, int elem_size,
-            int block_size, const int comp_lvl)
+                            int block_size, const int comp_lvl)
     int bshuf_decompress_zstd(void *A, void *B, int size, int elem_size,
-            int block_size)
+                              int block_size)
     int BSHUF_VERSION_MAJOR
     int BSHUF_VERSION_MINOR
     int BSHUF_VERSION_POINT
 
-__version__ = "%d.%d.%d" % (BSHUF_VERSION_MAJOR, BSHUF_VERSION_MINOR, 
-                            BSHUF_VERSION_POINT)
+__version__ = str("%d.%d.%d").format(BSHUF_VERSION_MAJOR, BSHUF_VERSION_MINOR,
+                                     BSHUF_VERSION_POINT)
 
 # Prototypes from bitshuffle.c
 cdef extern int bshuf_copy(void *A, void *B, int size, int elem_size)
