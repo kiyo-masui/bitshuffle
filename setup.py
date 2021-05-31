@@ -117,10 +117,10 @@ def pkgconfig(*packages, **kw):
     return config
 
 
-zstd_headers = ["zstd/zstd.h"]
-zstd_sources = glob.glob("zstd/common/*.c")
-zstd_sources += glob.glob("zstd/compress/*.c")
-zstd_sources += glob.glob("zstd/decompress/*.c")
+zstd_headers = ["zstd/lib/zstd.h"]
+zstd_sources = glob.glob("zstd/lib/common/*.c")
+zstd_sources += glob.glob("zstd/lib/compress/*.c")
+zstd_sources += glob.glob("zstd/lib/decompress/*.c")
 
 ext_bshuf = Extension(
     "bitshuffle.ext",
@@ -132,7 +132,7 @@ ext_bshuf = Extension(
         "lz4/lz4.c",
     ]
     + zstd_sources,
-    include_dirs=["src/", "lz4/", "zstd/"],
+    include_dirs=["src/", "lz4/", "zstd/lib/"],
     depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h", "lz4/lz4.h"]
     + zstd_headers,
     libraries=[],
@@ -159,7 +159,7 @@ h5filter = Extension(
     ]
     + zstd_headers,
     define_macros=MACROS,
-    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/", "zstd/"]))
+    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/", "zstd/lib/"]))
 )
 
 filter_plugin = Extension(
@@ -182,7 +182,7 @@ filter_plugin = Extension(
     ]
     + zstd_headers,
     define_macros=MACROS,
-    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/", "zstd/"]))
+    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/", "zstd/lib/"]))
 )
 
 lzf_plugin = Extension(
