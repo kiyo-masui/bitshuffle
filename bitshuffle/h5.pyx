@@ -112,7 +112,7 @@ def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
     tmp_shape = maxshape if maxshape is not None else shape
     # Validate chunk shape
     chunks_larger = (numpy.array([ not i>=j
-                     for i,j in zip(tmp_shape,chunks) if i is not None])).any()
+                     for i, j in zip(tmp_shape, chunks) if i is not None])).any()
     if isinstance(chunks, tuple) and chunks_larger:
         errmsg = ("Chunk shape must not be greater than data shape in any "
                   "dimension. {} is not compatible with {}".format(chunks, shape))
@@ -201,11 +201,11 @@ def create_bitshuffle_lzf_dataset(parent, name, shape, dtype, chunks=None,
 
 
 def create_bitshuffle_compressed_dataset(parent, name, shape, dtype,
-                                        chunks=None, maxshape=None,
-                                        fillvalue=None, track_times=None):
+                                         chunks=None, maxshape=None,
+                                         fillvalue=None, track_times=None):
     """Create dataset with bitshuffle+internal LZ4 compression."""
 
-    filter_pipeline = [H5FILTER,]
+    filter_pipeline = [H5FILTER, ]
     filter_opts = [(0, H5_COMPRESS_LZ4)]
     dset_id = create_dataset(parent, name, shape, dtype, chunks=chunks,
                              filter_pipeline=filter_pipeline,
