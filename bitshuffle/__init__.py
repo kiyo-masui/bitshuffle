@@ -11,6 +11,8 @@ Functions
     bitunshuffle
     compress_lz4
     decompress_lz4
+    compress_zstd
+    decompress_zstd
 
 """
 
@@ -26,6 +28,8 @@ from bitshuffle.ext import (
     using_AVX2,
     compress_lz4,
     decompress_lz4,
+    compress_zstd,
+    decompress_zstd,
 )
 
 __all__ = [
@@ -37,4 +41,6 @@ __all__ = [
     "using_AVX2",
     "compress_lz4",
     "decompress_lz4",
+    "compress_zstd",
+    "decompress_zstd",
 ]

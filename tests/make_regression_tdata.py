@@ -9,21 +9,24 @@ import h5py
 
 import bitshuffle
 from bitshuffle import h5
+from h5py import h5z
 
 BLOCK_SIZE = 64  # Smallish such that datasets have many blocks but are small.
-FILTER_PIPELINE = [
-    h5.H5FILTER,
+COMP_LVL = 10  # ZSTD compression level
+FILTER_PIPELINE = [h5.H5FILTER]
+FILTER_OPTS = [
+    [(BLOCK_SIZE, h5.H5_COMPRESS_LZ4)],
+    [(BLOCK_SIZE, h5.H5_COMPRESS_ZSTD, COMP_LVL)],
 ]
-FILTER_OPTS = [(BLOCK_SIZE, h5.H5_COMPRESS_LZ4)]
 
-OUT_FILE = "bitshuffle/tests/data/regression_%s.h5" % bitshuffle.__version__
+OUT_FILE = "tests/data/regression_%s.h5" % bitshuffle.__version__
 
 DTYPES = ["a1", "a2", "a3", "a4", "a6", "a8", "a10"]
 
-
 f = h5py.File(OUT_FILE, "w")
-g_comp = f.create_group("compressed")
 g_orig = f.create_group("origional")
+g_comp_lz4 = f.create_group("compressed")
+g_comp_zstd = f.create_group("compressed_zstd")
 
 for dtype in DTYPES:
     for rep in ["a", "b", "c"]:
@@ -37,15 +40,30 @@ for dtype in DTYPES:
 
         g_orig.create_dataset(dset_name, data=data)
 
+        # Create LZ4 compressed data
         h5.create_dataset(
-            g_comp,
-            dset_name,
+            g_comp_lz4,
+            bytes(dset_name, "utf-8"),
             shape,
             dtype,
             chunks=chunks,
             filter_pipeline=FILTER_PIPELINE,
-            filter_opts=FILTER_OPTS,
+            filter_flags=(h5z.FLAG_MANDATORY,),
+            filter_opts=FILTER_OPTS[0],
         )
-        g_comp[dset_name][:] = data
+        g_comp_lz4[dset_name][:] = data
+
+        # Create ZSTD compressed data
+        h5.create_dataset(
+            g_comp_zstd,
+            bytes(dset_name, "utf-8"),
+            shape,
+            dtype,
+            chunks=chunks,
+            filter_pipeline=FILTER_PIPELINE,
+            filter_flags=(h5z.FLAG_MANDATORY,),
+            filter_opts=FILTER_OPTS[1],
+        )
+        g_comp_zstd[dset_name][:] = data
 
 f.close()

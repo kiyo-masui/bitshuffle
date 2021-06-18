@@ -1665,7 +1665,7 @@ int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
 /* Wrap a function for processing a single block to process an entire buffer in
  * parallel. */
 int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, \
-        const size_t size, const size_t elem_size, size_t block_size) {
+        const size_t size, const size_t elem_size, size_t block_size, const int option) {
 
     omp_size_t ii = 0;
     int64_t err = 0;
@@ -1691,7 +1691,7 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, 
             private(count) reduction(+ : cum_count)
 #endif
     for (ii = 0; ii < (omp_size_t)( size / block_size ); ii ++) {
-        count = fun(&C, block_size, elem_size);
+        count = fun(&C, block_size, elem_size, option);
         if (count < 0) err = count;
         cum_count += count;
     }
@@ -1699,7 +1699,7 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, 
     last_block_size = size % block_size;
     last_block_size = last_block_size - last_block_size % BSHUF_BLOCKED_MULT;
     if (last_block_size) {
-        count = fun(&C, last_block_size, elem_size);
+        count = fun(&C, last_block_size, elem_size, option);
         if (count < 0) err = count;
         cum_count += count;
     }
@@ -1723,7 +1723,7 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, 
 
 /* Bitshuffle a single block. */
 int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
-        const size_t size, const size_t elem_size) {
+        const size_t size, const size_t elem_size, const int option) {
 
     size_t this_iter;
     const void *in;
@@ -1746,7 +1746,7 @@ int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
 
 /* Bitunshuffle a single block. */
 int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr, \
-        const size_t size, const size_t elem_size) {
+        const size_t size, const size_t elem_size, const int option) {
 
 
     size_t this_iter;
@@ -1840,7 +1840,7 @@ int64_t bshuf_bitshuffle(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
     return bshuf_blocked_wrap_fun(&bshuf_bitshuffle_block, in, out, size,
-            elem_size, block_size);
+            elem_size, block_size, 0/*option*/);
 }
 
 
@@ -1848,7 +1848,7 @@ int64_t bshuf_bitunshuffle(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
     return bshuf_blocked_wrap_fun(&bshuf_bitunshuffle_block, in, out, size,
-            elem_size, block_size);
+            elem_size, block_size, 0/*option*/);
 }
 
 

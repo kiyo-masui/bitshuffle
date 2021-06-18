@@ -40,6 +40,7 @@
 
 
 #define BSHUF_H5_COMPRESS_LZ4 2
+#define BSHUF_H5_COMPRESS_ZSTD 3
 
 
 extern H5Z_class_t bshuf_H5Filter[1];
