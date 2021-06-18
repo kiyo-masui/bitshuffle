@@ -101,7 +101,7 @@ loaded HDF5 filter requires HDF5 1.8.11 or later.
 
 To install::
 
-    python setup.py install
+    python setup.py install [--h5plugin [--h5plugin-dir=spam]]
 
 To get finer control of installation options, including whether to compile
 with OpenMP multi-threading, copy the ``setup.cfg.example`` to ``setup.cfg``
@@ -109,7 +109,8 @@ and edit the values therein.
 
 If using the dynamically loaded HDF5 filter (which gives you access to the
 Bitshuffle and LZF filters outside of python), set the environment variable
-``HDF5_PLUGIN_PATH`` to HDF5's default search location of ``/usr/local/hdf5/lib/plugin``.
+``HDF5_PLUGIN_PATH`` to the value of ``--h5plugin-dir`` or use HDF5's default
+search location of ``/usr/local/hdf5/lib/plugin``.
 
 If you get an error about missing source files when building the extensions,
 try upgrading setuptools.  There is a weird bug where setuptools prior to 0.7
