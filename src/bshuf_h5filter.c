@@ -118,7 +118,7 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
 
     if (block_size == 0) block_size = bshuf_default_block_size(elem_size);
 
-    // Compression in addition to bitshiffle.
+    // Compression in addition to bitshuffle.
     if (cd_nelmts > 4 && (cd_values[4] == BSHUF_H5_COMPRESS_LZ4 || cd_values[4] == BSHUF_H5_COMPRESS_ZSTD)) {
         if (flags & H5Z_FLAG_REVERSE) {
             // First eight bytes is the number of bytes in the output buffer,
@@ -240,4 +240,3 @@ int bshuf_register_h5filter(void){
     }
     return retval;
 }
-
