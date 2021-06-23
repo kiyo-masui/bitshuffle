@@ -20,19 +20,19 @@ jobs:
         run: python -m pip install cibuildwheel==2.0.0a3
 
       - name: Install apt dependencies
-      if: ${{ matrix.os == 'ubuntu-latest' }}
-      run: |
-        sudo apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
 
       - name: Install homebrew dependencies
-      if: ${{ matrix.os == 'macos-latest' }}
-      run: |
-        brew install hdf5 pkg-config
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          brew install hdf5 pkg-config
 
       - name: Install h5py
-      if: ${{ matrix.os == 'macos-latest' }}
-      run: |
-        pip install h5py
+        if: ${{ matrix.os == 'macos-latest' }}
+        run: |
+          pip install h5py
 
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
