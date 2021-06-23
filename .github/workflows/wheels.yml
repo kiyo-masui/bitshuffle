@@ -31,7 +31,13 @@ jobs:
 
       - name: Install h5py
         run: |
-          pip install h5py wheel
+          pip install h5py
+
+      - name: Install pip dependencies
+        run: |
+          pip install wheel
+          pip install Cython
+          pip install -r requirements.txt
 
       - name: Build wheels
         #run: python -m cibuildwheel --output-dir wheelhouse
