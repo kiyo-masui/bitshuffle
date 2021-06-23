@@ -44,7 +44,8 @@ jobs:
         #run: python setup.py sdist bdist_wheel
         # to supply options, put them in 'env', like:
         env:
-          CIBW_BEFORE_ALL_LINUX: apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
+          #CIBW_BEFORE_ALL_LINUX: apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
+          CIBW_BEFORE_ALL_LINUX: yum install -y hdf5-devel pkgconfig
 
       - uses: actions/upload-artifact@v2
         with:
