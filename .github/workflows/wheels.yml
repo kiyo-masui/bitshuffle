@@ -40,11 +40,11 @@ jobs:
           pip install -r requirements.txt
 
       - name: Build wheels
-        #run: python -m cibuildwheel --output-dir wheelhouse
-        run: python setup.py sdist bdist_wheel
+        run: python -m cibuildwheel --output-dir wheelhouse
+        #run: python setup.py sdist bdist_wheel
         # to supply options, put them in 'env', like:
-        # env:
-        #   CIBW_SOME_OPTION: value
+        env:
+          CIBW_BEFORE_ALL: apt install -y libhdf5-serial-dev hdf5-tools pkg-config
 
       - uses: actions/upload-artifact@v2
         with:
