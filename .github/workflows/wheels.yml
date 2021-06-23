@@ -30,7 +30,6 @@ jobs:
           brew install hdf5 pkg-config
 
       - name: Install h5py
-        if: ${{ matrix.os == 'macos-latest' }}
         run: |
           pip install h5py
 
