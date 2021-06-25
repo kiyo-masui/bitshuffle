@@ -47,7 +47,7 @@ jobs:
           #CIBW_BEFORE_ALL_LINUX: apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
           #CIBW_ARCHS_LINUX: "x86_64"
           #CIBW_MANYLINUX_X86_64_IMAGE: manylinux2_24
-          CIBW_BEFORE_ALL_LINUX: yum install -y hdf5-devel pkgconfig
+          CIBW_BEFORE_ALL_LINUX: yum install -y hdf5-devel pkgconfig && rpm --eval %{centos_ver} && rpm -ql hdf5-devel
 
       - uses: actions/upload-artifact@v2
         with:
