@@ -49,6 +49,7 @@ jobs:
           #CIBW_ARCHS_LINUX: "x86_64"
           #CIBW_MANYLINUX_X86_64_IMAGE: manylinux2_24
           CIBW_BEFORE_ALL_LINUX: yum install -y hdf5-devel pkgconfig
+          CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: pytest {package}/tests
 
       - uses: actions/upload-artifact@v2
