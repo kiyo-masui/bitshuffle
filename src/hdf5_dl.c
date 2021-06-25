@@ -32,7 +32,6 @@
 #include <stdarg.h>
 #include <dlfcn.h>
 #include "hdf5.h"
-#include "H5PLextern.h"
 
 
 /*Function types*/
