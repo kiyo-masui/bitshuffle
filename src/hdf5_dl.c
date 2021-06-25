@@ -31,6 +31,7 @@
  */
 #include <stdarg.h>
 #include <dlfcn.h>
+#include <stdbool.h>
 #include "hdf5.h"
 
 
