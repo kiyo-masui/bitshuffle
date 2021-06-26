@@ -144,7 +144,7 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
     }
     size = nbytes_uncomp / elem_size;
 
-    out_buf = malloc(buf_size_out);
+    out_buf = H5allocate_memory(buf_size_out, false);
     if (out_buf == NULL) {
         PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
                 "Could not allocate output buffer.");
@@ -166,24 +166,31 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
             bshuf_write_uint64_BE(out_buf, nbytes_uncomp);
             bshuf_write_uint32_BE((char*) out_buf + 8, block_size * elem_size);
             err = bshuf_compress_lz4(in_buf, (char*) out_buf + 12, size,
-                    elem_size, block_size); nbytes_out = err + 12; } } else {
-                if (flags & H5Z_FLAG_REVERSE) {
+                    elem_size, block_size);
+            nbytes_out = err + 12;
+        }
+    } else {
+        if (flags & H5Z_FLAG_REVERSE) {
             // Bit unshuffle.
             err = bshuf_bitunshuffle(in_buf, out_buf, size, elem_size,
-                    block_size); } else {
+                    block_size);
+        } else {
             // Bit shuffle.
             err = bshuf_bitshuffle(in_buf, out_buf, size, elem_size,
-                    block_size); } nbytes_out = nbytes; }
+                    block_size);
+        }
+        nbytes_out = nbytes;
+    }
     //printf("nb_in %d, nb_uncomp %d, nb_out %d, buf_out %d, block %d\n",
     //nbytes, nbytes_uncomp, nbytes_out, buf_size_out, block_size);
 
     if (err < 0) {
         sprintf(msg, "Error in bitshuffle with error code %d.", err);
         PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, msg);
-        free(out_buf);
+        H5free_memory(out_buf);
         return 0;
     } else {
-        free(*buf);
+        H5free_memory(*buf);
         *buf = out_buf;
         *buf_size = buf_size_out;
 
