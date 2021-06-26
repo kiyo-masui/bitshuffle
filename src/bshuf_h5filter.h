@@ -32,6 +32,10 @@
 #ifndef BSHUF_H5FILTER_H
 #define BSHUF_H5FILTER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define H5Z_class_t_vers 2
 #include "hdf5.h"
 
@@ -55,5 +59,8 @@ extern H5Z_class_t bshuf_H5Filter[1];
  */
 int bshuf_register_h5filter(void);
 
+#ifdef __cplusplus
+} // extern "C"
+#endif
 
 #endif // BSHUF_H5FILTER_H
