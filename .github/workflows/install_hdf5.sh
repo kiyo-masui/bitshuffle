@@ -8,4 +8,3 @@ make -j 6
 make install
 cd ..
 echo $PATH
-h5dump
