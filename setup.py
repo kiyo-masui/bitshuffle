@@ -71,8 +71,8 @@ elif sys.platform.startswith("freebsd"):
     FALLBACK_CONFIG["include_dirs"] += ["/usr/local/include"]  # homebrew
     FALLBACK_CONFIG["library_dirs"] += ["/usr/local/lib"]  # homebrew
 else:
-    FALLBACK_CONFIG["include_dirs"] += ["/usr/include"]  # redhat
-    FALLBACK_CONFIG["library_dirs"] += ["/usr/lib64"]  # redhat
+    FALLBACK_CONFIG["include_dirs"] += ["/usr/local/hdf5/include"]  # redhat
+    FALLBACK_CONFIG["library_dirs"] += ["/usr/local/hdf5/lib"]  # redhat
 
 FALLBACK_CONFIG["include_dirs"] = [
     d for d in FALLBACK_CONFIG["include_dirs"] if path.isdir(d)
