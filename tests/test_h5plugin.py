@@ -23,6 +23,8 @@ if H5VERSION[0] < 1 or (
 else:
     H51811P = True
 
+print(plugin_dir)
+
 
 class TestFilterPlugins(unittest.TestCase):
     def test_plugins(self):
@@ -45,7 +47,7 @@ class TestFilterPlugins(unittest.TestCase):
         f.close()
 
         # Make sure the filters are working outside of h5py by calling h5dump
-        h5dump = Popen(["h5dump", fname], stdout=PIPE, stderr=STDOUT)
+        h5dump = Popen(["/usr/bin/h5dump", fname], stdout=PIPE, stderr=STDOUT)
         stdout, nothing = h5dump.communicate()
         err = h5dump.returncode
         self.assertEqual(err, 0)

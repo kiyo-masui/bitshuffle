@@ -6,5 +6,6 @@ chmod +x autogen.sh
 ./configure --prefix=/usr/local/hdf5
 make -j 6
 make install
-LD_LIBRARY_PATH+=:/usr/local/hdf5/lib/
 cd ..
+echo $PATH
+h5dump
