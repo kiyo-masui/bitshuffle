@@ -50,7 +50,7 @@ jobs:
           #CIBW_MANYLINUX_X86_64_IMAGE: manylinux2_24
           #CIBW_BEFORE_ALL_LINUX: yum install -y hdf5-devel pkgconfig
           CIBW_ENVIRONMENT: "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/hdf5/lib"
-          CIBW_BEFORE_ALL_LINUX: yum install -y pkgconfig; chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh; ls /usr/bin/h5*
+          CIBW_BEFORE_ALL_LINUX: chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh; ls /usr/local/hdf5/bin; whereis h5dump
           CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: pytest {package}/tests
 
