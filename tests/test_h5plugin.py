@@ -28,7 +28,10 @@ print(plugin_dir)
 
 
 class TestFilterPlugins(unittest.TestCase):
-    @pytest.mark.skipif("CI_BUILD_WHEEL" in os.environ, reason="Can't build dynamic HDF5 plugin into bitshuffle wheel.")
+    @pytest.mark.skipif(
+        "CI_BUILD_WHEEL" in os.environ,
+        reason="Can't build dynamic HDF5 plugin into bitshuffle wheel.",
+    )
     def test_plugins(self):
         if not H51811P:
             return
