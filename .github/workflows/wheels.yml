@@ -52,6 +52,7 @@ jobs:
           CIBW_ENVIRONMENT: "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/hdf5/lib"
           CIBW_BEFORE_ALL_LINUX: chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh
           CIBW_TEST_REQUIRES: pytest
+          CIBW_BEFORE_TEST: PATH=$PATH:/usr/local/hdf5/bin
           CIBW_TEST_COMMAND: pytest {package}/tests
 
       - uses: actions/upload-artifact@v2
