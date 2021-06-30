@@ -21,11 +21,10 @@ jobs:
 
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
-        # to supply options, put them in 'env', like:
         env:
           CIBW_ARCHS_LINUX: "x86_64"
           CIBW_BEFORE_ALL_LINUX: chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh
-          CIBW_ENVIRONMENT: "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/hdf5/lib"
+          CIBW_ENVIRONMENT: "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib"
 
           CIBW_TEST_REQUIRES: pytest
           CIBW_TEST_COMMAND: CI_BUILD_WHEEL=1 pytest {package}/tests
