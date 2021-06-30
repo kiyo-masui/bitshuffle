@@ -7,4 +7,3 @@ chmod +x autogen.sh
 make -j 6
 make install
 cd ..
-#PATH=$PATH:/usr/local/hdf5/bin

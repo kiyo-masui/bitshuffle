@@ -70,9 +70,6 @@ elif sys.platform == "darwin":
 elif sys.platform.startswith("freebsd"):
     FALLBACK_CONFIG["include_dirs"] += ["/usr/local/include"]  # homebrew
     FALLBACK_CONFIG["library_dirs"] += ["/usr/local/lib"]  # homebrew
-else:
-    FALLBACK_CONFIG["include_dirs"] += ["/usr/local/include"]  # redhat
-    FALLBACK_CONFIG["library_dirs"] += ["/usr/local/lib"]  # redhat
 
 FALLBACK_CONFIG["include_dirs"] = [
     d for d in FALLBACK_CONFIG["include_dirs"] if path.isdir(d)
