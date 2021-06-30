@@ -5,6 +5,7 @@ import glob
 
 import numpy as np
 import h5py
+import pytest
 from subprocess import Popen, PIPE, STDOUT
 
 import bitshuffle
@@ -23,8 +24,14 @@ if H5VERSION[0] < 1 or (
 else:
     H51811P = True
 
+print(plugin_dir)
+
 
 class TestFilterPlugins(unittest.TestCase):
+    @pytest.mark.skipif(
+        "CI_BUILD_WHEEL" in os.environ,
+        reason="Can't build dynamic HDF5 plugin into bitshuffle wheel.",
+    )
     def test_plugins(self):
         if not H51811P:
             return
