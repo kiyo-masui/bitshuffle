@@ -3,8 +3,8 @@ tar -xvf hdf5-1.10.7.tar.gz
 cd hdf5-1.10.7
 chmod +x autogen.sh
 ./autogen.sh
-./configure --prefix=/usr/local/hdf5
+./configure --prefix=/usr/local
 make -j 6
 make install
 cd ..
-PATH=$PATH:/usr/local/hdf5/bin
+#PATH=$PATH:/usr/local/hdf5/bin
