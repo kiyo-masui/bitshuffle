@@ -4,7 +4,7 @@ requires = [
     "setuptools>=0.7",
     "Cython>=0.19",
     "numpy>=1.6.1",
-    "h5py>=2.4.0",
+    "h5py==3.1.0",
 ]
 
 build-backend = "setuptools.build_meta"
