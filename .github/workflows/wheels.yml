@@ -9,6 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
+        hdf5: [1.8.11, 1.10.7]
 
     steps:
       # Checkout bitshuffle
@@ -22,10 +23,10 @@ jobs:
 
       # Build wheels for linux and x86 platforms
       - name: Build wheels
-        run: python -m cibuildwheel --output-dir wheelhouse
+        run: python -m cibuildwheel --output-dir wheelhouse-hdf5-${{ matrix.hdf5 }}
         env:
           CIBW_ARCHS_LINUX: "x86_64"
-          CIBW_BEFORE_ALL_LINUX: chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh
+          CIBW_BEFORE_ALL_LINUX: chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh ${{ matrix.hdf5 }}
           CIBW_ENVIRONMENT: "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib"
           CIBW_TEST_REQUIRES: pytest
           # Run units tests but disable test_h5plugin.py
@@ -34,4 +35,4 @@ jobs:
       # Package wheels and host on CI
       - uses: actions/upload-artifact@v2
         with:
-          path: ./wheelhouse/*.whl
+          path: ./wheelhouse-hdf5-${{ matrix.hdf5 }}/*.whl
