@@ -1,7 +1,9 @@
-# Download and install HDF5 1.10.7 from source for building wheels
-curl https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.7/src/hdf5-1.10.7.tar.gz --output hdf5-1.10.7.tar.gz --silent
-tar -xvf hdf5-1.10.7.tar.gz
-cd hdf5-1.10.7
+HDF5_VERSION=$1
+
+# Download and install HDF5 $HDF5_VERSION from source for building wheels
+curl https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-${HDF5_VERSION%.*}/hdf5-$HDF5_VERSION/src/hdf5-$HDF5_VERSION.tar.gz --output hdf5-$HDF5_VERSION.tar.gz --silent
+tar -xvf hdf5-$HDF5_VERSION.tar.gz
+cd hdf5-$HDF5_VERSION
 chmod +x autogen.sh
 ./autogen.sh
 ./configure --prefix=/usr/local
