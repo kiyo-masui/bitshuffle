@@ -6,7 +6,7 @@ tar -xvf hdf5-$HDF5_VERSION.tar.gz
 cd hdf5-$HDF5_VERSION
 chmod +x autogen.sh
 ./autogen.sh
-./configure --prefix=/usr/local
+CFLAGS=-std=c99 ./configure --prefix=/usr/local
 make -j 6
 make install
 cd ..
