@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        hdf5: [1.10.2] #1.10.7]
+        hdf5: [1.10.1] #1.10.7]
 
     steps:
       # Checkout bitshuffle
