@@ -9,7 +9,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        hdf5: [1.10.1] #1.10.7]
+        hdf5: [1.10.7]
 
     steps:
       # Checkout bitshuffle
@@ -26,10 +26,10 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse-hdf5-${{ matrix.hdf5 }}
         env:
           CIBW_ARCHS_LINUX: "x86_64"
-          CIBW_BEFORE_ALL_LINUX: chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh ${{ matrix.hdf5 }}
+          CIBW_BEFORE_BUILD_LINUX: chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh ${{ matrix.hdf5 }}
           CIBW_ENVIRONMENT: "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib"
           CIBW_TEST_REQUIRES: pytest
-          CIBW_BEFORE_TEST: chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh ${{ matrix.hdf5 }}; 
+          CIBW_BEFORE_TEST: chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh 1.8.11; 
           # Run units tests but disable test_h5plugin.py
           CIBW_TEST_COMMAND: CI_BUILD_WHEEL=1 pytest {package}/tests
 
