@@ -42,14 +42,26 @@ jobs:
   
   build_sdist:
     name: Build source distribution
+    strategy:
+      matrix:
+        python-version: [3.8]
+
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/setup-python@v2
-        name: Install Python
+      - name: Install apt dependencies
+        run: |
+          sudo apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
+
+      - name: Install Python
+        uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install pip dependencies
+        run: |
+          pip install -r requirements.txt
 
       - name: Build sdist
         run: python setup.py sdist
