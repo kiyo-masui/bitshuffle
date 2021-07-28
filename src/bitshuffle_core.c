@@ -25,7 +25,9 @@
 #endif
 
 #if defined(__ARM_NEON__) || (__ARM_NEON)
+#ifdef __aarch64__
 #define USEARMNEON
+#endif
 #endif
 
 // Conditional includes for SSE2 and AVX2.
