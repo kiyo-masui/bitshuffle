@@ -32,12 +32,12 @@ cdef extern from b"bitshuffle.h":
     int bshuf_compress_lz4(void *A, void *B, int size, int elem_size,
                            int block_size) nogil
     int bshuf_decompress_lz4(void *A, void *B, int size, int elem_size,
-                             int block_size)
+                             int block_size) nogil
     int bshuf_compress_zstd_bound(int size, int elem_size, int block_size)
     int bshuf_compress_zstd(void *A, void *B, int size, int elem_size,
-                            int block_size, const int comp_lvl)
+                            int block_size, const int comp_lvl) nogil
     int bshuf_decompress_zstd(void *A, void *B, int size, int elem_size,
-                              int block_size)
+                              int block_size) nogil
     int BSHUF_VERSION_MAJOR
     int BSHUF_VERSION_MINOR
     int BSHUF_VERSION_POINT
@@ -496,8 +496,9 @@ def compress_zstd(np.ndarray arr not None, int block_size=0, int comp_lvl=1):
     out_flat = out.view(np.uint8).ravel()
     cdef void* arr_ptr = <void*> &arr_flat[0]
     cdef void* out_ptr = <void*> &out_flat[0]
-    for ii in range(REPEATC):
-        count = bshuf_compress_zstd(arr_ptr, out_ptr, size, itemsize, block_size, comp_lvl)
+    with nogil:
+        for ii in range(REPEATC):
+            count = bshuf_compress_zstd(arr_ptr, out_ptr, size, itemsize, block_size, comp_lvl)
     if count < 0:
         msg = "Failed. Error code %d."
         excp = RuntimeError(msg % count, count)
@@ -547,8 +548,9 @@ def decompress_zstd(np.ndarray arr not None, shape, dtype, int block_size=0):
     out_flat = out.view(np.uint8).ravel()
     cdef void* arr_ptr = <void*> &arr_flat[0]
     cdef void* out_ptr = <void*> &out_flat[0]
-    for ii in range(REPEATC):
-        count = bshuf_decompress_zstd(arr_ptr, out_ptr, size, itemsize,
+    with nogil:
+        for ii in range(REPEATC):
+            count = bshuf_decompress_zstd(arr_ptr, out_ptr, size, itemsize,
                                       block_size)
     if count < 0:
         msg = "Failed. Error code %d."
