@@ -20,12 +20,14 @@
 #define USEAVX2
 #endif
 
-#if defined(__SSE2__)
+#if defined(__SSE2__) || defined(NO_WARN_X86_INTRINSICS)
 #define USESSE2
 #endif
 
 #if defined(__ARM_NEON__) || (__ARM_NEON)
+#ifdef __aarch64__
 #define USEARMNEON
+#endif
 #endif
 
 // Conditional includes for SSE2 and AVX2.
