@@ -551,7 +551,7 @@ def decompress_zstd(np.ndarray arr not None, shape, dtype, int block_size=0):
     with nogil:
         for ii in range(REPEATC):
             count = bshuf_decompress_zstd(arr_ptr, out_ptr, size, itemsize,
-                                      block_size)
+                                          block_size)
     if count < 0:
         msg = "Failed. Error code %d."
         excp = RuntimeError(msg % count, count)
