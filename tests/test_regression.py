@@ -17,7 +17,7 @@ TEST_DATA_DIR = pathlib.Path(__file__).parent / "data"
 
 OUT_FILE_TEMPLATE = "regression_%s.h5"
 
-VERSIONS = ["0.1.3", "0.3.6"]
+VERSIONS = ["0.1.3", "0.4.0"]
 
 
 class TestAll(unittest.TestCase):
@@ -31,8 +31,8 @@ class TestAll(unittest.TestCase):
             for dset_name in g_comp.keys():
                 self.assertTrue(np.all(g_comp[dset_name][:] == g_orig[dset_name][:]))
 
-            # Only run ZSTD comparison on versions >= 0.3.6
-            if version.parse(rev) >= version.parse("0.3.6"):
+            # Only run ZSTD comparison on versions >= 0.4.0
+            if version.parse(rev) >= version.parse("0.4.0"):
                 g_comp_zstd = f["compressed_zstd"]
                 for dset_name in g_comp_zstd.keys():
                     self.assertTrue(
