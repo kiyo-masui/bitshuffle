@@ -45,6 +45,9 @@ jobs:
         pip install -r requirements.txt
         pip install pytest
 
+        # Pull in ZSTD repo
+        git submodule update --init
+
         # Installing the plugin to arbitrary directory to check the install script.
         python setup.py install --h5plugin --h5plugin-dir ~/hdf5/lib
 
