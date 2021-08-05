@@ -25,7 +25,7 @@ class TestAll(unittest.TestCase):
         for rev in VERSIONS:
             file_name = TEST_DATA_DIR / (OUT_FILE_TEMPLATE % rev)
             f = h5py.File(file_name, "r")
-            g_orig = f["origional"]
+            g_orig = f["original"]
             g_comp = f["compressed"]
 
             for dset_name in g_comp.keys():
