@@ -25,12 +25,12 @@ cdef extern from b"bitshuffle.h":
     int bshuf_using_SSE2()
     int bshuf_using_AVX2()
     int bshuf_bitshuffle(void *A, void *B, int size, int elem_size,
-                         int block_size)
+                         int block_size) nogil
     int bshuf_bitunshuffle(void *A, void *B, int size, int elem_size,
-                           int block_size)
+                           int block_size) nogil
     int bshuf_compress_lz4_bound(int size, int elem_size, int block_size)
     int bshuf_compress_lz4(void *A, void *B, int size, int elem_size,
-                           int block_size)
+                           int block_size) nogil
     int bshuf_decompress_lz4(void *A, void *B, int size, int elem_size,
                              int block_size)
     int bshuf_compress_zstd_bound(int size, int elem_size, int block_size)
@@ -293,8 +293,9 @@ def bitshuffle(np.ndarray arr not None, int block_size=0):
     cdef void* arr_ptr = <void*> &arr_flat[0]
     cdef void* out_ptr = <void*> &out_flat[0]
 
-    for ii in range(REPEATC):
-        count = bshuf_bitshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
+    with nogil:
+        for ii in range(REPEATC):
+            count = bshuf_bitshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
     if count < 0:
         msg = "Failed. Error code %d."
         excp = RuntimeError(msg % count, count)
@@ -336,8 +337,9 @@ def bitunshuffle(np.ndarray arr not None, int block_size=0):
     cdef void* arr_ptr = <void*> &arr_flat[0]
     cdef void* out_ptr = <void*> &out_flat[0]
 
-    for ii in range(REPEATC):
-        count = bshuf_bitunshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
+    with nogil:
+        for ii in range(REPEATC):
+            count = bshuf_bitunshuffle(arr_ptr, out_ptr, size, itemsize, block_size)
     if count < 0:
         msg = "Failed. Error code %d."
         excp = RuntimeError(msg % count, count)
@@ -385,8 +387,9 @@ def compress_lz4(np.ndarray arr not None, int block_size=0):
     out_flat = out.view(np.uint8).ravel()
     cdef void* arr_ptr = <void*> &arr_flat[0]
     cdef void* out_ptr = <void*> &out_flat[0]
-    for ii in range(REPEATC):
-        count = bshuf_compress_lz4(arr_ptr, out_ptr, size, itemsize, block_size)
+    with nogil:
+        for ii in range(REPEATC):
+            count = bshuf_compress_lz4(arr_ptr, out_ptr, size, itemsize, block_size)
     if count < 0:
         msg = "Failed. Error code %d."
         excp = RuntimeError(msg % count, count)
@@ -436,9 +439,10 @@ def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
     out_flat = out.view(np.uint8).ravel()
     cdef void* arr_ptr = <void*> &arr_flat[0]
     cdef void* out_ptr = <void*> &out_flat[0]
-    for ii in range(REPEATC):
-        count = bshuf_decompress_lz4(arr_ptr, out_ptr, size, itemsize,
-                                     block_size)
+    with nogil:
+        for ii in range(REPEATC):
+            count = bshuf_decompress_lz4(arr_ptr, out_ptr, size, itemsize,
+                                         block_size)
     if count < 0:
         msg = "Failed. Error code %d."
         excp = RuntimeError(msg % count, count)

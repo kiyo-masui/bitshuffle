@@ -43,6 +43,7 @@ Examples
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import sys
 import numpy
 import h5py
 from h5py import h5d, h5s, h5t, h5p, filters
@@ -56,11 +57,21 @@ cdef extern from b"bshuf_h5filter.h":
     int BSHUF_H5_COMPRESS_LZ4
     int BSHUF_H5_COMPRESS_ZSTD
 
+cdef extern int init_filter(const char* libname)
+
 cdef int LZF_FILTER = 32000
 
 H5FILTER = BSHUF_H5FILTER
 H5_COMPRESS_LZ4 = BSHUF_H5_COMPRESS_LZ4
 H5_COMPRESS_ZSTD = BSHUF_H5_COMPRESS_ZSTD
+
+# Init HDF5 dynamic loading with HDF5 library used by h5py
+if not sys.platform.startswith('win'):
+    if sys.version_info[0] >= 3:
+        libname = bytes(h5d.__file__, encoding='utf-8')
+    else:
+        libname = h5d.__file__
+    init_filter(libname)
 
 
 def register_h5_filter():

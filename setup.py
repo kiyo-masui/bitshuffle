@@ -13,6 +13,7 @@ from setuptools.command.install import install as install_
 import shutil
 import subprocess
 import sys
+import platform
 
 
 VERSION_MAJOR = 0
@@ -158,9 +159,13 @@ h5filter = Extension(
         "lz4/lz4.h",
     ]
     + zstd_headers,
-    define_macros=MACROS,
+    define_macros=MACROS + [("H5_USE_18_API", None)],
     **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/", "zstd/lib/"]))
 )
+
+if not sys.platform.startswith("win"):
+    h5filter.sources.append("src/hdf5_dl.c")
+    h5filter.libraries.remove("hdf5")
 
 filter_plugin = Extension(
     "bitshuffle.plugin.libh5bshuf",
@@ -326,7 +331,13 @@ class build_ext(build_ext_):
                 compileflags = COMPILE_FLAGS_MSVC
             else:
                 openmpflag = "-fopenmp"
-                compileflags = COMPILE_FLAGS + ["-march=%s" % self.march]
+                archi = platform.machine()
+                if archi in ("i386", "x86_64"):
+                    compileflags = COMPILE_FLAGS + ["-march=%s" % self.march]
+                else:
+                    compileflags = COMPILE_FLAGS + ["-mcpu=%s" % self.march]
+                    if archi == "ppc64le":
+                        compileflags = COMPILE_FLAGS + ["-DNO_WARN_X86_INTRINSICS"]
             for e in self.extensions:
                 e.extra_compile_args = list(
                     set(e.extra_compile_args).union(compileflags)
