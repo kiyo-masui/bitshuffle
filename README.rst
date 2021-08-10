@@ -99,7 +99,10 @@ Installation for Python
 
 Installation requires python 2.7+ or 3.3+, HDF5 1.8.4 or later, HDF5 for python
 (h5py), Numpy and Cython. Bitshuffle is linked against HDF5. To use the dynamically 
-loaded HDF5 filter requires HDF5 1.8.11 or later.
+loaded HDF5 filter requires HDF5 1.8.11 or later. The ZSTD repo needs to pulled into 
+bitshuffle before installation with::
+
+    git submodule update --init
 
 To install::
 
