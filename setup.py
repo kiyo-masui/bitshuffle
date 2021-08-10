@@ -17,8 +17,8 @@ import platform
 
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 3
-VERSION_POINT = 6
+VERSION_MINOR = 4
+VERSION_POINT = 0
 
 # Only unset in the 'release' branch and in tags.
 VERSION_DEV = 1
