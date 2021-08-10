@@ -119,6 +119,7 @@ def pkgconfig(*packages, **kw):
 
 
 zstd_headers = ["zstd/lib/zstd.h"]
+zstd_lib = ["zstd/lib/"]
 zstd_sources = glob.glob("zstd/lib/common/*.c")
 zstd_sources += glob.glob("zstd/lib/compress/*.c")
 zstd_sources += glob.glob("zstd/lib/decompress/*.c")
@@ -131,11 +132,9 @@ ext_bshuf = Extension(
         "src/bitshuffle_core.c",
         "src/iochain.c",
         "lz4/lz4.c",
-    ]
-    + zstd_sources,
-    include_dirs=["src/", "lz4/", "zstd/lib/"],
-    depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h", "lz4/lz4.h"]
-    + zstd_headers,
+    ],
+    include_dirs=["src/", "lz4/"],
+    depends=["src/bitshuffle.h", "src/bitshuffle_core.h", "src/iochain.h", "lz4/lz4.h"],
     libraries=[],
     define_macros=MACROS,
 )
@@ -149,18 +148,16 @@ h5filter = Extension(
         "src/bitshuffle_core.c",
         "src/iochain.c",
         "lz4/lz4.c",
-    ]
-    + zstd_sources,
+    ],
     depends=[
         "src/bitshuffle.h",
         "src/bitshuffle_core.h",
         "src/iochain.h",
         "src/bshuf_h5filter.h",
         "lz4/lz4.h",
-    ]
-    + zstd_headers,
+    ],
     define_macros=MACROS + [("H5_USE_18_API", None)],
-    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/", "zstd/lib/"]))
+    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/"]))
 )
 
 if not sys.platform.startswith("win"):
@@ -176,18 +173,16 @@ filter_plugin = Extension(
         "src/bitshuffle_core.c",
         "src/iochain.c",
         "lz4/lz4.c",
-    ]
-    + zstd_sources,
+    ],
     depends=[
         "src/bitshuffle.h",
         "src/bitshuffle_core.h",
         "src/iochain.h",
         "src/bshuf_h5filter.h",
         "lz4/lz4.h",
-    ]
-    + zstd_headers,
+    ],
     define_macros=MACROS,
-    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/", "zstd/lib/"]))
+    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/"]))
 )
 
 lzf_plugin = Extension(
@@ -232,19 +227,30 @@ class install(install_):
             None,
             "Where to install filter plugins. Default %s." % H5PLUGINS_DEFAULT,
         ),
+        ("zstd", None, "Install ZSTD support."),
     ]
 
     def initialize_options(self):
         install_.initialize_options(self)
         self.h5plugin = False
+        self.zstd = False
         self.h5plugin_dir = H5PLUGINS_DEFAULT
 
     def finalize_options(self):
         install_.finalize_options(self)
         if self.h5plugin not in ("0", "1", True, False):
-            raise ValueError("Invalid h5plugin argument. Mut be '0' or '1'.")
+            raise ValueError("Invalid h5plugin argument. Must be '0' or '1'.")
         self.h5plugin = int(self.h5plugin)
         self.h5plugin_dir = path.abspath(self.h5plugin_dir)
+        self.zstd = self.zstd
+
+        # Add ZSTD files to extensions if ZSTD enabled
+        if self.zstd:
+            for ext in EXTENSIONS:
+                if ext.name in ["bitshuffle.ext","bitshuffle.h5","bitshuffle.plugin.libh5bshuf"]:
+                    ext.sources += zstd_sources
+                    ext.include_dirs += zstd_lib
+                    ext.depends += zstd_headers
 
     def run(self):
         install_.run(self)
