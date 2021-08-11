@@ -124,6 +124,7 @@ int64_t bshuf_decompress_lz4(const void* in, void* out, const size_t size,
  * ---- ZSTD Interface ----
  */
 
+#ifdef ZSTD_SUPPORT
 /* ---- bshuf_compress_zstd_bound ----
  *
  * Bound on size of data compressed with *bshuf_compress_zstd*.
@@ -204,6 +205,8 @@ int64_t bshuf_compress_zstd(const void* in, void* out, const size_t size, const 
  */
 int64_t bshuf_decompress_zstd(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size);
+
+#endif // ZSTD_SUPPORT
 
 #ifdef __cplusplus
 } // extern "C"

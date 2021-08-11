@@ -10,6 +10,7 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as build_ext_
 from setuptools.command.develop import develop as develop_
 from setuptools.command.install import install as install_
+from Cython.Compiler.Main import default_options
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,8 @@ import platform
 VERSION_MAJOR = 0
 VERSION_MINOR = 4
 VERSION_POINT = 0
+# Define ZSTD macro for cython compilation
+default_options['compile_time_env'] = {'ZSTD_SUPPORT': False}
 
 # Only unset in the 'release' branch and in tags.
 VERSION_DEV = 1
@@ -38,6 +41,7 @@ MACROS = [
     ("BSHUF_VERSION_MAJOR", VERSION_MAJOR),
     ("BSHUF_VERSION_MINOR", VERSION_MINOR),
     ("BSHUF_VERSION_POINT", VERSION_POINT),
+    ("ZSTD_SUPPORT", 0),
 ]
 
 
@@ -244,13 +248,15 @@ class install(install_):
         self.h5plugin_dir = path.abspath(self.h5plugin_dir)
         self.zstd = self.zstd
 
-        # Add ZSTD files to extensions if ZSTD enabled
+        # Add ZSTD files and macro to extensions if ZSTD enabled
         if self.zstd:
+            default_options['compile_time_env'] = {'ZSTD_SUPPORT': True}
             for ext in EXTENSIONS:
-                if ext.name in ["bitshuffle.ext","bitshuffle.h5","bitshuffle.plugin.libh5bshuf"]:
+                if ext.name in ["bitshuffle.ext", "bitshuffle.h5", "bitshuffle.plugin.libh5bshuf"]:
                     ext.sources += zstd_sources
                     ext.include_dirs += zstd_lib
                     ext.depends += zstd_headers
+                    ext.define_macros[3] = ("ZSTD_SUPPORT", 1)
 
     def run(self):
         install_.run(self)

@@ -99,14 +99,14 @@ Installation for Python
 
 Installation requires python 2.7+ or 3.3+, HDF5 1.8.4 or later, HDF5 for python
 (h5py), Numpy and Cython. Bitshuffle is linked against HDF5. To use the dynamically 
-loaded HDF5 filter requires HDF5 1.8.11 or later. The ZSTD repo needs to pulled into 
-bitshuffle before installation with::
+loaded HDF5 filter requires HDF5 1.8.11 or later. If ZSTD support is enabled the ZSTD 
+repo needs to pulled into bitshuffle before installation with::
 
     git submodule update --init
 
-To install::
+To install bitshuffle::
 
-    python setup.py install [--h5plugin [--h5plugin-dir=spam]]
+    python setup.py install [--h5plugin [--h5plugin-dir=spam] --zstd]
 
 To get finer control of installation options, including whether to compile
 with OpenMP multi-threading, copy the ``setup.cfg.example`` to ``setup.cfg``
@@ -116,6 +116,8 @@ If using the dynamically loaded HDF5 filter (which gives you access to the
 Bitshuffle and LZF filters outside of python), set the environment variable
 ``HDF5_PLUGIN_PATH`` to the value of ``--h5plugin-dir`` or use HDF5's default
 search location of ``/usr/local/hdf5/lib/plugin``.
+
+ZSTD support is enabled with ``--zstd``.
 
 If you get an error about missing source files when building the extensions,
 try upgrading setuptools.  There is a weird bug where setuptools prior to 0.7

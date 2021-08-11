@@ -13,7 +13,10 @@
 #include "bitshuffle_core.h"
 #include "bitshuffle_internals.h"
 #include "lz4.h"
+
+#ifdef ZSTD_SUPPORT
 #include "zstd.h"
+#endif
 
 #include <stdio.h>
 #include <string.h>
@@ -110,6 +113,7 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
     return nbytes;
 }
 
+#ifdef ZSTD_SUPPORT
 /* Bitshuffle and compress a single block. */
 int64_t bshuf_compress_zstd_block(ioc_chain *C_ptr, \
         const size_t size, const size_t elem_size, const int comp_lvl) {
@@ -191,6 +195,8 @@ int64_t bshuf_decompress_zstd_block(ioc_chain *C_ptr,
     free(tmp_buf);
     return nbytes;
 }
+#endif // ZSTD_SUPPORT
+
 
 /* ---- Public functions ----
  *
@@ -233,6 +239,7 @@ int64_t bshuf_decompress_lz4(const void* in, void* out, const size_t size,
             elem_size, block_size, 0/*option*/);
 }
 
+#ifdef ZSTD_SUPPORT
 size_t bshuf_compress_zstd_bound(const size_t size,
         const size_t elem_size, size_t block_size) {
 
@@ -267,4 +274,4 @@ int64_t bshuf_decompress_zstd(const void* in, void* out, const size_t size,
     return bshuf_blocked_wrap_fun(&bshuf_decompress_zstd_block, in, out, size,
             elem_size, block_size, 0/*option*/);
 }
-
+#endif // ZSTD_SUPPORT
