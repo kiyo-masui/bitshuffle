@@ -21,7 +21,7 @@ VERSION_MAJOR = 0
 VERSION_MINOR = 4
 VERSION_POINT = 0
 # Define ZSTD macro for cython compilation
-default_options['compile_time_env'] = {'ZSTD_SUPPORT': False}
+default_options["compile_time_env"] = {"ZSTD_SUPPORT": False}
 
 # Only unset in the 'release' branch and in tags.
 VERSION_DEV = 1
@@ -250,9 +250,13 @@ class install(install_):
 
         # Add ZSTD files and macro to extensions if ZSTD enabled
         if self.zstd:
-            default_options['compile_time_env'] = {'ZSTD_SUPPORT': True}
+            default_options["compile_time_env"] = {"ZSTD_SUPPORT": True}
             for ext in EXTENSIONS:
-                if ext.name in ["bitshuffle.ext", "bitshuffle.h5", "bitshuffle.plugin.libh5bshuf"]:
+                if ext.name in [
+                    "bitshuffle.ext",
+                    "bitshuffle.h5",
+                    "bitshuffle.plugin.libh5bshuf",
+                ]:
                     ext.sources += zstd_sources
                     ext.include_dirs += zstd_lib
                     ext.depends += zstd_headers

@@ -35,8 +35,8 @@ from bitshuffle.ext import (
 zstd_api = []
 if __zstd__:
     from bitshuffle.ext import (
-         compress_zstd,
-         decompress_zstd,
+        compress_zstd,
+        decompress_zstd,
     )
 
     zstd_api += ["compress_zstd", "decompress_zstd"]
