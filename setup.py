@@ -41,7 +41,6 @@ MACROS = [
     ("BSHUF_VERSION_MAJOR", VERSION_MAJOR),
     ("BSHUF_VERSION_MINOR", VERSION_MINOR),
     ("BSHUF_VERSION_POINT", VERSION_POINT),
-    ("ZSTD_SUPPORT", 0),
 ]
 
 
@@ -260,7 +259,7 @@ class install(install_):
                     ext.sources += zstd_sources
                     ext.include_dirs += zstd_lib
                     ext.depends += zstd_headers
-                    ext.define_macros[3] = ("ZSTD_SUPPORT", 1)
+                    ext.define_macros += [("ZSTD_SUPPORT", 1)]
 
     def run(self):
         install_.run(self)
