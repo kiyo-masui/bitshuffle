@@ -1,3 +1,4 @@
+# flake8: noqa
 """
 Filter for improving compression of typed binary data.
 
