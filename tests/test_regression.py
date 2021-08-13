@@ -10,7 +10,6 @@ import unittest
 
 import numpy as np
 import h5py
-import pytest
 from bitshuffle import __zstd__
 
 from packaging import version
@@ -33,7 +32,7 @@ class TestAll(unittest.TestCase):
             for dset_name in g_comp.keys():
                 self.assertTrue(np.all(g_comp[dset_name][:] == g_orig[dset_name][:]))
 
-            # Only run ZSTD comparison on versions >= 0.4.0 and if ZSTD support 
+            # Only run ZSTD comparison on versions >= 0.4.0 and if ZSTD support
             # has been built into bitshuffle
             if version.parse(rev) >= version.parse("0.4.0") and __zstd__:
                 g_comp_zstd = f["compressed_zstd"]

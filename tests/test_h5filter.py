@@ -97,7 +97,7 @@ class TestFilter(unittest.TestCase):
         f.close()
 
     @pytest.mark.skipif(
-        __zstd__ == False,
+        __zstd__ is False,
         reason="Bitshuffle has not been built with ZSTD support.",
     )
     def test_with_zstd_compression(self):
