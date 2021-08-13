@@ -512,7 +512,6 @@ IF ZSTD_SUPPORT:
             raise excp
         return out[:count]
     
-    
     @cython.boundscheck(False)
     @cython.wraparound(False)
     def decompress_zstd(np.ndarray arr not None, shape, dtype, int block_size=0):
