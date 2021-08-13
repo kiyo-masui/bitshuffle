@@ -6,9 +6,10 @@ import glob
 
 import numpy as np
 import h5py
+import pytest
 from h5py import h5z
 
-from bitshuffle import h5
+from bitshuffle import h5, __zstd__
 
 
 os.environ["HDF5_PLUGIN_PATH"] = ""
@@ -95,6 +96,10 @@ class TestFilter(unittest.TestCase):
         self.assertTrue(np.all(d == data))
         f.close()
 
+    @pytest.mark.skipif(
+        __zstd__ == False,
+        reason="Bitshuffle has not been built with ZSTD support.",
+    )
     def test_with_zstd_compression(self):
         shape = (128 * 1024 + 783,)
         chunks = (4 * 1024 + 23,)
