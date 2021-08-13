@@ -459,6 +459,7 @@ def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
         raise RuntimeError(msg, count)
     return out
 
+
 IF ZSTD_SUPPORT:
     @cython.boundscheck(False)
     @cython.wraparound(False)
