@@ -202,6 +202,21 @@ lzf_plugin = Extension(
 
 
 EXTENSIONS = [ext_bshuf, h5filter]
+
+# For enabling ZSTD support when building wheels
+if "ENABLE_ZSTD" in os.environ:
+    default_options["compile_time_env"] = {"ZSTD_SUPPORT": True}
+    for ext in EXTENSIONS:
+        if ext.name in [
+            "bitshuffle.ext",
+            "bitshuffle.h5",
+            "bitshuffle.plugin.libh5bshuf",
+        ]:
+            ext.sources += zstd_sources
+            ext.include_dirs += zstd_lib
+            ext.depends += zstd_headers
+            ext.define_macros += [("ZSTD_SUPPORT", 1)]
+
 # Check for plugin hdf5 plugin support (hdf5 >= 1.8.11)
 HDF5_PLUGIN_SUPPORT = False
 CPATHS = os.environ["CPATH"].split(":") if "CPATH" in os.environ else []
