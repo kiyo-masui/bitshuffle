@@ -37,7 +37,7 @@ jobs:
     - name: Install h5py
       if: ${{ matrix.os == 'macos-latest' }}
       run: |
-        pip install h5py
+        pip install --no-binary=h5py h5py
 
     - name: Install pip dependencies
       run: |
