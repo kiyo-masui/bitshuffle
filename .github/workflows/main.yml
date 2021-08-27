@@ -35,7 +35,6 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install h5py
-      if: ${{ matrix.os == 'macos-latest' }}
       run: |
         pip install --no-binary=h5py h5py
 
