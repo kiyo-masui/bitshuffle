@@ -45,7 +45,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import sys
 import numpy
 import h5py
-from h5py import h5d, h5s, h5t, h5p, filters
+from h5py import h5d, h5s, h5t, h5p, h5z, filters
 
 cimport cython
 
@@ -67,7 +67,7 @@ if not sys.platform.startswith('win'):
     if sys.version_info[0] >= 3:
         libname = bytes(h5d.__file__, encoding='utf-8')
     else:
-        libname = h5d.__file__
+        libname = h5z.__file__
     init_filter(libname)
 
 
