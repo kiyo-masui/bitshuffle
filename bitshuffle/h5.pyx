@@ -65,7 +65,7 @@ H5_COMPRESS_LZ4 = BSHUF_H5_COMPRESS_LZ4
 # Init HDF5 dynamic loading with HDF5 library used by h5py
 if not sys.platform.startswith('win'):
     if sys.version_info[0] >= 3:
-        libname = bytes(h5d.__file__, encoding='utf-8')
+        libname = bytes(h5z.__file__, encoding='utf-8')
     else:
         libname = h5z.__file__
     init_filter(libname)
