@@ -87,6 +87,14 @@ static struct {
 } DL_H5Functions = {
     NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 
+static struct {
+    /*HDF5 variables*/
+    void *h5e_cantregister_ptr;
+    void *h5e_callback_ptr;
+    void *h5e_pline_ptr;
+    void *h5e_err_cls_ptr;
+} H5Variables_ptr = {
+    NULL, NULL, NULL, NULL};
 
 /*HDF5 variables*/
 hid_t H5E_CANTREGISTER_g = -1;
@@ -265,28 +273,36 @@ int init_filter(const char *libname)
         }
 
         /*Variables*/
-        if(H5E_CANTREGISTER_g == -1) {
+        if(H5Variables_ptr.h5e_cantregister_ptr == NULL) {
             symbol = find_sym(handle, "H5E_CANTREGISTER_g");
-            if(symbol != NULL)
+            if(symbol != NULL) {
                 H5E_CANTREGISTER_g = *((hid_t *)symbol);
+                H5Variables_ptr.h5e_cantregister_ptr = symbol;
+            }
         }
 
-        if(H5E_CALLBACK_g == -1) {
+        if(H5Variables_ptr.h5e_callback_ptr == NULL) {
             symbol = find_sym(handle, "H5E_CALLBACK_g");
-            if(symbol != NULL)
+            if(symbol != NULL) {
                 H5E_CALLBACK_g = *((hid_t *)symbol);
+                H5Variables_ptr.h5e_callback_ptr = symbol;
+            }
         }
 
-        if(H5E_PLINE_g == -1) {
+        if(H5Variables_ptr.h5e_pline_ptr == NULL) {
             symbol = find_sym(handle, "H5E_PLINE_g");
-            if(symbol != NULL)
+            if(symbol != NULL) {
                 H5E_PLINE_g = *((hid_t *)symbol);
+                H5Variables_ptr.h5e_pline_ptr = symbol;
+            }
         }
 
-        if(H5E_ERR_CLS_g == -1) {
+        if(H5Variables_ptr.h5e_err_cls_ptr == NULL) {
             symbol = find_sym(handle, "H5E_ERR_CLS_g");
-            if(symbol != NULL)
+            if(symbol != NULL) {
                 H5E_ERR_CLS_g = *((hid_t *)symbol);
+                H5Variables_ptr.h5e_err_cls_ptr = symbol;
+            }
         }
 
         retval = check_symbols();
