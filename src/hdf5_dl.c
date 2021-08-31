@@ -97,44 +97,167 @@ hid_t H5E_ERR_CLS_g = -1;
 
 static bool is_init = false;
 
+/*
+ * Try to find a symbol within a library
+ * 
+ * handle: Handle to the library
+ * symbol: Symbol to look for
+ * Returns: a pointer to the symbol or NULL 
+ * if the symbol can't be found 
+ */
+void *find_sym(void *handle, const char *symbol) {
+
+  void *ret = NULL, *err = NULL;
+  dlerror(); /* clear error code */
+  ret = dlsym(handle, symbol);
+
+  if(ret != NULL && (err = dlerror()) == NULL)
+    return ret;
+  else
+    return NULL;
+}
 
 /* Initialize the dynamic loading of symbols and register the plugin
  *
  * libname: Name of the DLL from which to load libHDF5 symbols
  * Returns: a value < 0 if an error occured
  */
-int init_filter(const char* libname)
+int init_filter(const char *libname)
 {
     int retval = -1;
-  	void * handle;
+  	void *handle = NULL, *symbol = NULL;
 
     handle = dlopen(libname, RTLD_LAZY | RTLD_LOCAL);
 
     if (handle != NULL) {
         /*H5*/
-        DL_H5Functions.H5open = (DL_func_H5open)dlsym(handle, "H5open");
+        if(DL_H5Functions.H5open == NULL) {
+            symbol = find_sym(handle, "H5open");
+            if(symbol != NULL)
+                DL_H5Functions.H5open = (DL_func_H5open)symbol;
+            else
+              retval = 0;
+        }
+
         /*H5E*/
-        DL_H5Functions.H5Epush1 = (DL_func_H5Epush1)dlsym(handle, "H5Epush1");
-        DL_H5Functions.H5Epush2 = (DL_func_H5Epush2)dlsym(handle, "H5Epush2");
+        if(DL_H5Functions.H5Epush1 == NULL) {
+            symbol = find_sym(handle, "H5Epush1");
+            if(symbol != NULL)
+                DL_H5Functions.H5Epush1 = (DL_func_H5Epush1)symbol;
+            else
+              retval = 0;
+        }
+
+        if(DL_H5Functions.H5Epush2 == NULL) {
+            symbol = find_sym(handle, "H5Epush2");
+            if(symbol != NULL)
+                DL_H5Functions.H5Epush2 = (DL_func_H5Epush2)symbol;
+            else
+              retval = 0;
+        }
+
         /*H5P*/
-        DL_H5Functions.H5Pget_filter_by_id2 = (DL_func_H5Pget_filter_by_id2)dlsym(handle, "H5Pget_filter_by_id2");
-        DL_H5Functions.H5Pget_chunk = (DL_func_H5Pget_chunk)dlsym(handle, "H5Pget_chunk");
-        DL_H5Functions.H5Pmodify_filter = (DL_func_H5Pmodify_filter)dlsym(handle, "H5Pmodify_filter");
+        if(DL_H5Functions.H5Pget_filter_by_id2 == NULL) {
+            symbol = find_sym(handle, "H5Pget_filter_by_id2");
+            if(symbol != NULL)
+                DL_H5Functions.H5Pget_filter_by_id2 = (DL_func_H5Pget_filter_by_id2)symbol;
+            else
+              retval = 0;
+        }
+
+        if(DL_H5Functions.H5Pget_chunk == NULL) {
+            symbol = find_sym(handle, "H5Pget_chunk");
+            if(symbol != NULL)
+                DL_H5Functions.H5Pget_chunk = (DL_func_H5Pget_chunk)symbol;
+            else
+              retval = 0;
+        }
+
+        if(DL_H5Functions.H5Pmodify_filter == NULL) {
+            symbol = find_sym(handle, "H5Pmodify_filter");
+            if(symbol != NULL)
+                DL_H5Functions.H5Pmodify_filter = (DL_func_H5Pmodify_filter)symbol;
+            else
+              retval = 0;
+        }
+
         /*H5T*/
-        DL_H5Functions.H5Tget_size = (DL_func_H5Tget_size)dlsym(handle, "H5Tget_size");
-        DL_H5Functions.H5Tget_class = (DL_func_H5Tget_class)dlsym(handle, "H5Tget_class");
-        DL_H5Functions.H5Tget_super = (DL_func_H5Tget_super)dlsym(handle, "H5Tget_super");
-        DL_H5Functions.H5Tclose = (DL_func_H5Tclose)dlsym(handle, "H5Tclose");
+        if(DL_H5Functions.H5Tget_size == NULL) {
+            symbol = find_sym(handle, "H5Tget_size");
+            if(symbol != NULL)
+                DL_H5Functions.H5Tget_size = (DL_func_H5Tget_size)symbol;
+            else
+              retval = 0;
+        }
+
+        if(DL_H5Functions.H5Tget_class == NULL) {
+            symbol = find_sym(handle, "H5Tget_class");
+            if(symbol != NULL)
+                DL_H5Functions.H5Tget_class = (DL_func_H5Tget_class)symbol;
+            else
+              retval = 0;
+        }
+       
+        if(DL_H5Functions.H5Tget_super == NULL) {
+            symbol = find_sym(handle, "H5Tget_super");
+            if(symbol != NULL)
+                DL_H5Functions.H5Tget_super = (DL_func_H5Tget_super)symbol;
+            else
+              retval = 0;
+        }
+        
+        if(DL_H5Functions.H5Tclose == NULL) {
+            symbol = find_sym(handle, "H5Tclose");
+            if(symbol != NULL)
+                DL_H5Functions.H5Tclose = (DL_func_H5Tclose)symbol;
+            else
+              retval = 0;
+        }
+
         /*H5Z*/
-        DL_H5Functions.H5Zregister = (DL_func_H5Zregister)dlsym(handle, "H5Zregister");
+        if(DL_H5Functions.H5Zregister == NULL) {
+            symbol = find_sym(handle, "H5Zregister");
+            if(symbol != NULL)
+                DL_H5Functions.H5Zregister = (DL_func_H5Zregister)symbol;
+            else
+              retval = 0;
+        }
 
         /*Variables*/
-        H5E_CANTREGISTER_g = *((hid_t *)dlsym(handle, "H5E_CANTREGISTER_g"));
-        H5E_CALLBACK_g = *((hid_t *)dlsym(handle, "H5E_CALLBACK_g"));
-        H5E_PLINE_g = *((hid_t *)dlsym(handle, "H5E_PLINE_g"));
-        H5E_ERR_CLS_g = *((hid_t *)dlsym(handle, "H5E_ERR_CLS_g"));
+        if(H5E_CANTREGISTER_g == -1) {
+            symbol = find_sym(handle, "H5E_CANTREGISTER_g");
+            if(symbol != NULL)
+                H5E_CANTREGISTER_g = *((hid_t *)symbol);
+            else
+              retval = 0;
+        }
 
-        is_init = true;
+        if(H5E_CALLBACK_g == -1) {
+            symbol = find_sym(handle, "H5E_CALLBACK_g");
+            if(symbol != NULL)
+                H5E_CALLBACK_g = *((hid_t *)symbol);
+            else
+              retval = 0;
+        }
+
+        if(H5E_PLINE_g == -1) {
+            symbol = find_sym(handle, "H5E_PLINE_g");
+            if(symbol != NULL)
+                H5E_PLINE_g = *((hid_t *)symbol);
+            else
+              retval = 0;
+        }
+
+        if(H5E_ERR_CLS_g == -1) {
+            symbol = find_sym(handle, "H5E_ERR_CLS_g");
+            if(symbol != NULL)
+                H5E_ERR_CLS_g = *((hid_t *)symbol);
+            else
+              retval = 0;
+        }
+
+        if(retval == -1)
+            is_init = true;
     }
 
     return retval;
