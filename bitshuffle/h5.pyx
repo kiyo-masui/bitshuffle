@@ -45,7 +45,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import sys
 import numpy
 import h5py
-from h5py import h5d, h5s, h5t, h5p, h5z, filters
+from h5py import h5d, h5fd, h5s, h5t, h5p, h5z, defs, filters
 
 cimport cython
 
@@ -66,13 +66,15 @@ H5_COMPRESS_LZ4 = BSHUF_H5_COMPRESS_LZ4
 if not sys.platform.startswith('win'):
     if sys.version_info[0] >= 3:
         libs = [bytes(h5d.__file__, encoding='utf-8'),
+                bytes(h5fd.__file__, encoding='utf-8'),
                 bytes(h5s.__file__, encoding='utf-8'),
                 bytes(h5t.__file__, encoding='utf-8'),
                 bytes(h5p.__file__, encoding='utf-8'),
-                bytes(h5z.__file__, encoding='utf-8')]
+                bytes(h5z.__file__, encoding='utf-8'),
+                bytes(defs.__file__, encoding='utf-8')]
     else:
-        libs = [h5d.__file__, h5s.__file__, h5t.__file__,
-                h5p.__file__, h5z.__file__]
+        libs = [h5d.__file__, h5fd.__file__, h5s.__file__, h5t.__file__,
+                h5p.__file__, h5z.__file__, defs.__file__]
 
     # Ensure all symbols are loaded
     success = 0
