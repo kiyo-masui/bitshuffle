@@ -65,7 +65,7 @@ H5_COMPRESS_LZ4 = BSHUF_H5_COMPRESS_LZ4
 # Init HDF5 dynamic loading with HDF5 library used by h5py
 if not sys.platform.startswith('win'):
     if sys.version_info[0] >= 3:
-        libs = [bytes(h5d.__file__, encoding='utf-8'), 
+        libs = [bytes(h5d.__file__, encoding='utf-8'),
                 bytes(h5s.__file__, encoding='utf-8'),
                 bytes(h5t.__file__, encoding='utf-8'),
                 bytes(h5p.__file__, encoding='utf-8'),
@@ -83,6 +83,7 @@ if not sys.platform.startswith('win'):
 
     if not success:
         raise RuntimeError("Failed to load all HDF5 symbols using these libs: {}".format(libs))
+
 
 def register_h5_filter():
     ret = bshuf_register_h5filter()
