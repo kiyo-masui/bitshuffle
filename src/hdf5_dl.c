@@ -128,70 +128,68 @@ void *find_sym(void *handle, const char *symbol) {
 /*
  * Check that all symbols have been loaded
  * 
- * Returns: 0 if an error occured, -1 for success
+ * Returns: -1 if an error occured, 0 for success
  */
 int check_symbols() {
 
-  int retval = -1;
-
   if(DL_H5Functions.H5open == NULL)
-    retval = 0;
+    return -1;
 
   /*H5E*/
   if(DL_H5Functions.H5Epush1 == NULL)
-    retval = 0;
+    return -1;
 
   if(DL_H5Functions.H5Epush2 == NULL)
-    retval = 0;
+    return -1;
 
   /*H5P*/
   if(DL_H5Functions.H5Pget_filter_by_id2 == NULL)
-    retval = 0;
+    return -1;
 
   if(DL_H5Functions.H5Pget_chunk == NULL)
-    retval = 0;
+    return -1;
 
   if(DL_H5Functions.H5Pmodify_filter == NULL)
-    retval = 0;
+    return -1;
 
   /*H5T*/
   if(DL_H5Functions.H5Tget_size == NULL)
-    retval = 0;
+    return -1;
 
   if(DL_H5Functions.H5Tget_class == NULL)
-    retval = 0;
+    return -1;
   
   if(DL_H5Functions.H5Tget_super == NULL)
-    retval = 0;
+    return -1;
   
   if(DL_H5Functions.H5Tclose == NULL)
-    retval = 0;
+    return -1;
 
   /*H5Z*/
   if(DL_H5Functions.H5Zregister == NULL)
-    retval = 0;
+    return -1;
 
   /*Variables*/
-  if(H5E_CANTREGISTER_g == -1)
-    retval = 0;
+  if(H5Variables_ptr.h5e_cantregister_ptr == NULL)
+    return -1;
 
-  if(H5E_CALLBACK_g == -1)
-    retval = 0;
+  if(H5Variables_ptr.h5e_callback_ptr == NULL)
+    return -1;
 
-  if(H5E_PLINE_g == -1)
-    retval = 0;
+  if(H5Variables_ptr.h5e_pline_ptr == NULL)
+    return -1;
 
-  if(H5E_ERR_CLS_g == -1)
-    retval = 0;
+  if(H5Variables_ptr.h5e_err_cls_ptr == NULL)
+    return -1;
 
-  return retval;
+  return 0;
 
 }
 
 /* Initialize the dynamic loading of symbols and register the plugin
  *
  * libname: Name of the DLL from which to load libHDF5 symbols
- * Returns: 0 if an error occured, -1 for success
+ * Returns: -1 if an error occured, 0 for success
  */
 int init_filter(const char *libname)
 {
@@ -275,39 +273,36 @@ int init_filter(const char *libname)
         /*Variables*/
         if(H5Variables_ptr.h5e_cantregister_ptr == NULL) {
             symbol = find_sym(handle, "H5E_CANTREGISTER_g");
-            if(symbol != NULL) {
-                H5E_CANTREGISTER_g = *((hid_t *)symbol);
+            if(symbol != NULL)
                 H5Variables_ptr.h5e_cantregister_ptr = symbol;
-            }
         }
 
         if(H5Variables_ptr.h5e_callback_ptr == NULL) {
             symbol = find_sym(handle, "H5E_CALLBACK_g");
-            if(symbol != NULL) {
-                H5E_CALLBACK_g = *((hid_t *)symbol);
+            if(symbol != NULL)
                 H5Variables_ptr.h5e_callback_ptr = symbol;
-            }
         }
 
         if(H5Variables_ptr.h5e_pline_ptr == NULL) {
             symbol = find_sym(handle, "H5E_PLINE_g");
-            if(symbol != NULL) {
-                H5E_PLINE_g = *((hid_t *)symbol);
+            if(symbol != NULL)
                 H5Variables_ptr.h5e_pline_ptr = symbol;
-            }
         }
 
         if(H5Variables_ptr.h5e_err_cls_ptr == NULL) {
             symbol = find_sym(handle, "H5E_ERR_CLS_g");
-            if(symbol != NULL) {
-                H5E_ERR_CLS_g = *((hid_t *)symbol);
+            if(symbol != NULL)
                 H5Variables_ptr.h5e_err_cls_ptr = symbol;
-            }
         }
 
         retval = check_symbols();
-        if(retval == -1)
+        if(!retval) {
+            H5E_CANTREGISTER_g = *((hid_t *)H5Variables_ptr.h5e_cantregister_ptr);
+            H5E_CALLBACK_g = *((hid_t *)H5Variables_ptr.h5e_callback_ptr);
+            H5E_PLINE_g = *((hid_t *)H5Variables_ptr.h5e_pline_ptr);
+            H5E_ERR_CLS_g = *((hid_t *)H5Variables_ptr.h5e_err_cls_ptr);
             is_init = true;
+        }
     }
 
     return retval;

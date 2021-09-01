@@ -77,13 +77,13 @@ if not sys.platform.startswith('win'):
                 h5p.__file__, h5z.__file__, defs.__file__]
 
     # Ensure all symbols are loaded
-    success = 0
+    success = -1
     for lib in libs:
         success = init_filter(lib)
-        if success == -1:
+        if success == 0:
             break
 
-    if not success:
+    if success == -1:
         raise RuntimeError("Failed to load all HDF5 symbols using these libs: {}".format(libs))
 
 
