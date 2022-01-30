@@ -170,7 +170,7 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
 
     out_buf = malloc(buf_size_out);
     if (out_buf == NULL) {
-        PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
+        !PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
                 "Could not allocate output buffer.");
         return 0;
     }
@@ -195,30 +195,55 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
             // Techincally we should be using signed integers instead of
             // unsigned ones, however for valid inputs (positive numbers) these
             // have the same representation.
+				
             bshuf_write_uint64_BE(out_buf, nbytes_uncomp);
             bshuf_write_uint32_BE((char*) out_buf + 8, block_size * elem_size);
-            if(cd_values[4] == BSHUF_H5_COMPRESS_LZ4) {
-                err = bshuf_compress_lz4(in_buf, (char*) out_buf + 12, size,
-                        elem_size, block_size); 
-            }
+            if ( flags & H5Z_FLAG_OPTIONAL ) {
+				if ( nbytes_uncomp < 18 ) { // TODO feel free to properly adjust
+											// this is 12 header + 4 lz4 block header + 2 bytes lz4 block payload 
+											// feel free to use more realistic values or make lz4 local or use
+											// larger common value for lz4 and std
+					err = -82;
+				}
+				else {
+            		if(cd_values[4] == BSHUF_H5_COMPRESS_LZ4) {
+            			err = bshuf_compress_lz4_out_size_limited(in_buf, (char*) out_buf + 12, size, elem_size, block_size);
+					}
+					// TODO add ZSTD support here
+					if ( err >= 0 ) {
+						nbytes_out = err + 12;
+						if ( nbytes_out > nbytes_uncomp ) err = -82;
+					}
+				}
+			}
+			else {
+            	if(cd_values[4] == BSHUF_H5_COMPRESS_LZ4) {
+            		err = bshuf_compress_lz4(in_buf, (char*) out_buf + 12, size,
+							 elem_size, block_size);
+				}
 #ifdef ZSTD_SUPPORT
-            else if (cd_values[4] == BSHUF_H5_COMPRESS_ZSTD) {
-                err = bshuf_compress_zstd(in_buf, (char*) out_buf + 12, size,
-                        elem_size, block_size, comp_lvl); 
-            }
+	            else if (cd_values[4] == BSHUF_H5_COMPRESS_ZSTD) {
+    	            err = bshuf_compress_zstd(in_buf, (char*) out_buf + 12, size,
+        	                elem_size, block_size, comp_lvl); 
+            	}
 #endif
-            nbytes_out = err + 12;
+ 				nbytes_out = err + 12;
+			}
         } 
     } else {
-            if (flags & H5Z_FLAG_REVERSE) {
+        if (flags & H5Z_FLAG_REVERSE) {
             // Bit unshuffle.
-            err = bshuf_bitunshuffle(in_buf, out_buf, size, elem_size,
-                    block_size); } else {
+            err = bshuf_bitunshuffle(in_buf, out_buf, size, elem_size, block_size);
+        } else {
             // Bit shuffle.
-            err = bshuf_bitshuffle(in_buf, out_buf, size, elem_size,
-                    block_size); } nbytes_out = nbytes; }
-    //printf("nb_in %d, nb_uncomp %d, nb_out %d, buf_out %d, block %d\n",
-    //nbytes, nbytes_uncomp, nbytes_out, buf_size_out, block_size);
+            err = bshuf_bitshuffle(in_buf, out_buf, size, elem_size, block_size);
+        } 
+        nbytes_out = nbytes;
+    }
+#if 0
+    printf("nb_in %d, nb_uncomp %d, nb_out %d, buf_out %d, block %d\n",
+    nbytes, nbytes_uncomp, nbytes_out, buf_size_out, block_size);
+#endif
 
     if (err < 0) {
         sprintf(msg, "Error in bitshuffle with error code %d.", err);

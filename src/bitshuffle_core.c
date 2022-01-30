@@ -49,6 +49,29 @@ typedef size_t omp_size_t;
 #define CHECK_MULT_EIGHT(n) if (n % 8) return -80;
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
+#define CHECK_ABORT(condition,error,C) if ( condition ) { \
+	ioc_destroy(&C); \
+	return error; \
+}
+
+#if defined(_OPENMP)
+
+#define PARALLEL_MAY_FAIL(condition,guard) if (condition)
+
+#define _PRAGMA(x) _Pragma(#x)
+
+#define PARALLEL_CHECK_ABORT(condition,guard,error,C) if ( condition ) {\
+    guard = error; \
+    _PRAGMA(omp flush( guard )) \
+}
+
+#else
+
+#define PARALLEL_MAY_FAIL(condition,guard)
+
+#define PARALLEL_CHECK_ABORT(condition,guard,error,C) CHECK_ABORT(condition,error,C)
+
+#endif
 
 /* ---- Functions indicating compile time instruction set. ---- */
 
@@ -1667,10 +1690,13 @@ int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
 /* Wrap a function for processing a single block to process an entire buffer in
  * parallel. */
 int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, \
-        const size_t size, const size_t elem_size, size_t block_size, const int option) {
+        const size_t size, const size_t elem_size, size_t block_size, const int option, \
+		size_t out_size_limit) {
 
     omp_size_t ii = 0;
+#if defined(_OPENMP)
     int64_t err = 0;
+#endif
     int64_t count, cum_count=0;
     size_t last_block_size;
     size_t leftover_bytes;
@@ -1686,29 +1712,63 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, 
     if (block_size == 0) {
         block_size = bshuf_default_block_size(elem_size);
     }
-    if (block_size % BSHUF_BLOCKED_MULT) return -81;
+    CHECK_ABORT(block_size % BSHUF_BLOCKED_MULT, -81, C);
 
+	if ( out_size_limit ) {
 #if defined(_OPENMP)
+	#pragma omp flush (err)
     #pragma omp parallel for schedule(dynamic, 1) \
             private(count) reduction(+ : cum_count)
 #endif
-    for (ii = 0; ii < (omp_size_t)( size / block_size ); ii ++) {
-        count = fun(&C, block_size, elem_size, option);
-        if (count < 0) err = count;
-        cum_count += count;
+    	for (ii = 0; ii < (omp_size_t)( size / block_size ); ii ++) {
+			PARALLEL_MAY_FAIL( !err, err ) {
+       			count = fun(&C, block_size, elem_size,option);
+				PARALLEL_CHECK_ABORT( count < 0 , err, count, C );
+        		cum_count += count;
+				// cast to unsigned safe: cum_count < 0 only possible when count < 0 and
+				// cum_count < -count which cause PARALLEL_CHECK_ABORT to set err = count
+				PARALLEL_CHECK_ABORT( (size_t)cum_count > out_size_limit, err, -82, C);
+			}
+		}
+	}
+	else {
+#if defined(_OPENMP)
+	#pragma omp flush (err)
+    #pragma omp parallel for schedule(dynamic, 1) \
+            private(count) reduction(+ : cum_count)
+#endif
+    	for (ii = 0; ii < (omp_size_t)( size / block_size ); ii ++) {
+			PARALLEL_MAY_FAIL( !err , err ) {
+        		count = fun(&C, block_size, elem_size,option);
+				PARALLEL_CHECK_ABORT( count < 0 , err, count, C);
+        		cum_count += count;
+			}
+		}
     }
+#if defined(_OPENMP)
+	CHECK_ABORT( err < 0, err, C);
+#endif
 
     last_block_size = size % block_size;
     last_block_size = last_block_size - last_block_size % BSHUF_BLOCKED_MULT;
     if (last_block_size) {
         count = fun(&C, last_block_size, elem_size, option);
-        if (count < 0) err = count;
+        CHECK_ABORT(count < 0, count, C);
         cum_count += count;
+		// cast to unsigend safe: cum_count < 0 not possible as this would appart
+		// from out_size_limit > 0 required that count < 0 and cum_count < -count
+		// which any preceding call to CHECK_ABORT would have handled by aborting
+		// bshuf_blocked_wrap_fun immediately.
+		CHECK_ABORT( out_size_limit && ( (size_t)cum_count > out_size_limit ), -82, C );
     }
 
-    if (err < 0) return err;
-
     leftover_bytes = size % BSHUF_BLOCKED_MULT * elem_size;
+	cum_count += leftover_bytes;
+	// cast to unsigend safe: cum_count < 0 not possible as this would appart
+	// from out_size_limit > 0 required that count < 0 and cum_count < -count
+	// which any precedding call to CHECK_ABORT would have handled by aborting
+	// bshuf_blocked_wrap_fun immediately.
+	CHECK_ABORT ( out_size_limit && ( (size_t)cum_count > out_size_limit ), -82, C);
     //this_iter;
     last_in = (char *) ioc_get_in(&C, &this_iter);
     ioc_set_next_in(&C, &this_iter, (void *) (last_in + leftover_bytes));
@@ -1719,7 +1779,7 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, 
 
     ioc_destroy(&C);
 
-    return cum_count + leftover_bytes;
+    return cum_count;// + leftover_bytes;
 }
 
 
@@ -1842,7 +1902,7 @@ int64_t bshuf_bitshuffle(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
     return bshuf_blocked_wrap_fun(&bshuf_bitshuffle_block, in, out, size,
-            elem_size, block_size, 0/*option*/);
+            elem_size, block_size, 0/*option*/,0/* no output limit */);
 }
 
 
@@ -1850,7 +1910,7 @@ int64_t bshuf_bitunshuffle(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
 
     return bshuf_blocked_wrap_fun(&bshuf_bitunshuffle_block, in, out, size,
-            elem_size, block_size, 0/*option*/);
+            elem_size, block_size, 0/*option*/,0 /*no output limit in unshuffle */);
 }
 
 
