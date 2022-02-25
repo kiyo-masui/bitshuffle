@@ -23,12 +23,14 @@ jobs:
       - uses: actions/setup-python@v2
 
       - name: Install cibuildwheel
-        run: python -m pip install cibuildwheel==2.0.0a3
+        run: python -m pip install cibuildwheel==2.3.1
 
       # Build wheels for linux and x86 platforms
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse-hdf5-${{ matrix.hdf5 }}
         env:
+          CIBW_PLATFORM: linux
+          CIBW_BUILD: "cp*manylinux*"
           CIBW_ARCHS_LINUX: "x86_64"
           CIBW_BEFORE_ALL_LINUX: |
             chmod +x .github/workflows/install_hdf5.sh
