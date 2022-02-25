@@ -1,6 +1,10 @@
 name: Build bitshuffle wheels and upload to PyPI
 
-on: [pull_request]
+on:
+  workflow_dispatch:
+  release:
+    types:
+    - published
 
 jobs:
   build_wheels:
@@ -76,9 +80,9 @@ jobs:
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
     # Upload to PyPI on every tag
-    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
+    # if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')
     # Alternatively, to publish when a GitHub Release is created, use the following rule:
-    # if: github.event_name == 'release' && github.event.action == 'published'
+    if: github.event_name == 'release' && github.event.action == 'published'
     steps:
       - uses: actions/download-artifact@v2
         with:
