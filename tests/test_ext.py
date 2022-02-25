@@ -6,7 +6,7 @@ import time
 import numpy as np
 from numpy import random
 
-from bitshuffle import ext
+from bitshuffle import ext, __zstd__
 
 
 # If we are doing timeings by what factor to increase workload.
@@ -379,6 +379,22 @@ class TestProfile(unittest.TestCase):
         )
         self.check_data = pre_trans
 
+    @unittest.skipUnless(__zstd__, "ZSTD support not included")
+    def test_10c_compress_z64(self):
+        self.case = "compress zstd  64"
+        self.data = self.data.view(np.float64)
+        self.fun = lambda x: ext.compress_zstd(x, BLOCK)
+
+    @unittest.skipUnless(__zstd__, "ZSTD support not included")
+    def test_10d_decompress_z64(self):
+        self.case = "decompress zstd 64"
+        pre_trans = self.data.view(np.float64)
+        self.data = ext.compress_zstd(pre_trans, BLOCK)
+        self.fun = lambda x: ext.decompress_zstd(
+            x, pre_trans.shape, pre_trans.dtype, BLOCK
+        )
+        self.check_data = pre_trans
+
 
 """
 Commented out to prevent nose from finding them.
@@ -536,6 +552,23 @@ class TestBitShuffleCircle(unittest.TestCase):
                 data = dbuf[:n]
                 shuff = ext.compress_lz4(data)
                 out = ext.decompress_lz4(shuff, data.shape, data.dtype)
+                self.assertTrue(out.dtype is data.dtype)
+                self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
+
+    @unittest.skipUnless(__zstd__, "ZSTD support not included")
+    def test_circle_with_zstd_compression(self):
+        nmax = 100000
+        reps = 20
+        for dtype in TEST_DTYPES:
+            itemsize = np.dtype(dtype).itemsize
+            nbyte_max = nmax * itemsize
+            dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
+            dbuf = dbuf.view(dtype)
+            for ii in range(reps):
+                n = random.randint(0, nmax, 1)[0]
+                data = dbuf[:n]
+                shuff = ext.compress_zstd(data)
+                out = ext.decompress_zstd(shuff, data.shape, data.dtype)
                 self.assertTrue(out.dtype is data.dtype)
                 self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
 
