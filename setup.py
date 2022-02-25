@@ -19,12 +19,12 @@ import platform
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 4
-VERSION_POINT = 0
+VERSION_POINT = 1
 # Define ZSTD macro for cython compilation
 default_options["compile_time_env"] = {"ZSTD_SUPPORT": False}
 
 # Only unset in the 'release' branch and in tags.
-VERSION_DEV = 1
+VERSION_DEV = None
 
 VERSION = "%d.%d.%d" % (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
 if VERSION_DEV:
