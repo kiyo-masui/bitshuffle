@@ -30,13 +30,18 @@ jobs:
         run: python -m cibuildwheel --output-dir wheelhouse-hdf5-${{ matrix.hdf5 }}
         env:
           CIBW_ARCHS_LINUX: "x86_64"
-          CIBW_BEFORE_BUILD_LINUX: chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh ${{ matrix.hdf5 }};
-                                   git submodule update --init
-          CIBW_ENVIRONMENT: "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib ENABLE_ZSTD=1"
+          CIBW_BEFORE_ALL_LINUX: |
+            chmod +x .github/workflows/install_hdf5.sh
+            .github/workflows/install_hdf5.sh ${{ matrix.hdf5 }}
+            git submodule update --init
+          CIBW_ENVIRONMENT: |
+            LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib ENABLE_ZSTD=1
           CIBW_TEST_REQUIRES: pytest
           # Install different version of HDF5 for unit tests to ensure the
           # wheels are indepedent of HDF5 installation
-          CIBW_BEFORE_TEST: chmod +x .github/workflows/install_hdf5.sh; .github/workflows/install_hdf5.sh 1.8.11;
+          # CIBW_BEFORE_TEST: |
+          #   chmod +x .github/workflows/install_hdf5.sh
+          #   .github/workflows/install_hdf5.sh 1.8.11
           # Run units tests but disable test_h5plugin.py
           CIBW_TEST_COMMAND: pytest {package}/tests
 
