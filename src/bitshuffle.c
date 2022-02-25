@@ -188,6 +188,8 @@ int64_t bshuf_decompress_zstd_block(ioc_chain *C_ptr,
         free(tmp_buf);
         return -91;
     }
+
+    nbytes = nbytes_from_header;
     count = bshuf_untrans_bit_elem(tmp_buf, out, size, elem_size);
     CHECK_ERR_FREE(count, tmp_buf);
     nbytes += 4;
