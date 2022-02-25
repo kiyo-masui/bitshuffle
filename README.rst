@@ -21,12 +21,12 @@ is performed within blocks of data roughly 8kB long [1]_.
 
 This does not in itself compress data, only rearranges it for more efficient
 compression. To perform the actual compression you will need a compression
-library.  Bitshuffle has been designed to be well matched Marc Lehmann's
-LZF_ as well as LZ4_. Note that because Bitshuffle modifies the data at the bit
+library.  Bitshuffle has been designed to be well matched to Marc Lehmann's
+LZF_ as well as LZ4_ and ZSTD_. Note that because Bitshuffle modifies the data at the bit
 level, sophisticated entropy reducing compression libraries such as GZIP and
 BZIP are unlikely to achieve significantly better compression than simpler and
-faster duplicate-string-elimination algorithms such as LZF and LZ4. Bitshuffle
-thus includes routines (and HDF5 filter options) to apply LZ4 compression to
+faster duplicate-string-elimination algorithms such as LZF, LZ4 and ZSTD. Bitshuffle
+thus includes routines (and HDF5 filter options) to apply LZ4 and ZSTD compression to
 each block after shuffling [2]_.
 
 The Bitshuffle algorithm relies on neighbouring elements of a dataset being
@@ -50,7 +50,7 @@ used outside of python and in command line utilities such as ``h5dump``.
 .. [1] Chosen to fit comfortably within L1 cache as well as be well matched
        window of the LZF compression library.
 
-.. [2] Over applying bitshuffle to the full dataset then applying LZ4
+.. [2] Over applying bitshuffle to the full dataset then applying LZ4/ZSTD
        compression, this has the tremendous advantage that the block is
        already in the L1 cache.
 
@@ -61,6 +61,8 @@ used outside of python and in command line utilities such as ``h5dump``.
 .. _LZF: http://oldhome.schmorp.de/marc/liblzf.html
 
 .. _LZ4: https://code.google.com/p/lz4/
+
+.. _ZSTD: https://github.com/facebook/zstd
 
 
 Applications
@@ -97,11 +99,14 @@ Installation for Python
 
 Installation requires python 2.7+ or 3.3+, HDF5 1.8.4 or later, HDF5 for python
 (h5py), Numpy and Cython. Bitshuffle is linked against HDF5. To use the dynamically 
-loaded HDF5 filter requires HDF5 1.8.11 or later.
+loaded HDF5 filter requires HDF5 1.8.11 or later. If ZSTD support is enabled the ZSTD 
+repo needs to pulled into bitshuffle before installation with::
 
-To install::
+    git submodule update --init
 
-    python setup.py install [--h5plugin [--h5plugin-dir=spam]]
+To install bitshuffle::
+
+    python setup.py install [--h5plugin [--h5plugin-dir=spam] --zstd]
 
 To get finer control of installation options, including whether to compile
 with OpenMP multi-threading, copy the ``setup.cfg.example`` to ``setup.cfg``
@@ -111,6 +116,8 @@ If using the dynamically loaded HDF5 filter (which gives you access to the
 Bitshuffle and LZF filters outside of python), set the environment variable
 ``HDF5_PLUGIN_PATH`` to the value of ``--h5plugin-dir`` or use HDF5's default
 search location of ``/usr/local/hdf5/lib/plugin``.
+
+ZSTD support is enabled with ``--zstd``.
 
 If you get an error about missing source files when building the extensions,
 try upgrading setuptools.  There is a weird bug where setuptools prior to 0.7
@@ -133,9 +140,13 @@ the filter will be available only within python and only after importing
 The filter can be added to new datasets either through the `h5py` low level
 interface or through the convenience functions provided in
 `bitshuffle.h5`. See the docstrings and unit tests for examples. For `h5py`
-version 2.5.0 and later Bitshuffle can added to new datasets through the
+version 2.5.0 and later Bitshuffle can be added to new datasets through the
 high level interface, as in the example below.
 
+The compression algorithm can be configured using the `filter_opts` in 
+`bitshuffle.h5.create_dataset()`. LZ4 is chosen with: 
+`(BLOCK_SIZE, h5.H5_COMPRESS_LZ4)` and ZSTD with: 
+`(BLOCK_SIZE, h5.H5_COMPRESS_ZSTD, COMP_LVL)`. See `test_h5filter.py` for an example.
 
 Example h5py
 ------------

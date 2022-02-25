@@ -33,14 +33,23 @@ cdef extern from b"bitshuffle.h":
                            int block_size) nogil
     int bshuf_decompress_lz4(void *A, void *B, int size, int elem_size,
                              int block_size) nogil
+    IF ZSTD_SUPPORT:
+        int bshuf_compress_zstd_bound(int size, int elem_size, int block_size)
+        int bshuf_compress_zstd(void *A, void *B, int size, int elem_size,
+                                int block_size, const int comp_lvl) nogil
+        int bshuf_decompress_zstd(void *A, void *B, int size, int elem_size,
+                                  int block_size) nogil
     int BSHUF_VERSION_MAJOR
     int BSHUF_VERSION_MINOR
     int BSHUF_VERSION_POINT
 
+__version__ = "%d.%d.%d" % (BSHUF_VERSION_MAJOR, BSHUF_VERSION_MINOR,
+                            BSHUF_VERSION_POINT)
 
-__version__ = str("%d.%d.%d").format(BSHUF_VERSION_MAJOR, BSHUF_VERSION_MINOR,
-                                     BSHUF_VERSION_POINT)
-
+IF ZSTD_SUPPORT:
+    __zstd__ = True
+ELSE:
+    __zstd__ = False
 
 # Prototypes from bitshuffle.c
 cdef extern int bshuf_copy(void *A, void *B, int size, int elem_size)
@@ -451,3 +460,110 @@ def decompress_lz4(np.ndarray arr not None, shape, dtype, int block_size=0):
     return out
 
 
+IF ZSTD_SUPPORT:
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    def compress_zstd(np.ndarray arr not None, int block_size=0, int comp_lvl=1):
+        """Bitshuffle then compress an array using ZSTD.
+    
+        Parameters
+        ----------
+        arr : numpy array
+            Data to be processed.
+        block_size : positive integer
+            Block size in number of elements. By default, block size is chosen
+            automatically.
+        comp_lvl : positive integer
+            Compression level applied by ZSTD
+    
+        Returns
+        -------
+        out : array with np.uint8 data type
+            Buffer holding compressed data.
+    
+        """
+    
+        cdef int ii, size, itemsize, count=0
+        shape = (arr.shape[i] for i in range(arr.ndim))
+        if not arr.flags['C_CONTIGUOUS']:
+            msg = "Input array must be C-contiguous."
+            raise ValueError(msg)
+        size = arr.size
+        dtype = arr.dtype
+        itemsize = dtype.itemsize
+    
+        max_out_size = bshuf_compress_zstd_bound(size, itemsize, block_size)
+    
+        cdef np.ndarray out
+        out = np.empty(max_out_size, dtype=np.uint8)
+    
+        cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] arr_flat
+        arr_flat = arr.view(np.uint8).ravel()
+        cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] out_flat
+        out_flat = out.view(np.uint8).ravel()
+        cdef void* arr_ptr = <void*> &arr_flat[0]
+        cdef void* out_ptr = <void*> &out_flat[0]
+        with nogil:
+            for ii in range(REPEATC):
+                count = bshuf_compress_zstd(arr_ptr, out_ptr, size, itemsize, block_size, comp_lvl)
+        if count < 0:
+            msg = "Failed. Error code %d."
+            excp = RuntimeError(msg % count, count)
+            raise excp
+        return out[:count]
+    
+    @cython.boundscheck(False)
+    @cython.wraparound(False)
+    def decompress_zstd(np.ndarray arr not None, shape, dtype, int block_size=0):
+        """Decompress a buffer using ZSTD then bitunshuffle it yielding an array.
+    
+        Parameters
+        ----------
+        arr : numpy array
+            Input data to be decompressed.
+        shape : tuple of integers
+            Shape of the output (decompressed array). Must match the shape of the
+            original data array before compression.
+        dtype : numpy dtype
+            Datatype of the output array. Must match the data type of the original
+            data array before compression.
+        block_size : positive integer
+            Block size in number of elements. Must match value used for
+            compression.
+    
+        Returns
+        -------
+        out : numpy array with shape *shape* and data type *dtype*
+            Decompressed data.
+    
+        """
+    
+        cdef int ii, size, itemsize, count=0
+        if not arr.flags['C_CONTIGUOUS']:
+            msg = "Input array must be C-contiguous."
+            raise ValueError(msg)
+        size = np.prod(shape)
+        itemsize = dtype.itemsize
+    
+        cdef np.ndarray out
+        out = np.empty(tuple(shape), dtype=dtype)
+    
+        cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] arr_flat
+        arr_flat = arr.view(np.uint8).ravel()
+        cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] out_flat
+        out_flat = out.view(np.uint8).ravel()
+        cdef void* arr_ptr = <void*> &arr_flat[0]
+        cdef void* out_ptr = <void*> &out_flat[0]
+        with nogil:
+            for ii in range(REPEATC):
+                count = bshuf_decompress_zstd(arr_ptr, out_ptr, size, itemsize,
+                                              block_size)
+        if count < 0:
+            msg = "Failed. Error code %d."
+            excp = RuntimeError(msg % count, count)
+            raise excp
+        if count != arr.size:
+            msg = "Decompressed different number of bytes than input buffer size."
+            msg += "Input buffer %d, decompressed %d." % (arr.size, count)
+            raise RuntimeError(msg, count)
+        return out

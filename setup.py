@@ -10,6 +10,7 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as build_ext_
 from setuptools.command.develop import develop as develop_
 from setuptools.command.install import install as install_
+from Cython.Compiler.Main import default_options
 import shutil
 import subprocess
 import sys
@@ -17,8 +18,10 @@ import platform
 
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 3
-VERSION_POINT = 6
+VERSION_MINOR = 4
+VERSION_POINT = 0
+# Define ZSTD macro for cython compilation
+default_options["compile_time_env"] = {"ZSTD_SUPPORT": False}
 
 # Only unset in the 'release' branch and in tags.
 VERSION_DEV = 1
@@ -118,6 +121,12 @@ def pkgconfig(*packages, **kw):
     return config
 
 
+zstd_headers = ["zstd/lib/zstd.h"]
+zstd_lib = ["zstd/lib/"]
+zstd_sources = glob.glob("zstd/lib/common/*.c")
+zstd_sources += glob.glob("zstd/lib/compress/*.c")
+zstd_sources += glob.glob("zstd/lib/decompress/*.c")
+
 ext_bshuf = Extension(
     "bitshuffle.ext",
     sources=[
@@ -193,6 +202,21 @@ lzf_plugin = Extension(
 
 
 EXTENSIONS = [ext_bshuf, h5filter]
+
+# For enabling ZSTD support when building wheels
+if "ENABLE_ZSTD" in os.environ:
+    default_options["compile_time_env"] = {"ZSTD_SUPPORT": True}
+    for ext in EXTENSIONS:
+        if ext.name in [
+            "bitshuffle.ext",
+            "bitshuffle.h5",
+            "bitshuffle.plugin.libh5bshuf",
+        ]:
+            ext.sources += zstd_sources
+            ext.include_dirs += zstd_lib
+            ext.depends += zstd_headers
+            ext.define_macros += [("ZSTD_SUPPORT", 1)]
+
 # Check for plugin hdf5 plugin support (hdf5 >= 1.8.11)
 HDF5_PLUGIN_SUPPORT = False
 CPATHS = os.environ["CPATH"].split(":") if "CPATH" in os.environ else []
@@ -221,19 +245,36 @@ class install(install_):
             None,
             "Where to install filter plugins. Default %s." % H5PLUGINS_DEFAULT,
         ),
+        ("zstd", None, "Install ZSTD support."),
     ]
 
     def initialize_options(self):
         install_.initialize_options(self)
         self.h5plugin = False
+        self.zstd = False
         self.h5plugin_dir = H5PLUGINS_DEFAULT
 
     def finalize_options(self):
         install_.finalize_options(self)
         if self.h5plugin not in ("0", "1", True, False):
-            raise ValueError("Invalid h5plugin argument. Mut be '0' or '1'.")
+            raise ValueError("Invalid h5plugin argument. Must be '0' or '1'.")
         self.h5plugin = int(self.h5plugin)
         self.h5plugin_dir = path.abspath(self.h5plugin_dir)
+        self.zstd = self.zstd
+
+        # Add ZSTD files and macro to extensions if ZSTD enabled
+        if self.zstd:
+            default_options["compile_time_env"] = {"ZSTD_SUPPORT": True}
+            for ext in EXTENSIONS:
+                if ext.name in [
+                    "bitshuffle.ext",
+                    "bitshuffle.h5",
+                    "bitshuffle.plugin.libh5bshuf",
+                ]:
+                    ext.sources += zstd_sources
+                    ext.include_dirs += zstd_lib
+                    ext.depends += zstd_headers
+                    ext.define_macros += [("ZSTD_SUPPORT", 1)]
 
     def run(self):
         install_.run(self)

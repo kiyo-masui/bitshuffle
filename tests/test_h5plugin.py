@@ -27,7 +27,7 @@ else:
 
 class TestFilterPlugins(unittest.TestCase):
     @pytest.mark.skipif(
-        "CI_BUILD_WHEEL" in os.environ,
+        "CIBUILDWHEEL" in os.environ,
         reason="Can't build dynamic HDF5 plugin into bitshuffle wheel.",
     )
     def test_plugins(self):
@@ -40,11 +40,7 @@ class TestFilterPlugins(unittest.TestCase):
         fname = "tmp_test_filters.h5"
         f = h5py.File(fname, "w")
         dset = f.create_dataset(
-            "range",
-            shape=shape,
-            dtype=dtype,
-            chunks=chunks,
-            compression=32008,
+            "range", shape=shape, dtype=dtype, chunks=chunks, compression=32008
         )
         dset[:] = data
         f.close()

@@ -14,6 +14,7 @@ Constants
 
     H5FILTER : The Bitshuffle HDF5 filter integer identifier.
     H5_COMPRESS_LZ4 : Filter option flag for LZ4 compression.
+    H5_COMPRESS_ZSTD : Filter option flag for ZSTD compression.
 
 Functions
 =========
@@ -54,6 +55,7 @@ cdef extern from b"bshuf_h5filter.h":
     int bshuf_register_h5filter()
     int BSHUF_H5FILTER
     int BSHUF_H5_COMPRESS_LZ4
+    int BSHUF_H5_COMPRESS_ZSTD
 
 cdef extern int init_filter(const char* libname)
 
@@ -61,6 +63,7 @@ cdef int LZF_FILTER = 32000
 
 H5FILTER = BSHUF_H5FILTER
 H5_COMPRESS_LZ4 = BSHUF_H5_COMPRESS_LZ4
+H5_COMPRESS_ZSTD = BSHUF_H5_COMPRESS_ZSTD
 
 # Init HDF5 dynamic loading with HDF5 library used by h5py
 if not sys.platform.startswith('win'):
