@@ -55,4 +55,4 @@ jobs:
         python setup.py install --h5plugin --h5plugin-dir ~/hdf5/lib --zstd
 
     - name: Run tests
-      run: pytest .
+      run: pytest -v .
