@@ -64,7 +64,7 @@ class TestProfile(unittest.TestCase):
         size_i = self.data.size * self.data.dtype.itemsize
         size_o = out.size * out.dtype.itemsize
         size = max([size_i, size_o])
-        speed = ext.REPEAT * size / delta_t / 1024 ** 3  # GB/s
+        speed = ext.REPEAT * size / delta_t / 1024**3  # GB/s
         if TIME:
             print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1.0 / speed, speed))
         if self.check is not None:
