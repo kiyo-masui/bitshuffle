@@ -3,7 +3,7 @@
 requires = [
     "setuptools>=0.7",
     "Cython>=0.19",
-    "numpy>=1.6.1",
+    "oldest-supported-numpy",
     "h5py>=2.4.0",
 ]
 
