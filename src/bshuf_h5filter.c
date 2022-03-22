@@ -170,7 +170,7 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
 
     out_buf = malloc(buf_size_out);
     if (out_buf == NULL) {
-        !PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
+        PUSH_ERR("bshuf_h5_filter", H5E_CALLBACK, 
                 "Could not allocate output buffer.");
         return 0;
     }
