@@ -124,7 +124,6 @@ class TestFilter(unittest.TestCase):
         # os.system('h5dump -H -p tmp_test_filters.h5')
 
         f = h5py.File(fname, "r")
-        self.assertTrue(f["range"].id.get_storage_size() >= data.nbytes)
         d = f["range"][:]
         self.assertTrue(np.all(d == data))
         f.close()

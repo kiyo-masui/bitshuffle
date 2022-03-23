@@ -215,7 +215,7 @@ if "ENABLE_ZSTD" in os.environ:
             ext.sources += zstd_sources
             ext.include_dirs += zstd_lib
             ext.depends += zstd_headers
-            ext.define_macros += [("ZSTD_SUPPORT", 1)]
+            ext.define_macros += [("ZSTD_SUPPORT", 1),("ZSTD_DISABLE_ASM",1)]
 
 # Check for plugin hdf5 plugin support (hdf5 >= 1.8.11)
 HDF5_PLUGIN_SUPPORT = False
@@ -274,7 +274,7 @@ class install(install_):
                     ext.sources += zstd_sources
                     ext.include_dirs += zstd_lib
                     ext.depends += zstd_headers
-                    ext.define_macros += [("ZSTD_SUPPORT", 1)]
+                    ext.define_macros += [("ZSTD_SUPPORT", 1),("ZSTD_DISABLE_ASM",1)]
 
     def run(self):
         install_.run(self)
