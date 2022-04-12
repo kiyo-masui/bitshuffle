@@ -300,6 +300,20 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.untrans_bit_elem_scal
         self.check_data = pre_trans
 
+    def test_06h_untrans_bit_elem_32(self):
+        self.case = "bit U elem AVX512 32"
+        pre_trans = self.data.view(np.float32)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_AVX512
+        self.check_data = pre_trans
+
+    def test_06i_untrans_bit_elem_64(self):
+        self.case = "bit U elem AVX512 64"
+        pre_trans = self.data.view(np.float64)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_AVX512
+        self.check_data = pre_trans
+
     def test_07a_trans_byte_bitrow_64(self):
         self.case = "byte T row scal 64"
         self.data = self.data.view(np.float64)
@@ -352,6 +366,30 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.shuffle_bit_eightelem_AVX
         self.check = ext.shuffle_bit_eightelem_scal
 
+    def test_08g_shuffle_bit_eight_AVX512_32(self):
+        self.case = "bit S eight AVX 32"
+        self.data = self.data.view(np.float32)
+        self.fun = ext.shuffle_bit_eightelem_AVX512
+        self.check = ext.shuffle_bit_eightelem_scal
+
+    def test_08h_shuffle_bit_eight_AVX512_64(self):
+        self.case = "bit S eight AVX512 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.shuffle_bit_eightelem_AVX512
+        self.check = ext.shuffle_bit_eightelem_scal
+
+    def test_08i_shuffle_bit_eight_AVX512_16(self):
+        self.case = "bit S eight AVX512 16"
+        self.data = self.data.view(np.int16)
+        self.fun = ext.shuffle_bit_eightelem_AVX512
+        self.check = ext.shuffle_bit_eightelem_scal
+
+    def test_08i_shuffle_bit_eight_AVX512_128(self):
+        self.case = "bit S eight AVX512 128"
+        self.data = self.data.view(np.complex128)
+        self.fun = ext.shuffle_bit_eightelem_AVX512
+        self.check = ext.shuffle_bit_eightelem_scal
+
     def test_09a_trans_bit_elem_scal_64(self):
         self.case = "bit T elem scal 64"
         self.data = self.data.view(np.float64)
@@ -389,6 +427,13 @@ class TestProfile(unittest.TestCase):
         pre_trans = self.data.view(np.float64)
         self.data = trans_bit_elem(pre_trans)
         self.fun = ext.untrans_bit_elem_AVX
+        self.check_data = pre_trans
+
+    def test_09g_untrans_bit_elem_AVX_64(self):
+        self.case = "bit U elem AVX512 64"
+        pre_trans = self.data.view(np.float64)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_AVX512
         self.check_data = pre_trans
 
     def test_10a_bitshuffle_64(self):
@@ -524,6 +569,10 @@ class TestOddLengths(unittest.TestCase):
         self.check = trans_bit_elem
 
     def test_untrans_bit_elem_AVX(self):
+        self.fun = lambda x: ext.untrans_bit_elem_SSE(ext.trans_bit_elem(x))
+        self.check = lambda x: x
+
+    def test_untrans_bit_elem_AVX512(self):
         self.fun = lambda x: ext.untrans_bit_elem_SSE(ext.trans_bit_elem(x))
         self.check = lambda x: x
 
