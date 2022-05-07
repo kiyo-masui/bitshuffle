@@ -8,6 +8,7 @@ Functions
     using_NEON
     using_SSE2
     using_AVX2
+    using_AVX512
     bitshuffle
     bitunshuffle
     compress_lz4
@@ -28,6 +29,7 @@ from bitshuffle.ext import (
     using_NEON,
     using_SSE2,
     using_AVX2,
+    using_AVX512,
     compress_lz4,
     decompress_lz4,
 )
@@ -49,6 +51,7 @@ __all__ = [
     "using_NEON",
     "using_SSE2",
     "using_AVX2",
+    "using_AVX512",
     "compress_lz4",
     "decompress_lz4",
 ] + zstd_api

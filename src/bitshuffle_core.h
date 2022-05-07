@@ -19,6 +19,7 @@
  *      -11   : Missing SSE.
  *      -12   : Missing AVX.
  *      -13   : Missing Arm Neon.
+ *      -14   : Missing AVX512.
  *      -80   : Input size not a multiple of 8.
  *      -81   : block_size not multiple of 8.
  *      -91   : Decompression error, wrong number of bytes processed.
@@ -89,6 +90,18 @@ int bshuf_using_NEON(void);
  *
  */
 int bshuf_using_AVX2(void);
+
+
+/* ---- bshuf_using_AVX512 ----
+ *
+ * Whether routines where compiled with the AVX512 instruction set.
+ *
+ * Returns
+ * -------
+ *  1 if using AVX512, 0 otherwise.
+ *
+ */
+int bshuf_using_AVX512(void);
 
 
 /* ---- bshuf_default_block_size ----
