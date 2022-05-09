@@ -201,7 +201,7 @@ lzf_plugin = Extension(
 )
 
 
-EXTENSIONS = [ext_bshuf, h5filter]
+EXTENSIONS = [ext_bshuf, ]
 
 # For enabling ZSTD support when building wheels
 if "ENABLE_ZSTD" in os.environ:
@@ -220,9 +220,9 @@ if "ENABLE_ZSTD" in os.environ:
 # Check for plugin hdf5 plugin support (hdf5 >= 1.8.11)
 HDF5_PLUGIN_SUPPORT = False
 CPATHS = os.environ["CPATH"].split(":") if "CPATH" in os.environ else []
-for p in ["/usr/include"] + pkgconfig("hdf5")["include_dirs"] + CPATHS:
-    if os.path.exists(os.path.join(p, "H5PLextern.h")):
-        HDF5_PLUGIN_SUPPORT = True
+#for p in ["/usr/include"] + pkgconfig("hdf5")["include_dirs"] + CPATHS:
+#    if os.path.exists(os.path.join(p, "H5PLextern.h")):
+#        HDF5_PLUGIN_SUPPORT = True
 
 if HDF5_PLUGIN_SUPPORT:
     EXTENSIONS.extend([filter_plugin, lzf_plugin])
