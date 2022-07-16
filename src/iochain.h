@@ -1,5 +1,5 @@
 /*
- * IOchain - Distribute a chain of dependant IO events amoung threads.
+ * IOchain - Distribute a chain of dependent IO events among threads.
  *
  * This file is part of Bitshuffle
  * Author: Kiyoshi Masui <kiyo@physics.ubc.ca>

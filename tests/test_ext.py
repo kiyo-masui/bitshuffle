@@ -613,7 +613,7 @@ class TestOddLengths(unittest.TestCase):
 
 
 class TestBitShuffleCircle(unittest.TestCase):
-    """Ensure that final filter is circularly consistant for any data type and
+    """Ensure that final filter is circularly consistent for any data type and
     any length buffer."""
 
     def test_circle(self):

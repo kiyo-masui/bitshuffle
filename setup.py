@@ -47,7 +47,7 @@ MACROS = [
 H5PLUGINS_DEFAULT = "/usr/local/hdf5/lib/plugin"
 MARCH_DEFAULT = "native"
 
-# OSX's clang compliler does not support OpenMP.
+# OSX's clang compiler does not support OpenMP.
 if sys.platform == "darwin":
     OMP_DEFAULT = False
 else:

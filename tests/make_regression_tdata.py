@@ -24,7 +24,7 @@ OUT_FILE = "tests/data/regression_%s.h5" % bitshuffle.__version__
 DTYPES = ["a1", "a2", "a3", "a4", "a6", "a8", "a10"]
 
 f = h5py.File(OUT_FILE, "w")
-g_orig = f.create_group("origional")
+g_orig = f.create_group("original")
 g_comp_lz4 = f.create_group("compressed")
 g_comp_zstd = f.create_group("compressed_zstd")
 
