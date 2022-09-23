@@ -17,7 +17,7 @@ jobs:
 
     steps:
       # Checkout bitshuffle
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       # Build wheels for linux and x86 platforms
       - name: Build wheels
@@ -43,7 +43,7 @@ jobs:
           CIBW_TEST_COMMAND: pytest {package}/tests
 
       # Package wheels and host on CI
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse-hdf5-${{ matrix.hdf5 }}/*.whl
 
@@ -55,14 +55,14 @@ jobs:
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install apt dependencies
         run: |
           sudo apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
 
       - name: Install Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -73,7 +73,7 @@ jobs:
       - name: Build sdist
         run: python setup.py sdist
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: dist/*.tar.gz
 
@@ -86,7 +86,7 @@ jobs:
     # Alternatively, to publish when a GitHub Release is created, use the following rule:
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: artifact
           path: dist
