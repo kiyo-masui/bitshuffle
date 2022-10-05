@@ -214,6 +214,27 @@ Then, you use them like this::
 .. _`snappy-java`: https://github.com/xerial/snappy-java
 
 
+Rust HDF5 plugin
+----------------
+
+If you wish to open HDF5 files compressed with bitshuffle in your Rust program, there is a `Rust binding`_ for it.
+In your Cargo.toml::
+
+    [dependencies]
+    ...
+    hdf5-bitshuffle = "0.9"
+    ...
+
+To register the plugin in your code::
+
+    use hdf5_bitshuffle::register_bitshuffle_plugin;
+
+    fn main() {
+        register_bitshuffle_plugin();
+    }
+
+.. _`Rust binding`: https://docs.rs/hdf5-bitshuffle/latest/hdf5_bitshuffle/
+
 Anaconda
 --------
 
