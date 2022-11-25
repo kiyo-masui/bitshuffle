@@ -18,8 +18,8 @@ import platform
 
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 4
-VERSION_POINT = 2
+VERSION_MINOR = 5
+VERSION_POINT = 1
 # Define ZSTD macro for cython compilation
 default_options["compile_time_env"] = {"ZSTD_SUPPORT": False}
 
