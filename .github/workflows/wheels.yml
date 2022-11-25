@@ -34,6 +34,7 @@ jobs:
           # Only build Haswell wheels on x86 for compatibility
           CIBW_ENVIRONMENT: >
             LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+            CPATH=/usr/local/include
             ENABLE_ZSTD=1
             BITSHUFFLE_ARCH=haswell
           CIBW_TEST_REQUIRES: pytest
