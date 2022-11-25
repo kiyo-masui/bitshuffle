@@ -45,13 +45,20 @@ MACROS = [
 
 
 H5PLUGINS_DEFAULT = "/usr/local/hdf5/lib/plugin"
-MARCH_DEFAULT = "native"
 
 # OSX's clang compiler does not support OpenMP.
 if sys.platform == "darwin":
     OMP_DEFAULT = False
 else:
     OMP_DEFAULT = True
+
+# Build against the native architecture unless overridden by an environment variable
+# This can also be overridden by a direct command line argument, or a `setup.cfg` entry
+# This option is needed for the cibuildwheel action
+if "BITSHUFFLE_ARCH" in os.environ:
+    MARCH_DEFAULT = os.environ["BITSHUFFLE_ARCH"]
+else:
+    MARCH_DEFAULT = "native"
 
 FALLBACK_CONFIG = {
     "include_dirs": [],
