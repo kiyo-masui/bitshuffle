@@ -34,7 +34,7 @@ class TestProfile(unittest.TestCase):
         if TIME:
             n *= TIME
         # Almost random bits, but now quite. All bits exercised (to fully test
-        # transpose) but still slightly compresible.
+        # transpose) but still slightly compressible.
         self.data = random.randint(0, 200, n).astype(np.uint8)
         self.fun = ext.copy
         self.check = None
@@ -613,7 +613,7 @@ class TestOddLengths(unittest.TestCase):
 
 
 class TestBitShuffleCircle(unittest.TestCase):
-    """Ensure that final filter is circularly consistant for any data type and
+    """Ensure that final filter is circularly consistent for any data type and
     any length buffer."""
 
     def test_circle(self):

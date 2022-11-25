@@ -25,7 +25,7 @@ void bshuf_write_uint32_BE(void* buf, uint32_t num);
 uint32_t bshuf_read_uint32_BE(const void* buf);
 
 
-// Only called on compresion, not on reverse.
+// Only called on compression, not on reverse.
 herr_t bshuf_h5_set_local(hid_t dcpl, hid_t type, hid_t space){
 
     herr_t r;
@@ -192,7 +192,7 @@ size_t bshuf_h5_filter(unsigned int flags, size_t cd_nelmts,
             // Bit shuffle/compress.
             // Write the header, described in
             // http://www.hdfgroup.org/services/filters/HDF5_LZ4.pdf.
-            // Techincally we should be using signed integers instead of
+            // Technically we should be using signed integers instead of
             // unsigned ones, however for valid inputs (positive numbers) these
             // have the same representation.
             bshuf_write_uint64_BE(out_buf, nbytes_uncomp);

@@ -13,7 +13,7 @@
  *
  * Filter Options
  * --------------
- *  block_size (option slot 0) : interger (optional)
+ *  block_size (option slot 0) : integer (optional)
  *      What block size to use (in elements not bytes). Default is 0,
  *      for which bitshuffle will pick a block size with a target of 8kb.
  *  Compression (option slot 1) : 0 or BSHUF_H5_COMPRESS_LZ4
