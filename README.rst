@@ -97,20 +97,35 @@ Comparing Bitshuffle to other compression algorithms and HDF5 filters:
 Installation for Python
 -----------------------
 
-Installation requires python 2.7+ or 3.3+, HDF5 1.8.4 or later, HDF5 for python
-(h5py), Numpy and Cython. Bitshuffle is linked against HDF5. To use the dynamically 
-loaded HDF5 filter requires HDF5 1.8.11 or later. If ZSTD support is enabled the ZSTD 
-repo needs to pulled into bitshuffle before installation with::
+
+In most cases bitshuffle can be installed by `pip`::
+
+    pip install bitshuffle
+
+On Linux and macOS x86_64 platforms binary wheels are available, on other platforms a
+source build will be performed. The binary wheels are built with AVX2 support and will
+only run processors that support these instructions (most processors from 2015 onwards,
+i.e. Intel Haswell, AMD Excavator and later). On an unsupported processor these builds
+of bitshuffle will crash with `SIGILL`. To run on unsupported x86_64 processors, or
+target newer instructions such as AVX512, you should perform a build from source.
+This can be forced by giving pip the `--no-binary=bitshuffle` option.
+
+Source installation requires python 2.7+ or 3.3+, HDF5 1.8.4 or later, HDF5 for python
+(h5py), Numpy and Cython. Bitshuffle is linked against HDF5. To use the dynamically
+loaded HDF5 filter requires HDF5 1.8.11 or later.
+
+For total control, bitshuffle can be built using `python setup.py`. If ZSTD support is
+to be enabled the ZSTD repo needs to pulled into bitshuffle before installation with::
 
     git submodule update --init
 
-To install bitshuffle::
+To build and install bitshuffle::
 
     python setup.py install [--h5plugin [--h5plugin-dir=spam] --zstd]
 
-To get finer control of installation options, including whether to compile
-with OpenMP multi-threading, copy the ``setup.cfg.example`` to ``setup.cfg``
-and edit the values therein.
+To get finer control of installation options, including whether to compile with OpenMP
+multi-threading and the target microarchitecture copy the ``setup.cfg.example`` to
+``setup.cfg`` and edit the values therein.
 
 If using the dynamically loaded HDF5 filter (which gives you access to the
 Bitshuffle and LZF filters outside of python), set the environment variable
@@ -143,9 +158,9 @@ interface or through the convenience functions provided in
 version 2.5.0 and later Bitshuffle can be added to new datasets through the
 high level interface, as in the example below.
 
-The compression algorithm can be configured using the `filter_opts` in 
-`bitshuffle.h5.create_dataset()`. LZ4 is chosen with: 
-`(BLOCK_SIZE, h5.H5_COMPRESS_LZ4)` and ZSTD with: 
+The compression algorithm can be configured using the `filter_opts` in
+`bitshuffle.h5.create_dataset()`. LZ4 is chosen with:
+`(BLOCK_SIZE, h5.H5_COMPRESS_LZ4)` and ZSTD with:
 `(BLOCK_SIZE, h5.H5_COMPRESS_ZSTD, COMP_LVL)`. See `test_h5filter.py` for an example.
 
 Example h5py
