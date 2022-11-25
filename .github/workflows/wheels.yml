@@ -26,13 +26,16 @@ jobs:
           output-dir: ./wheelhouse-hdf5-${{ matrix.hdf5}}
         env:
           CIBW_SKIP: "pp* *musllinux*"
-          CIBW_ARCHS_LINUX: "x86_64"
+          CIBW_ARCHS: "x86_64"
           CIBW_BEFORE_ALL: |
             chmod +x .github/workflows/install_hdf5.sh
             .github/workflows/install_hdf5.sh ${{ matrix.hdf5 }}
             git submodule update --init
-          CIBW_ENVIRONMENT: |
-            LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib ENABLE_ZSTD=1
+          # Only build Haswell wheels on x86 for compatibility
+          CIBW_ENVIRONMENT: >
+            LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib
+            ENABLE_ZSTD=1
+            BITSHUFFLE_ARCH=haswell
           CIBW_TEST_REQUIRES: pytest
           # Install different version of HDF5 for unit tests to ensure the
           # wheels are independent of HDF5 installation
@@ -41,6 +44,8 @@ jobs:
           #   .github/workflows/install_hdf5.sh 1.8.11
           # Run units tests but disable test_h5plugin.py
           CIBW_TEST_COMMAND: pytest {package}/tests
+          # The Github runners for macOS don't support AVX2 instructions and so the tests will fail with SIGILL, so skip them
+          CIBW_TEST_SKIP: "*macosx*"
 
       # Package wheels and host on CI
       - uses: actions/upload-artifact@v3
