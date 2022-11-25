@@ -222,7 +222,18 @@ for p in ["/usr/include"] + pkgconfig("hdf5")["include_dirs"] + CPATHS:
 if HDF5_FILTER_SUPPORT:
     EXTENSIONS.append(h5filter)
 
+# Check for plugin hdf5 plugin support (hdf5 >= 1.8.11)
+HDF5_PLUGIN_SUPPORT = False
+CPATHS = os.environ["CPATH"].split(":") if "CPATH" in os.environ else []
+for p in ["/usr/include"] + pkgconfig("hdf5")["include_dirs"] + CPATHS:
+    if os.path.exists(os.path.join(p, "H5PLextern.h")):
+        HDF5_PLUGIN_SUPPORT = True
+
+if HDF5_PLUGIN_SUPPORT:
+    EXTENSIONS.extend([filter_plugin, lzf_plugin])
+
 # For enabling ZSTD support when building wheels
+# This needs to be done after all Extensions have been added to EXTENSIONS
 if "ENABLE_ZSTD" in os.environ:
     default_options["compile_time_env"] = {"ZSTD_SUPPORT": True}
     for ext in EXTENSIONS:
@@ -235,16 +246,6 @@ if "ENABLE_ZSTD" in os.environ:
             ext.include_dirs += zstd_lib
             ext.depends += zstd_headers
             ext.define_macros += [("ZSTD_SUPPORT", 1)]
-
-# Check for plugin hdf5 plugin support (hdf5 >= 1.8.11)
-HDF5_PLUGIN_SUPPORT = False
-CPATHS = os.environ["CPATH"].split(":") if "CPATH" in os.environ else []
-for p in ["/usr/include"] + pkgconfig("hdf5")["include_dirs"] + CPATHS:
-    if os.path.exists(os.path.join(p, "H5PLextern.h")):
-        HDF5_PLUGIN_SUPPORT = True
-
-if HDF5_PLUGIN_SUPPORT:
-    EXTENSIONS.extend([filter_plugin, lzf_plugin])
 
 
 class develop(develop_):
