@@ -25,7 +25,7 @@ jobs:
         with:
           output-dir: ./wheelhouse-hdf5-${{ matrix.hdf5}}
         env:
-          CIBW_SKIP: "pp* *musllinux*"
+          CIBW_SKIP: "pp* *musllinux* cp311-macosx*"
           CIBW_ARCHS: "x86_64"
           CIBW_BEFORE_ALL: |
             chmod +x .github/workflows/install_hdf5.sh
