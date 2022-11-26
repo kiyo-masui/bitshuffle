@@ -10,11 +10,20 @@ from setuptools import setup, Extension
 from setuptools.command.build_ext import build_ext as build_ext_
 from setuptools.command.develop import develop as develop_
 from setuptools.command.install import install as install_
-from Cython.Compiler.Main import default_options
+
 import shutil
 import subprocess
 import sys
 import platform
+
+try:
+    from Cython.Compiler.Main import default_options
+except ImportError as e:
+    print("Cython is required to evaluate bitshuffle extensions")
+    # Install Cython via pip subprocess call
+    print ("Installing Cython...")
+    subprocess.call(["pip", "install", "Cython>=0.19"])
+    from Cython.Compiler.Main import default_options
 
 
 VERSION_MAJOR = 0
