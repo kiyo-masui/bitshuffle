@@ -66,7 +66,7 @@ typedef int64_t (*bshufBlockFunDef)(ioc_chain* C_ptr,
 /* Wrap a function for processing a single block to process an entire buffer in
  * parallel. */
 int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out,
-        const size_t size, const size_t elem_size, size_t block_size, const int option);
+        const size_t size, const size_t elem_size, size_t block_size, const int option,size_t out_size_limit);
 
 #ifdef __cplusplus
 } // extern "C"

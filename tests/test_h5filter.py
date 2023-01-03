@@ -128,6 +128,118 @@ class TestFilter(unittest.TestCase):
         self.assertTrue(np.all(d == data))
         f.close()
 
+    def test_with_compression_optional(self):
+        shape = (128 * 1024 + 783,)
+        chunks = (4 * 1024 + 23,)
+        dtype = np.int64
+        data = np.arange(shape[0])
+        fname = "tmp_test_filters.h5"
+        f = h5py.File(fname, "w")
+        h5.create_dataset(
+            f,
+            b"range",
+            shape,
+            dtype,
+            chunks,
+            filter_pipeline=(32008,),
+            filter_flags=(h5z.FLAG_OPTIONAL,),
+            filter_opts=((0, h5.H5_COMPRESS_LZ4),),
+        )
+        f["range"][:] = data
+
+        f.close()
+        # os.system('h5dump -H -p tmp_test_filters.h5')
+
+        f = h5py.File(fname, "r")
+        self.assertTrue(f["range"].id.get_storage_size() < data.nbytes )
+        d = f["range"][:]
+        self.assertTrue(np.all(d == data))
+        f.close()
+
+    def test_skip_compression_on_very_short(self):
+        shape = (2,)#(128 * 1024 + 783,)
+        chunks = shape #(4 * 1024 + 23,)
+        dtype = np.int64
+        data = np.arange(shape[0])
+        fname = "tmp_test_filters.h5"
+        f = h5py.File(fname, "w")
+        h5.create_dataset(
+            f,
+            b"range",
+            shape,
+            dtype,
+            chunks,
+            filter_pipeline=(32008,),
+            filter_flags=(h5z.FLAG_OPTIONAL,),
+            filter_opts=((0, h5.H5_COMPRESS_LZ4),),
+        )
+        f["range"][:] = data
+
+        f.close()
+        # os.system('h5dump -H -p tmp_test_filters.h5')
+
+        f = h5py.File(fname, "r")
+        self.assertTrue(f["range"].id.get_storage_size() == data.nbytes)
+        d = f["range"][:]
+        self.assertTrue(np.all(d == data))
+        f.close()
+
+    def test_skip_compression_on_short_random(self):
+        shape = (4,)#(128 * 1024 + 783,)
+        chunks = shape #(4 * 1024 + 23,)
+        dtype = np.float64
+        data = np.random.default_rng().random(shape[0])
+        fname = "tmp_test_filters.h5"
+        f = h5py.File(fname, "w")
+        h5.create_dataset(
+            f,
+            b"range",
+            shape,
+            dtype,
+            chunks,
+            filter_pipeline=(32008,),
+            filter_flags=(h5z.FLAG_OPTIONAL,),
+            filter_opts=((0, h5.H5_COMPRESS_LZ4),),
+        )
+        f["range"][:] = data
+
+        f.close()
+        # os.system('h5dump -H -p tmp_test_filters.h5')
+
+        f = h5py.File(fname, "r")
+        self.assertTrue(f["range"].id.get_storage_size() == data.nbytes)
+        d = f["range"][:]
+        self.assertTrue(np.all(d == data))
+        f.close()
+
+    def test_force_compression_on_short_random(self):
+        shape = (4,)#(128 * 1024 + 783,)
+        chunks = shape #(4 * 1024 + 23,)
+        dtype = np.float64
+        data = np.random.default_rng().random(shape[0])
+        fname = "tmp_test_filters.h5"
+        f = h5py.File(fname, "w")
+        h5.create_dataset(
+            f,
+            b"range",
+            shape,
+            dtype,
+            chunks,
+            filter_pipeline=(32008,),
+            filter_flags=(h5z.FLAG_MANDATORY,),
+            filter_opts=((0, h5.H5_COMPRESS_LZ4),),
+        )
+        f["range"][:] = data
+
+        f.close()
+        # os.system('h5dump -H -p tmp_test_filters.h5')
+
+        f = h5py.File(fname, "r")
+        self.assertTrue(f["range"].id.get_storage_size() >= data.nbytes)
+        d = f["range"][:]
+        self.assertTrue(np.all(d == data))
+        f.close()
+
     def tearDown(self):
         files = glob.glob("tmp_test_*")
         for f in files:
