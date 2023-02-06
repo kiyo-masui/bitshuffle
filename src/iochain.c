@@ -11,6 +11,7 @@
  */
 
 #include <stdlib.h>
+#include "bitshuffle_internals.h"
 #include "iochain.h"
 
 
@@ -88,3 +89,31 @@ void ioc_set_next_out(ioc_chain *C, size_t *this_iter, void* out_ptr) {
 #endif
 }
 
+
+
+void o_chain_init( o_chain *C, const void *in, const void *out){
+  C->i0 = in;
+  C->o0 = out;
+  C->in = (void*) in;
+  C->out = (void*) out;
+  C->current = 0;
+  C->nbytes = bshuf_read_uint32_BE(C->in);
+}
+
+
+
+void o_chain_goto( o_chain *C, size_t ii, size_t osize ){
+
+  if ( ii < C->current ){
+    /* rewind to start. Should never happen with omp ordered */
+    C->in = (void*) C->i0;
+    C->current = 0;
+    C->nbytes = bshuf_read_uint32_BE(C->in);
+  }
+  while ( C->current < ii ) {
+    C->in = (void*) ((char *) C->in + C->nbytes + 4);
+    C->current++;
+    C->nbytes = bshuf_read_uint32_BE(C->in);
+  }
+  C->out = (void*) ((char *) C->o0 + ii * osize);
+}

@@ -75,23 +75,17 @@ int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr, \
 
 
 /* Decompress and bitunshuffle a single block. */
-int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
+int64_t bshuf_decompress_lz4_block(o_chain *C_ptr,
         const size_t size, const size_t elem_size, const int option) {
 
     int64_t nbytes, count;
     void *out, *tmp_buf;
     const void *in;
-    size_t this_iter;
     int32_t nbytes_from_header;
 
-    in = ioc_get_in(C_ptr, &this_iter);
-    nbytes_from_header = bshuf_read_uint32_BE(in);
-    ioc_set_next_in(C_ptr, &this_iter,
-            (void*) ((char*) in + nbytes_from_header + 4));
-
-    out = ioc_get_out(C_ptr, &this_iter);
-    ioc_set_next_out(C_ptr, &this_iter,
-            (void *) ((char *) out + size * elem_size));
+    in = C_ptr->in;
+    nbytes_from_header = C_ptr->nbytes;
+    out = C_ptr->out;
 
     tmp_buf = malloc(size * elem_size);
     if (tmp_buf == NULL) return -1;
@@ -99,7 +93,7 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
     nbytes = LZ4_decompress_safe((const char*) in + 4, (char *) tmp_buf, nbytes_from_header,
                                  size * elem_size);
     CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    if (nbytes != size * elem_size) {
+    if (nbytes != (int64_t)(size * elem_size)) {
         free(tmp_buf);
         return -91;
     }
@@ -161,30 +155,25 @@ int64_t bshuf_compress_zstd_block(ioc_chain *C_ptr, \
 
 
 /* Decompress and bitunshuffle a single block. */
-int64_t bshuf_decompress_zstd_block(ioc_chain *C_ptr,
+int64_t bshuf_decompress_zstd_block(o_chain *C_ptr,
         const size_t size, const size_t elem_size, const int option) {
 
     int64_t nbytes, count;
     void *out, *tmp_buf;
     const void *in;
-    size_t this_iter;
     int32_t nbytes_from_header;
 
-    in = ioc_get_in(C_ptr, &this_iter);
-    nbytes_from_header = bshuf_read_uint32_BE(in);
-    ioc_set_next_in(C_ptr, &this_iter,
-            (void*) ((char*) in + nbytes_from_header + 4));
-
-    out = ioc_get_out(C_ptr, &this_iter);
-    ioc_set_next_out(C_ptr, &this_iter,
-            (void *) ((char *) out + size * elem_size));
+    in = C_ptr->in;
+    nbytes_from_header = C_ptr->nbytes;
+    out = C_ptr->out;
 
     tmp_buf = malloc(size * elem_size);
+
     if (tmp_buf == NULL) return -1;
 
     nbytes = ZSTD_decompress(tmp_buf, size * elem_size, (void *)((char *) in + 4), nbytes_from_header);
     CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    if (nbytes != size * elem_size) {
+    if (nbytes != (int64_t)(size * elem_size)) {
         free(tmp_buf);
         return -91;
     }
@@ -237,7 +226,7 @@ int64_t bshuf_compress_lz4(const void* in, void* out, const size_t size,
 
 int64_t bshuf_decompress_lz4(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
-    return bshuf_blocked_wrap_fun(&bshuf_decompress_lz4_block, in, out, size,
+    return bshuf_blocked_decompress_wrap_fun(&bshuf_decompress_lz4_block, in, out, size,
             elem_size, block_size, 0/*option*/);
 }
 
@@ -273,7 +262,7 @@ int64_t bshuf_compress_zstd(const void* in, void* out, const size_t size,
 
 int64_t bshuf_decompress_zstd(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
-    return bshuf_blocked_wrap_fun(&bshuf_decompress_zstd_block, in, out, size,
+    return bshuf_blocked_decompress_wrap_fun(&bshuf_decompress_zstd_block, in, out, size,
             elem_size, block_size, 0/*option*/);
 }
 #endif // ZSTD_SUPPORT

@@ -63,11 +63,19 @@ int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
 typedef int64_t (*bshufBlockFunDef)(ioc_chain* C_ptr,
         const size_t size, const size_t elem_size, const int option);
 
+/* Function definition for worker functions that process a single block. */
+typedef int64_t (*bshufBlockFunDefDC)(o_chain* C_ptr,
+        const size_t size, const size_t elem_size, const int option);
+
 /* Wrap a function for processing a single block to process an entire buffer in
  * parallel. */
 int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out,
         const size_t size, const size_t elem_size, size_t block_size, const int option);
 
+/* Wrap a function for processing a single block to process an entire buffer in
+ * parallel. */
+int64_t bshuf_blocked_decompress_wrap_fun(bshufBlockFunDefDC fun, const void* in, void* out,
+        const size_t size, const size_t elem_size, size_t block_size, const int option);
 #ifdef __cplusplus
 } // extern "C"
 #endif
