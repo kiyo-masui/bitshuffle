@@ -55,6 +55,17 @@
 #endif
 
 
+
+typedef struct o_chain {
+  const void *i0;
+  const void *o0;
+  void *in;
+  void *out;
+  size_t current;
+  uint32_t nbytes;
+} o_chain;
+
+
 #define IOC_SIZE 33
 
 
@@ -89,6 +100,10 @@ const void * ioc_get_in(ioc_chain *C, size_t *this_iter);
 void ioc_set_next_in(ioc_chain *C, size_t* this_iter, void* in_ptr);
 void * ioc_get_out(ioc_chain *C, size_t *this_iter);
 void ioc_set_next_out(ioc_chain *C, size_t *this_iter, void* out_ptr);
+
+
+void o_chain_init( o_chain *C, const void *in, const void* out);
+void o_chain_goto( o_chain *C, size_t ii, size_t osize );
 
 #endif  // IOCHAIN_H
 
