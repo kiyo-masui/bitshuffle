@@ -49,6 +49,8 @@ typedef int64_t omp_size_t;
 typedef size_t omp_size_t;
 #endif
 
+typedef uint16_t alias_uint16_t __attribute__((may_alias));
+
 // Macros.
 #define CHECK_MULT_EIGHT(n) if (n % 8) return -80;
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
@@ -656,8 +658,8 @@ int64_t bshuf_trans_bit_byte_NEON(const void* in, void* out, const size_t size,
         out[1] = neonmovemask_bulk(x4, x5, x6, x7);
         int kk;
         for (kk = 0; kk < 8; kk++) {
-            uint16_t *out_ui16 = (uint16_t*) &out_b[((7 - kk) * nbyte + ii) / 8];
-            *out_ui16 = ((uint16_t*)out)[kk];
+            alias_uint16_t *out_ui16 = (alias_uint16_t*) &out_b[((7 - kk) * nbyte + ii) / 8];
+            *out_ui16 = ((alias_uint16_t*)out)[kk];
         }
     }
     count = bshuf_trans_bit_byte_remainder(in, out, size, elem_size,
@@ -795,7 +797,7 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
     // With a bit of care, this could be written such that such that it is
     // in_buf = out_buf safe.
     const char* in_b = (const char*) in;
-    uint16_t* out_ui16 = (uint16_t*) out;
+    alias_uint16_t* out_ui16 = (alias_uint16_t*) out;
 
     size_t ii, jj, kk;
     size_t nbyte = elem_size * size;
@@ -830,7 +832,7 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
 
                 for (kk = 0; kk < 8; kk++) {
                     size_t ind = (ii + jj / 8 + (7 - kk) * elem_size);
-                    out_ui16[ind / 2] = ((uint16_t *)out)[kk];
+                    out_ui16[ind / 2] = ((alias_uint16_t *)out)[kk];
                 }
             }
         }
@@ -1145,7 +1147,7 @@ int64_t bshuf_trans_bit_byte_SSE(const void* in, void* out, const size_t size,
     size_t ii, kk;
     const char* in_b = (const char*) in;
     char* out_b = (char*) out;
-    uint16_t* out_ui16;
+    alias_uint16_t* out_ui16;
 
     int64_t count;
 
@@ -1161,7 +1163,7 @@ int64_t bshuf_trans_bit_byte_SSE(const void* in, void* out, const size_t size,
         for (kk = 0; kk < 8; kk++) {
             bt = _mm_movemask_epi8(xmm);
             xmm = _mm_slli_epi16(xmm, 1);
-            out_ui16 = (uint16_t*) &out_b[((7 - kk) * nbyte + ii) / 8];
+            out_ui16 = (alias_uint16_t*) &out_b[((7 - kk) * nbyte + ii) / 8];
             *out_ui16 = bt;
         }
     }
