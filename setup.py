@@ -370,13 +370,15 @@ class build_ext(build_ext_):
             compileflags = COMPILE_FLAGS_MSVC
         else:
             openmpflag = "-fopenmp"
+            compileflags = COMPILE_FLAGS
             archi = platform.machine()
             if archi in ("i386", "x86_64"):
-                compileflags = COMPILE_FLAGS + ["-march=%s" % self.march]
+                if self.march != "native":
+                    compileflags += ["-march=%s" % self.march]
+            elif archi == "ppc64le":
+                compileflags += ["-DNO_WARN_X86_INTRINSICS"]
             else:
-                compileflags = COMPILE_FLAGS + ["-mcpu=%s" % self.march]
-                if archi == "ppc64le":
-                    compileflags = COMPILE_FLAGS + ["-DNO_WARN_X86_INTRINSICS"]
+                compileflags += ["-mcpu=%s" % self.march]
 
         if self.omp not in ("0", "1", True, False):
             raise ValueError("Invalid omp argument. Mut be '0' or '1'.")
