@@ -33,7 +33,7 @@
 
 
 /* Bitshuffle and compress a single block. */
-int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr, \
+int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size, const int option) {
 
     int64_t nbytes, count;
@@ -120,7 +120,7 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
 
 #ifdef ZSTD_SUPPORT
 /* Bitshuffle and compress a single block. */
-int64_t bshuf_compress_zstd_block(ioc_chain *C_ptr, \
+int64_t bshuf_compress_zstd_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size, const int comp_lvl) {
 
     int64_t nbytes, count;

@@ -309,7 +309,7 @@ int64_t bshuf_trans_byte_bitrow_scal(const void* in, void* out, const size_t siz
     for (jj = 0; jj < elem_size; jj++) {
         for (ii = 0; ii < nbyte_row; ii++) {
             for (kk = 0; kk < 8; kk++) {
-                out_b[ii * 8 * elem_size + jj * 8 + kk] = \
+                out_b[ii * 8 * elem_size + jj * 8 + kk] =
                         in_b[(jj * 8 + kk) * nbyte_row + ii];
             }
         }
@@ -319,7 +319,7 @@ int64_t bshuf_trans_byte_bitrow_scal(const void* in, void* out, const size_t siz
 
 
 /* Shuffle bits within the bytes of eight element blocks. */
-int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
+int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out,
         const size_t size, const size_t elem_size) {
 
     const char *in_b;
@@ -1837,7 +1837,7 @@ int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
 
 /* Wrap a function for processing a single block to process an entire buffer in
  * parallel. */
-int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, \
+int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out,
         const size_t size, const size_t elem_size, size_t block_size, const int option) {
 
     omp_size_t ii = 0;
@@ -1895,7 +1895,7 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, 
 
 
 /* Bitshuffle a single block. */
-int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
+int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size, const int option) {
 
     size_t this_iter;
@@ -1918,7 +1918,7 @@ int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
 
 
 /* Bitunshuffle a single block. */
-int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr, \
+int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr,
         const size_t size, const size_t elem_size, const int option) {
 
 
