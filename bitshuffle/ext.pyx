@@ -494,7 +494,7 @@ IF ZSTD_SUPPORT:
     @cython.wraparound(False)
     def compress_zstd(np.ndarray arr not None, int block_size=0, int comp_lvl=1):
         """Bitshuffle then compress an array using ZSTD.
-    
+
         Parameters
         ----------
         arr : numpy array
@@ -504,14 +504,14 @@ IF ZSTD_SUPPORT:
             automatically.
         comp_lvl : positive integer
             Compression level applied by ZSTD
-    
+
         Returns
         -------
         out : array with np.uint8 data type
             Buffer holding compressed data.
-    
+
         """
-    
+
         cdef int ii, size, itemsize, count=0
         shape = (arr.shape[i] for i in range(arr.ndim))
         if not arr.flags['C_CONTIGUOUS']:
@@ -520,12 +520,12 @@ IF ZSTD_SUPPORT:
         size = arr.size
         dtype = arr.dtype
         itemsize = dtype.itemsize
-    
+
         max_out_size = bshuf_compress_zstd_bound(size, itemsize, block_size)
-    
+
         cdef np.ndarray out
         out = np.empty(max_out_size, dtype=np.uint8)
-    
+
         cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] arr_flat
         arr_flat = arr.view(np.uint8).ravel()
         cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] out_flat
@@ -540,12 +540,12 @@ IF ZSTD_SUPPORT:
             excp = RuntimeError(msg % count, count)
             raise excp
         return out[:count]
-    
+
     @cython.boundscheck(False)
     @cython.wraparound(False)
     def decompress_zstd(np.ndarray arr not None, shape, dtype, int block_size=0):
         """Decompress a buffer using ZSTD then bitunshuffle it yielding an array.
-    
+
         Parameters
         ----------
         arr : numpy array
@@ -559,24 +559,24 @@ IF ZSTD_SUPPORT:
         block_size : positive integer
             Block size in number of elements. Must match value used for
             compression.
-    
+
         Returns
         -------
         out : numpy array with shape *shape* and data type *dtype*
             Decompressed data.
-    
+
         """
-    
+
         cdef int ii, size, itemsize, count=0
         if not arr.flags['C_CONTIGUOUS']:
             msg = "Input array must be C-contiguous."
             raise ValueError(msg)
         size = np.prod(shape)
         itemsize = dtype.itemsize
-    
+
         cdef np.ndarray out
         out = np.empty(tuple(shape), dtype=dtype)
-    
+
         cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] arr_flat
         arr_flat = arr.view(np.uint8).ravel()
         cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] out_flat

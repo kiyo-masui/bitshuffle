@@ -890,7 +890,7 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
 /* ---- Worker code that uses SSE2 ----
  *
  * The following code makes use of the SSE2 instruction set and specialized
- * 16 byte registers. The SSE2 instructions are present on modern x86 
+ * 16 byte registers. The SSE2 instructions are present on modern x86
  * processors. The first Intel processor microarchitecture supporting SSE2 was
  * Pentium 4 (2000).
  *
@@ -1795,7 +1795,7 @@ int64_t bshuf_untrans_bit_elem_AVX512(const void* in, void* out, const size_t si
 
 /* ---- Drivers selecting best instruction set at compile time. ---- */
 
-int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size, 
+int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size,
         const size_t elem_size) {
 
     int64_t count;
@@ -1814,7 +1814,7 @@ int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size,
 }
 
 
-int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size, 
+int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
         const size_t elem_size) {
 
     int64_t count;
@@ -1904,7 +1904,7 @@ int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
     int64_t count;
 
 
-    
+
     in = ioc_get_in(C_ptr, &this_iter);
     ioc_set_next_in(C_ptr, &this_iter,
             (void*) ((char*) in + size * elem_size));

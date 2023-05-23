@@ -87,4 +87,3 @@ void ioc_set_next_out(ioc_chain *C, size_t *this_iter, void* out_ptr) {
     omp_unset_lock(&(C->in_pl[(*this_iter) % IOC_SIZE].lock));
 #endif
 }
-
