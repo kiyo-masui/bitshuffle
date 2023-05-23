@@ -50,7 +50,7 @@ typedef size_t omp_size_t;
 #endif
 
 // Macros.
-#define CHECK_MULT_EIGHT(n) if (n % 8) return -80;
+#define CHECK_MULT_EIGHT(n) do { if ((n) % 8) return -80; } while (0)
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
 

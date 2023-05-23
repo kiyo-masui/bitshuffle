@@ -38,7 +38,13 @@
 
 
 // Macros.
-#define CHECK_ERR_FREE(count, buf) if (count < 0) { free(buf); return count; }
+#define CHECK_ERR_FREE(count, buf) \
+        do {                       \
+            if ((count) < 0) {     \
+                free(buf);         \
+                return (count);    \
+            }                      \
+        } while (0)
 
 
 #ifdef __cplusplus

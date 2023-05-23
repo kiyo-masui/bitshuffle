@@ -23,8 +23,13 @@
 
 
 // Macros.
-#define CHECK_ERR_FREE_LZ(count, buf) if (count < 0) {                      \
-    free(buf); return count - 1000; }
+#define CHECK_ERR_FREE_LZ(count, buf)   \
+        do {                            \
+            if ((count) < 0) {          \
+                free(buf);              \
+                return (count) - 1000;  \
+            }                           \
+        } while (0)
 
 
 /* Bitshuffle and compress a single block. */
