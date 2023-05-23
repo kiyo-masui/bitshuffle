@@ -194,7 +194,7 @@ int check_symbols() {
 int init_filter(const char *libname)
 {
     int retval = -1;
-  	void *handle = NULL;
+    void *handle = NULL;
 
     handle = dlopen(libname, RTLD_LAZY | RTLD_LOCAL);
 
