@@ -130,7 +130,7 @@ void *find_sym(void *handle, const char *symbol) {
  *
  * Returns: -1 if an error occured, 0 for success
  */
-int check_symbols() {
+int check_symbols(void) {
 
   if(DL_H5Functions.H5open == NULL)
     return -1;
