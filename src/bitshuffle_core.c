@@ -50,7 +50,7 @@ typedef size_t omp_size_t;
 #endif
 
 // Macros.
-#define CHECK_MULT_EIGHT(n) if (n % 8) return -80;
+#define CHECK_MULT_EIGHT(n) do { if ((n) % 8) return -80; } while (0)
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
 
@@ -309,7 +309,7 @@ int64_t bshuf_trans_byte_bitrow_scal(const void* in, void* out, const size_t siz
     for (jj = 0; jj < elem_size; jj++) {
         for (ii = 0; ii < nbyte_row; ii++) {
             for (kk = 0; kk < 8; kk++) {
-                out_b[ii * 8 * elem_size + jj * 8 + kk] = \
+                out_b[ii * 8 * elem_size + jj * 8 + kk] =
                         in_b[(jj * 8 + kk) * nbyte_row + ii];
             }
         }
@@ -319,7 +319,7 @@ int64_t bshuf_trans_byte_bitrow_scal(const void* in, void* out, const size_t siz
 
 
 /* Shuffle bits within the bytes of eight element blocks. */
-int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
+int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out,
         const size_t size, const size_t elem_size) {
 
     const char *in_b;
@@ -890,7 +890,7 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
 /* ---- Worker code that uses SSE2 ----
  *
  * The following code makes use of the SSE2 instruction set and specialized
- * 16 byte registers. The SSE2 instructions are present on modern x86 
+ * 16 byte registers. The SSE2 instructions are present on modern x86
  * processors. The first Intel processor microarchitecture supporting SSE2 was
  * Pentium 4 (2000).
  *
@@ -1795,7 +1795,7 @@ int64_t bshuf_untrans_bit_elem_AVX512(const void* in, void* out, const size_t si
 
 /* ---- Drivers selecting best instruction set at compile time. ---- */
 
-int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size, 
+int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size,
         const size_t elem_size) {
 
     int64_t count;
@@ -1814,7 +1814,7 @@ int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size,
 }
 
 
-int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size, 
+int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
         const size_t elem_size) {
 
     int64_t count;
@@ -1837,7 +1837,7 @@ int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
 
 /* Wrap a function for processing a single block to process an entire buffer in
  * parallel. */
-int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, \
+int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out,
         const size_t size, const size_t elem_size, size_t block_size, const int option) {
 
     omp_size_t ii = 0;
@@ -1895,7 +1895,7 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, 
 
 
 /* Bitshuffle a single block. */
-int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
+int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size, const int option) {
 
     size_t this_iter;
@@ -1904,7 +1904,7 @@ int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
     int64_t count;
 
 
-    
+
     in = ioc_get_in(C_ptr, &this_iter);
     ioc_set_next_in(C_ptr, &this_iter,
             (void*) ((char*) in + size * elem_size));
@@ -1918,7 +1918,7 @@ int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
 
 
 /* Bitunshuffle a single block. */
-int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr, \
+int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr,
         const size_t size, const size_t elem_size, const int option) {
 
 

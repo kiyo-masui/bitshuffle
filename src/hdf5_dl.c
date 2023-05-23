@@ -107,11 +107,11 @@ static bool is_init = false;
 
 /*
  * Try to find a symbol within a library
- * 
+ *
  * handle: Handle to the library
  * symbol: Symbol to look for
- * Returns: a pointer to the symbol or NULL 
- * if the symbol can't be found 
+ * Returns: a pointer to the symbol or NULL
+ * if the symbol can't be found
  */
 void *find_sym(void *handle, const char *symbol) {
 
@@ -127,10 +127,10 @@ void *find_sym(void *handle, const char *symbol) {
 
 /*
  * Check that all symbols have been loaded
- * 
+ *
  * Returns: -1 if an error occured, 0 for success
  */
-int check_symbols() {
+int check_symbols(void) {
 
   if(DL_H5Functions.H5open == NULL)
     return -1;
@@ -158,10 +158,10 @@ int check_symbols() {
 
   if(DL_H5Functions.H5Tget_class == NULL)
     return -1;
-  
+
   if(DL_H5Functions.H5Tget_super == NULL)
     return -1;
-  
+
   if(DL_H5Functions.H5Tclose == NULL)
     return -1;
 
@@ -194,7 +194,7 @@ int check_symbols() {
 int init_filter(const char *libname)
 {
     int retval = -1;
-  	void *handle = NULL;
+    void *handle = NULL;
 
     handle = dlopen(libname, RTLD_LAZY | RTLD_LOCAL);
 
@@ -213,14 +213,14 @@ int init_filter(const char *libname)
 
         /*H5P*/
         if(DL_H5Functions.H5Pget_filter_by_id2 == NULL)
-            DL_H5Functions.H5Pget_filter_by_id2 = 
+            DL_H5Functions.H5Pget_filter_by_id2 =
               (DL_func_H5Pget_filter_by_id2)find_sym(handle, "H5Pget_filter_by_id2");
 
         if(DL_H5Functions.H5Pget_chunk == NULL)
             DL_H5Functions.H5Pget_chunk = (DL_func_H5Pget_chunk)find_sym(handle, "H5Pget_chunk");
 
         if(DL_H5Functions.H5Pmodify_filter == NULL)
-            DL_H5Functions.H5Pmodify_filter = 
+            DL_H5Functions.H5Pmodify_filter =
               (DL_func_H5Pmodify_filter)find_sym(handle, "H5Pmodify_filter");
 
         /*H5T*/
@@ -229,10 +229,10 @@ int init_filter(const char *libname)
 
         if(DL_H5Functions.H5Tget_class == NULL)
             DL_H5Functions.H5Tget_class = (DL_func_H5Tget_class)find_sym(handle, "H5Tget_class");
-       
+
         if(DL_H5Functions.H5Tget_super == NULL)
             DL_H5Functions.H5Tget_super = (DL_func_H5Tget_super)find_sym(handle, "H5Tget_super");
-        
+
         if(DL_H5Functions.H5Tclose == NULL)
             DL_H5Functions.H5Tclose = (DL_func_H5Tclose)find_sym(handle, "H5Tclose");
 
