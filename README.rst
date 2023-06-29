@@ -54,7 +54,7 @@ used outside of python and in command line utilities such as ``h5dump``.
        compression, this has the tremendous advantage that the block is
        already in the L1 cache.
 
-.. _`dynamically loaded filters`: http://www.hdfgroup.org/HDF5/doc/Advanced/DynamicallyLoadedFilters/HDF5DynamicallyLoadedFilters.pdf
+.. _`dynamically loaded filters`: https://docs.hdfgroup.org/hdf5/rfc/HDF5DynamicallyLoadedFilters.pdf
 
 .. _`Shuffle filter`: http://www.hdfgroup.org/HDF5/doc_resource/H5Shuffle_Perf.pdf
 
@@ -91,7 +91,7 @@ Comparing Bitshuffle to other compression algorithms and HDF5 filters:
   its prefilters,  However, MAFICS's emphasis is on obtaining high compression
   ratios at all costs, sacrificing throughput.
 
-.. _MAFISC: http://wr.informatik.uni-hamburg.de/research/projects/icomex/mafisc
+.. _MAFISC: https://wr.informatik.uni-hamburg.de/research/projects/icomex/mafisc
 
 
 Installation for Python
@@ -138,7 +138,7 @@ If you get an error about missing source files when building the extensions,
 try upgrading setuptools.  There is a weird bug where setuptools prior to 0.7
 doesn't work properly with Cython in some cases.
 
-.. _source: http://docs.h5py.org/en/latest/build.html#source-installation
+.. _source: https://docs.h5py.org/en/latest/build.html#source-installation
 
 
 Usage from Python
@@ -278,5 +278,5 @@ Citing Bitshuffle
 -----------------
 
 Bitshuffle was initially described in
-http://dx.doi.org/10.1016/j.ascom.2015.07.002, pre-print available at
-http://arxiv.org/abs/1503.00638.
+https://doi.org/10.1016/j.ascom.2015.07.002, pre-print available at
+https://arxiv.org/abs/1503.00638.

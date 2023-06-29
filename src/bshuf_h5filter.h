@@ -3,7 +3,7 @@
  *
  * This file is part of Bitshuffle
  * Author: Kiyoshi Masui <kiyo@physics.ubc.ca>
- * Website: http://www.github.com/kiyo-masui/bitshuffle
+ * Website: https://www.github.com/kiyo-masui/bitshuffle
  * Created: 2014
  *
  * See LICENSE file for details about copyright and rights to use.
@@ -24,7 +24,7 @@
  *
  *      For LZ4 compression, the compressed format of the data is the same as
  *      for the normal LZ4 filter described in
- *      http://www.hdfgroup.org/services/filters/HDF5_LZ4.pdf.
+ *      https://support.hdfgroup.org/services/filters/HDF5_LZ4.pdf.
  *
  */
 
