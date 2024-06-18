@@ -44,7 +44,7 @@
 
 /*  Deal with the mutiple definitions for H5Z_class_t.
     Note: HDF5 1.6 and >= 1.8 are supported.
-    See https://portal.hdfgroup.org/hdf5/develop/group___h5_z.html#title6
+    See https://hdfgroup.github.io/hdf5/develop/group___h5_z.html#ga93145acc38c2c60d832b7a9b0123706b
     for version history.
 
     (1) The old class should always be used for HDF5 1.6

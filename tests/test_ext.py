@@ -25,7 +25,7 @@ TEST_DTYPES = [
     np.float64,
     np.complex128,
 ]
-TEST_DTYPES += [b"a3", b"a5", b"a6", b"a7", b"a9", b"a11", b"a12", b"a24", b"a48"]
+TEST_DTYPES += [b"S3", b"S5", b"S6", b"S7", b"S9", b"S11", b"S12", b"S24", b"S48"]
 
 
 class TestProfile(unittest.TestCase):
