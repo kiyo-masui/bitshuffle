@@ -70,6 +70,7 @@ doc/generated
 ## Editor files and backups.
 *.swp
 *.swo
+*~
 
 # Generated files
 bitshuffle/ext.c
