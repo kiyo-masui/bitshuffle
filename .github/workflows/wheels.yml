@@ -13,15 +13,15 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        hdf5: ["1.10.7"]
+        hdf5: ["1.10.7", "1.14.4"]
 
     steps:
       # Checkout bitshuffle
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # Build wheels for linux and x86 platforms
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.11.2
+        uses: pypa/cibuildwheel@v2.19.2
         with:
           output-dir: ./wheelhouse-hdf5-${{ matrix.hdf5}}
         env:
@@ -57,18 +57,18 @@ jobs:
     name: Build source distribution
     strategy:
       matrix:
-        python-version: ["3.8"]
+        python-version: ["3.9"]
 
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install apt dependencies
         run: |
           sudo apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
 
       - name: Install Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 

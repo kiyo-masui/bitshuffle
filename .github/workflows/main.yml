@@ -12,28 +12,27 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.10"]
+        python-version: ["3.9", "3.10", "3.12"]
         os: [ubuntu-latest, macos-latest]
-        exclude:
-        - os: macos-latest
-          python-version: "3.6"
 
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Install apt dependencies
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
+        sudo apt-get update
         sudo apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
 
     - name: Install homebrew dependencies
       if: ${{ matrix.os == 'macos-latest' }}
       run: |
+        brew update
         brew install hdf5 pkg-config
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
