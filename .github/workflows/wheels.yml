@@ -45,7 +45,8 @@ jobs:
           #   .github/workflows/install_hdf5.sh 1.8.11
           # Run units tests but disable test_h5plugin.py
           CIBW_TEST_COMMAND: pytest {package}/tests
-          # The Github runners for macOS don't support AVX2 instructions and so the tests will fail with SIGILL, so skip them
+          # The Github runners for macOS don't support AVX2
+          # instructions and so the tests will fail with SIGILL, so skip them
           CIBW_TEST_SKIP: "*macosx*"
 
       # Package wheels and host on CI

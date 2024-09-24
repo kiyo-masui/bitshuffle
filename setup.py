@@ -429,6 +429,7 @@ setup(
     cmdclass={"build_ext": build_ext, "install": install, "develop": develop},
     setup_requires=setup_requires,
     install_requires=requires,
+    python_requires=">=3.9",
     # extras_require={'H5':  ["h5py"]},
     package_data={"": ["data/*"]},
     # metadata for upload to PyPI
