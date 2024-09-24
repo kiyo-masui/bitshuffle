@@ -25,6 +25,7 @@ jobs:
     - name: Install apt dependencies
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
+        sudo apt-get update
         sudo apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
 
     - name: Install homebrew dependencies
