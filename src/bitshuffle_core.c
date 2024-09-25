@@ -1931,10 +1931,10 @@ int64_t bshuf_blocked_decompress_wrap_fun(bshufBlockFunDefDC fun, const void* in
     #pragma omp parallel private(C, count) shared(last_in, last_out,) reduction(+ : cum_count)
     {
     /* thread local structure */
+#endif
     C = (struct o_chain *) malloc( sizeof(struct o_chain) );
     o_chain_init(C, in, out);
     #pragma omp for schedule(static)
-#endif
     for (ii = 0; ii < nblocks; ii ++) {
 
         o_chain_goto( C, ii, block_size * elem_size );
