@@ -1,5 +1,5 @@
 # Order matters
 setuptools>=0.7
 Cython>=0.19
-numpy>=1.6.1
+numpy>=1.24
 h5py>=2.4.0
