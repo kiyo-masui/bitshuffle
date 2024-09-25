@@ -1,9 +1,9 @@
 # Include dependencies when building wheels on cibuildwheel
 [build-system]
 requires = [
-    "setuptools>=0.7",
+    "setuptools",
     "Cython>=0.19",
-    "numpy>=1.6.1",
+    "numpy>=2.0.0rc1",
     "h5py>=2.4.0",
 ]
 

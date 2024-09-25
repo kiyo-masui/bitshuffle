@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        hdf5: ["1.10.7", "1.14.4"]
+        hdf5: ["1.10.7", "1.14.4-3"]
 
     steps:
       # Checkout bitshuffle
@@ -45,7 +45,8 @@ jobs:
           #   .github/workflows/install_hdf5.sh 1.8.11
           # Run units tests but disable test_h5plugin.py
           CIBW_TEST_COMMAND: pytest {package}/tests
-          # The Github runners for macOS don't support AVX2 instructions and so the tests will fail with SIGILL, so skip them
+          # The Github runners for macOS don't support AVX2
+          # instructions and so the tests will fail with SIGILL, so skip them
           CIBW_TEST_SKIP: "*macosx*"
 
       # Package wheels and host on CI
@@ -57,7 +58,7 @@ jobs:
     name: Build source distribution
     strategy:
       matrix:
-        python-version: ["3.9"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
 
     runs-on: ubuntu-latest
     steps:
@@ -65,6 +66,7 @@ jobs:
 
       - name: Install apt dependencies
         run: |
+          sudo apt-get update
           sudo apt-get install -y libhdf5-serial-dev hdf5-tools pkg-config
 
       - name: Install Python
