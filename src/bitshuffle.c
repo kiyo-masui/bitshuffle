@@ -99,7 +99,9 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
     nbytes = LZ4_decompress_safe((const char*) in + 4, (char *) tmp_buf, nbytes_from_header,
                                  size * elem_size);
     CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    if (nbytes != size * elem_size) {
+	// cast to unsigned safe: as CHECK_ERR_FREE would have handled nbytes < 0
+	// by returning from function immediately
+    if ((size_t)nbytes != size * elem_size) {
         free(tmp_buf);
         return -91;
     }
@@ -231,14 +233,20 @@ size_t bshuf_compress_lz4_bound(const size_t size,
 int64_t bshuf_compress_lz4(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
     return bshuf_blocked_wrap_fun(&bshuf_compress_lz4_block, in, out, size,
-            elem_size, block_size, 0/*option*/);
+            elem_size, block_size, 0/*option*/,0 /*no output limit*/);
+}
+
+int64_t bshuf_compress_lz4_out_size_limited(const void* in, void* out, const size_t size,
+        const size_t elem_size, size_t block_size) {
+    return bshuf_blocked_wrap_fun(&bshuf_compress_lz4_block, in, out, size,
+            elem_size, block_size,0 /*option*/,size*elem_size);
 }
 
 
 int64_t bshuf_decompress_lz4(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
     return bshuf_blocked_wrap_fun(&bshuf_decompress_lz4_block, in, out, size,
-            elem_size, block_size, 0/*option*/);
+            elem_size, block_size, 0/*option*/,0/*no output limit in decompression*/);
 }
 
 #ifdef ZSTD_SUPPORT
@@ -267,13 +275,13 @@ size_t bshuf_compress_zstd_bound(const size_t size,
 int64_t bshuf_compress_zstd(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size, const int comp_lvl) {
     return bshuf_blocked_wrap_fun(&bshuf_compress_zstd_block, in, out, size,
-            elem_size, block_size, comp_lvl);
+            elem_size, block_size, comp_lvl,0/*no output limit yet*/);
 }
 
 
 int64_t bshuf_decompress_zstd(const void* in, void* out, const size_t size,
         const size_t elem_size, size_t block_size) {
     return bshuf_blocked_wrap_fun(&bshuf_decompress_zstd_block, in, out, size,
-            elem_size, block_size, 0/*option*/);
+            elem_size, block_size, 0/*option*/,0/*no output limit in decompression*/);
 }
 #endif // ZSTD_SUPPORT

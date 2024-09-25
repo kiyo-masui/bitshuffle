@@ -87,6 +87,8 @@ size_t bshuf_compress_lz4_bound(const size_t size,
  */
 int64_t bshuf_compress_lz4(const void* in, void* out, const size_t size, const size_t
         elem_size, size_t block_size);
+int64_t bshuf_compress_lz4_out_size_limited(const void* in, void* out, const size_t size, const size_t
+        elem_size, size_t block_size);
 
 
 /* ---- bshuf_decompress_lz4 ----
