@@ -58,7 +58,7 @@ jobs:
     name: Build source distribution
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13.0-rc.2"]
 
     runs-on: ubuntu-latest
     steps:
