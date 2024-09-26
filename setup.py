@@ -360,8 +360,6 @@ class build_ext(build_ext_):
             ext._needs_stub = False
 
     def build_extensions(self):
-        c = self.compiler.compiler_type
-
         # Set compiler flags including architecture
         if self.compiler.compiler_type == "msvc":
             openmpflag = "/openmp"
