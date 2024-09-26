@@ -25,7 +25,7 @@
  * Usage
  * -----
  *  - Call `ioc_init` in serial block.
- *  - Each thread should create a local variable *size_t this_iter* and 
+ *  - Each thread should create a local variable *size_t this_iter* and
  *    pass its address to all function calls. Its value will be set
  *    inside the functions and is used to identify the thread.
  *  - Each thread must call each of the `ioc_get*` and `ioc_set*` methods
@@ -91,4 +91,3 @@ void * ioc_get_out(ioc_chain *C, size_t *this_iter);
 void ioc_set_next_out(ioc_chain *C, size_t *this_iter, void* out_ptr);
 
 #endif  // IOCHAIN_H
-
