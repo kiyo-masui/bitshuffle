@@ -6,4 +6,4 @@ def pytest_report_header(config):
     avx2 = bitshuffle.using_AVX2()
     avx512 = bitshuffle.using_AVX512()
     neon = bitshuffle.using_NEON()
-    return f"SSE2 {sse2}; AVX2 {avx2}; AVX512 {avx512}; NEON {neon}"
+    return f"Bitshuffle instruction set: SSE2 {sse2}; AVX2 {avx2}; AVX512 {avx512}; NEON {neon}"
