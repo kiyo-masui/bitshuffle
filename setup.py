@@ -19,7 +19,7 @@ import platform
 
 VERSION_MAJOR = 0
 VERSION_MINOR = 5
-VERSION_POINT = 1
+VERSION_POINT = 2
 # Define ZSTD macro for cython compilation
 default_options["compile_time_env"] = {"ZSTD_SUPPORT": False}
 
@@ -106,9 +106,7 @@ def pkgconfig(*packages, **kw):
         try:
             subprocess.check_output(["pkg-config", package])
         except (subprocess.CalledProcessError, OSError):
-            print(
-                "Can't find %s with pkg-config fallback to " "static config" % package
-            )
+            print("Can't find %s with pkg-config fallback to static config" % package)
             for distutils_key in flag_map:
                 config.setdefault(distutils_key, []).extend(
                     FALLBACK_CONFIG[distutils_key]
@@ -362,8 +360,6 @@ class build_ext(build_ext_):
             ext._needs_stub = False
 
     def build_extensions(self):
-        c = self.compiler.compiler_type
-
         # Set compiler flags including architecture
         if self.compiler.compiler_type == "msvc":
             openmpflag = "/openmp"
@@ -429,6 +425,7 @@ setup(
     cmdclass={"build_ext": build_ext, "install": install, "develop": develop},
     setup_requires=setup_requires,
     install_requires=requires,
+    python_requires=">=3.9",
     # extras_require={'H5':  ["h5py"]},
     package_data={"": ["data/*"]},
     # metadata for upload to PyPI

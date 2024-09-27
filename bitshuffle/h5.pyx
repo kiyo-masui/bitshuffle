@@ -231,5 +231,3 @@ def create_bitshuffle_compressed_dataset(parent, name, shape, dtype,
                              filter_opts=filter_opts, maxshape=maxshape,
                              fillvalue=fillvalue, track_times=track_times)
     return dset_id
-
-

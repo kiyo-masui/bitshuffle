@@ -2,7 +2,7 @@
  * Bitshuffle - Filter for improving compression of typed binary data.
  *
  * Author: Kiyoshi Masui <kiyo@physics.ubc.ca>
- * Website: http://www.github.com/kiyo-masui/bitshuffle
+ * Website: https://www.github.com/kiyo-masui/bitshuffle
  * Created: 2014
  *
  * See LICENSE file for details about copyright and rights to use.
@@ -23,12 +23,17 @@
 
 
 // Macros.
-#define CHECK_ERR_FREE_LZ(count, buf) if (count < 0) {                      \
-    free(buf); return count - 1000; }
+#define CHECK_ERR_FREE_LZ(count, buf)   \
+        do {                            \
+            if ((count) < 0) {          \
+                free(buf);              \
+                return (count) - 1000;  \
+            }                           \
+        } while (0)
 
 
 /* Bitshuffle and compress a single block. */
-int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr, \
+int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size, const int option) {
 
     int64_t nbytes, count;
@@ -115,7 +120,7 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
 
 #ifdef ZSTD_SUPPORT
 /* Bitshuffle and compress a single block. */
-int64_t bshuf_compress_zstd_block(ioc_chain *C_ptr, \
+int64_t bshuf_compress_zstd_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size, const int comp_lvl) {
 
     int64_t nbytes, count;

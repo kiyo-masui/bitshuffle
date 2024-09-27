@@ -3,7 +3,7 @@
  *
  * This file is part of Bitshuffle
  * Author: Kiyoshi Masui <kiyo@physics.ubc.ca>
- * Website: http://www.github.com/kiyo-masui/bitshuffle
+ * Website: https://www.github.com/kiyo-masui/bitshuffle
  * Created: 2014
  *
  * See LICENSE file for details about copyright and rights to use.
@@ -87,4 +87,3 @@ void ioc_set_next_out(ioc_chain *C, size_t *this_iter, void* out_ptr) {
     omp_unset_lock(&(C->in_pl[(*this_iter) % IOC_SIZE].lock));
 #endif
 }
-
