@@ -367,7 +367,7 @@ class build_ext(build_ext_):
         else:
             openmpflag = "-fopenmp"
             archi = platform.machine()
-            if archi in ("i386", "x86_64"):
+            if archi in ("i386", "x86_64", "loongarch64"):
                 compileflags = COMPILE_FLAGS + ["-march=%s" % self.march]
             else:
                 compileflags = COMPILE_FLAGS + ["-mcpu=%s" % self.march]
