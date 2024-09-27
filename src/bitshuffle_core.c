@@ -49,8 +49,10 @@ typedef int64_t omp_size_t;
 typedef size_t omp_size_t;
 #endif
 
+typedef uint16_t alias_uint16_t __attribute__((may_alias));
+
 // Macros.
-#define CHECK_MULT_EIGHT(n) if (n % 8) return -80;
+#define CHECK_MULT_EIGHT(n) do { if ((n) % 8) return -80; } while (0)
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
 
@@ -309,7 +311,7 @@ int64_t bshuf_trans_byte_bitrow_scal(const void* in, void* out, const size_t siz
     for (jj = 0; jj < elem_size; jj++) {
         for (ii = 0; ii < nbyte_row; ii++) {
             for (kk = 0; kk < 8; kk++) {
-                out_b[ii * 8 * elem_size + jj * 8 + kk] = \
+                out_b[ii * 8 * elem_size + jj * 8 + kk] =
                         in_b[(jj * 8 + kk) * nbyte_row + ii];
             }
         }
@@ -319,7 +321,7 @@ int64_t bshuf_trans_byte_bitrow_scal(const void* in, void* out, const size_t siz
 
 
 /* Shuffle bits within the bytes of eight element blocks. */
-int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out, \
+int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out,
         const size_t size, const size_t elem_size) {
 
     const char *in_b;
@@ -605,44 +607,59 @@ int64_t bshuf_trans_byte_elem_NEON(const void* in, void* out, const size_t size,
     }
 }
 
-
-/* Creates a mask made up of the most significant
- * bit of each byte of 'input'
- */
-int32_t move_byte_mask_neon(uint8x16_t input) {
-
-    return (  ((input[0] & 0x80) >> 7)          | (((input[1] & 0x80) >> 7) << 1)   | (((input[2] & 0x80) >> 7) << 2)   | (((input[3] & 0x80) >> 7) << 3)
-            | (((input[4] & 0x80) >> 7) << 4)   | (((input[5] & 0x80) >> 7) << 5)   | (((input[6] & 0x80) >> 7) << 6)   | (((input[7] & 0x80) >> 7) << 7)
-            | (((input[8] & 0x80) >> 7) << 8)   | (((input[9] & 0x80) >> 7) << 9)   | (((input[10] & 0x80) >> 7) << 10) | (((input[11] & 0x80) >> 7) << 11)
-            | (((input[12] & 0x80) >> 7) << 12) | (((input[13] & 0x80) >> 7) << 13) | (((input[14] & 0x80) >> 7) << 14) | (((input[15] & 0x80) >> 7) << 15)
-           );
+uint64_t neonmovemask_bulk(uint8x16_t p0, uint8x16_t p1, uint8x16_t p2, uint8x16_t p3) {
+  const uint8x16_t bitmask = { 0x01, 0x02, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80,
+                               0x01, 0x02, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80};
+  uint8x16_t t0 = vandq_u8(p0, bitmask);
+  uint8x16_t t1 = vandq_u8(p1, bitmask);
+  uint8x16_t t2 = vandq_u8(p2, bitmask);
+  uint8x16_t t3 = vandq_u8(p3, bitmask);
+  uint8x16_t sum0 = vpaddq_u8(t0, t1);
+  uint8x16_t sum1 = vpaddq_u8(t2, t3);
+  sum0 = vpaddq_u8(sum0, sum1);
+  sum0 = vpaddq_u8(sum0, sum0);
+  return vgetq_lane_u64(vreinterpretq_u64_u8(sum0), 0);
 }
 
 /* Transpose bits within bytes. */
 int64_t bshuf_trans_bit_byte_NEON(const void* in, void* out, const size_t size,
          const size_t elem_size) {
 
-    size_t ii, kk;
+    size_t ii;
     const char* in_b = (const char*) in;
     char* out_b = (char*) out;
-    uint16_t* out_ui16;
-
     int64_t count;
-
     size_t nbyte = elem_size * size;
 
     CHECK_MULT_EIGHT(nbyte);
 
-    int16x8_t xmm;
-    int32_t bt;
+    const uint8x16_t a0 = vdupq_n_u8(0x80);
+    const uint8x16_t a1 = vdupq_n_u8(0x40);
+    const uint8x16_t a2 = vdupq_n_u8(0x20);
+    const uint8x16_t a3 = vdupq_n_u8(0x10);
+    const uint8x16_t a4 = vdupq_n_u8(0x8);
+    const uint8x16_t a5 = vdupq_n_u8(0x4);
+    const uint8x16_t a6 = vdupq_n_u8(0x2);
+    const uint8x16_t a7 = vdupq_n_u8(0x1);
 
     for (ii = 0; ii + 15 < nbyte; ii += 16) {
-        xmm = vld1q_s16((int16_t *) (in_b + ii));
+        uint8x16_t x = vld1q_u8((uint8_t *) (in_b + ii));
+        uint8x16_t x0 = vceqq_u8(a0, vandq_u8(x, a0));
+        uint8x16_t x1 = vceqq_u8(a1, vandq_u8(x, a1));
+        uint8x16_t x2 = vceqq_u8(a2, vandq_u8(x, a2));
+        uint8x16_t x3 = vceqq_u8(a3, vandq_u8(x, a3));
+        uint8x16_t x4 = vceqq_u8(a4, vandq_u8(x, a4));
+        uint8x16_t x5 = vceqq_u8(a5, vandq_u8(x, a5));
+        uint8x16_t x6 = vceqq_u8(a6, vandq_u8(x, a6));
+        uint8x16_t x7 = vceqq_u8(a7, vandq_u8(x, a7));
+
+        uint64_t out[2];
+        out[0] = neonmovemask_bulk(x0, x1, x2, x3);
+        out[1] = neonmovemask_bulk(x4, x5, x6, x7);
+        int kk;
         for (kk = 0; kk < 8; kk++) {
-            bt = move_byte_mask_neon((uint8x16_t) xmm);
-            xmm = vshlq_n_s16(xmm, 1);
-            out_ui16 = (uint16_t*) &out_b[((7 - kk) * nbyte + ii) / 8];
-            *out_ui16 = bt;
+            alias_uint16_t *out_ui16 = (uint16_t*) &out_b[((7 - kk) * nbyte + ii) / 8];
+            *out_ui16 = ((alias_uint16_t*)out)[kk];
         }
     }
     count = bshuf_trans_bit_byte_remainder(in, out, size, elem_size,
@@ -780,26 +797,42 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
     // With a bit of care, this could be written such that such that it is
     // in_buf = out_buf safe.
     const char* in_b = (const char*) in;
-    uint16_t* out_ui16 = (uint16_t*) out;
+    alias_uint16_t* out_ui16 = (alias_uint16_t*) out;
 
     size_t ii, jj, kk;
     size_t nbyte = elem_size * size;
 
-    int16x8_t xmm;
-    int32_t bt;
-
     if (elem_size % 2) {
         bshuf_shuffle_bit_eightelem_scal(in, out, size, elem_size);
     } else {
+        const uint8x16_t a0 = vdupq_n_u8(0x80);
+        const uint8x16_t a1 = vdupq_n_u8(0x40);
+        const uint8x16_t a2 = vdupq_n_u8(0x20);
+        const uint8x16_t a3 = vdupq_n_u8(0x10);
+        const uint8x16_t a4 = vdupq_n_u8(0x8);
+        const uint8x16_t a5 = vdupq_n_u8(0x4);
+        const uint8x16_t a6 = vdupq_n_u8(0x2);
+        const uint8x16_t a7 = vdupq_n_u8(0x1);
         for (ii = 0; ii + 8 * elem_size - 1 < nbyte;
                 ii += 8 * elem_size) {
             for (jj = 0; jj + 15 < 8 * elem_size; jj += 16) {
-                xmm = vld1q_s16((int16_t *) &in_b[ii + jj]);
+                uint8x16_t x = vld1q_u8((uint8_t *) &in_b[ii + jj]);
+                uint8x16_t x0 = vceqq_u8(a0, vandq_u8(x, a0));
+                uint8x16_t x1 = vceqq_u8(a1, vandq_u8(x, a1));
+                uint8x16_t x2 = vceqq_u8(a2, vandq_u8(x, a2));
+                uint8x16_t x3 = vceqq_u8(a3, vandq_u8(x, a3));
+                uint8x16_t x4 = vceqq_u8(a4, vandq_u8(x, a4));
+                uint8x16_t x5 = vceqq_u8(a5, vandq_u8(x, a5));
+                uint8x16_t x6 = vceqq_u8(a6, vandq_u8(x, a6));
+                uint8x16_t x7 = vceqq_u8(a7, vandq_u8(x, a7));
+
+                uint64_t out[2];
+                out[0] = neonmovemask_bulk(x0, x1, x2, x3);
+                out[1] = neonmovemask_bulk(x4, x5, x6, x7);
+
                 for (kk = 0; kk < 8; kk++) {
-                    bt = move_byte_mask_neon((uint8x16_t) xmm);
-                    xmm = vshlq_n_s16(xmm, 1);
                     size_t ind = (ii + jj / 8 + (7 - kk) * elem_size);
-                    out_ui16[ind / 2] = bt;
+                    out_ui16[ind / 2] = ((alias_uint16_t *)out)[kk];
                 }
             }
         }
@@ -890,7 +923,7 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
 /* ---- Worker code that uses SSE2 ----
  *
  * The following code makes use of the SSE2 instruction set and specialized
- * 16 byte registers. The SSE2 instructions are present on modern x86 
+ * 16 byte registers. The SSE2 instructions are present on modern x86
  * processors. The first Intel processor microarchitecture supporting SSE2 was
  * Pentium 4 (2000).
  *
@@ -1114,7 +1147,7 @@ int64_t bshuf_trans_bit_byte_SSE(const void* in, void* out, const size_t size,
     size_t ii, kk;
     const char* in_b = (const char*) in;
     char* out_b = (char*) out;
-    uint16_t* out_ui16;
+    alias_uint16_t* out_ui16;
 
     int64_t count;
 
@@ -1130,7 +1163,7 @@ int64_t bshuf_trans_bit_byte_SSE(const void* in, void* out, const size_t size,
         for (kk = 0; kk < 8; kk++) {
             bt = _mm_movemask_epi8(xmm);
             xmm = _mm_slli_epi16(xmm, 1);
-            out_ui16 = (uint16_t*) &out_b[((7 - kk) * nbyte + ii) / 8];
+            out_ui16 = (alias_uint16_t*) &out_b[((7 - kk) * nbyte + ii) / 8];
             *out_ui16 = bt;
         }
     }
@@ -1795,7 +1828,7 @@ int64_t bshuf_untrans_bit_elem_AVX512(const void* in, void* out, const size_t si
 
 /* ---- Drivers selecting best instruction set at compile time. ---- */
 
-int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size, 
+int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size,
         const size_t elem_size) {
 
     int64_t count;
@@ -1814,7 +1847,7 @@ int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size,
 }
 
 
-int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size, 
+int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
         const size_t elem_size) {
 
     int64_t count;
@@ -1837,7 +1870,7 @@ int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
 
 /* Wrap a function for processing a single block to process an entire buffer in
  * parallel. */
-int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out, \
+int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out,
         const size_t size, const size_t elem_size, size_t block_size, const int option) {
 
     omp_size_t ii = 0;
@@ -1964,7 +1997,7 @@ int64_t bshuf_blocked_decompress_wrap_fun(bshufBlockFunDefDC fun, const void* in
 
 
 /* Bitshuffle a single block. */
-int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
+int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size, const int option) {
 
     size_t this_iter;
@@ -1973,7 +2006,7 @@ int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
     int64_t count;
 
 
-    
+
     in = ioc_get_in(C_ptr, &this_iter);
     ioc_set_next_in(C_ptr, &this_iter,
             (void*) ((char*) in + size * elem_size));
@@ -1987,7 +2020,7 @@ int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr, \
 
 
 /* Bitunshuffle a single block. */
-int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr, \
+int64_t bshuf_bitunshuffle_block(ioc_chain* C_ptr,
         const size_t size, const size_t elem_size, const int option) {
 
 

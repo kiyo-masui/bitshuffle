@@ -90,7 +90,6 @@ void ioc_set_next_out(ioc_chain *C, size_t *this_iter, void* out_ptr) {
 }
 
 
-
 void o_chain_init( o_chain *C, const void *in, const void *out){
   C->i0 = in;
   C->o0 = out;
