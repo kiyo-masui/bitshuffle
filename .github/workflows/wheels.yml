@@ -50,7 +50,7 @@ jobs:
           CIBW_TEST_SKIP: "*macosx*"
 
       # Package wheels and host on CI
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse-hdf5-${{ matrix.hdf5 }}/*.whl
 
@@ -81,7 +81,7 @@ jobs:
       - name: Build sdist
         run: python setup.py sdist
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: dist/*.tar.gz
 
