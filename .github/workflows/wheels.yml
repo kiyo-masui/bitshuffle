@@ -21,7 +21,7 @@ jobs:
 
       # Build wheels for linux and x86 platforms
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.2
+        uses: pypa/cibuildwheel@v2.21.1
         with:
           output-dir: ./wheelhouse-hdf5-${{ matrix.hdf5}}
         env:
