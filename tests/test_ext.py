@@ -66,7 +66,7 @@ class TestProfile(unittest.TestCase):
         size = max([size_i, size_o])
         speed = ext.REPEAT * size / delta_t / 1024**3  # GB/s
         if TIME:
-            print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1.0 / speed, speed))
+            print(f"{self.case:-20}: {1.0 / speed:5.2f} s/GB,   {speed:%5.2f} GB/s")
         if self.check is not None:
             ans = self.check(self.data).view(np.uint8)
             self.assertTrue(np.all(ans == out.view(np.uint8)))

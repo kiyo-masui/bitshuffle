@@ -24,9 +24,9 @@ default_options["compile_time_env"] = {"ZSTD_SUPPORT": False}
 # Only unset in the 'release' branch and in tags.
 VERSION_DEV = None
 
-VERSION = "%d.%d.%d" % (VERSION_MAJOR, VERSION_MINOR, VERSION_POINT)
+VERSION = f"{VERSION_MAJOR}.{VERSION_MINOR}.{VERSION_POINT}"
 if VERSION_DEV:
-    VERSION = VERSION + ".dev%d" % VERSION_DEV
+    VERSION = f"{VERSION}.dev{VERSION_DEV}"
 
 
 COMPILE_FLAGS = ["-O3", "-ffast-math", "-std=c99"]
