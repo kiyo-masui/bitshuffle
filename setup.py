@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 # I didn't import unicode_literals. They break setuptools or Cython in python
 # 2.7, but python 3 seems to be happy with them.
 
@@ -165,7 +163,7 @@ h5filter = Extension(
         "lz4/lz4.h",
     ],
     define_macros=MACROS + [("H5_USE_18_API", None)],
-    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/"]))
+    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/"])),
 )
 
 if not sys.platform.startswith("win"):
@@ -190,7 +188,7 @@ filter_plugin = Extension(
         "lz4/lz4.h",
     ],
     define_macros=MACROS,
-    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/"]))
+    **pkgconfig("hdf5", config=dict(include_dirs=["src/", "lz4/"])),
 )
 
 lzf_plugin = Extension(
@@ -202,7 +200,7 @@ lzf_plugin = Extension(
         "lzf/lzf/lzf_d.c",
     ],
     depends=["lzf/lzf_filter.h", "lzf/lzf/lzf.h", "lzf/lzf/lzfP.h"],
-    **pkgconfig("hdf5", config=dict(include_dirs=["lzf/", "lzf/lzf/"]))
+    **pkgconfig("hdf5", config=dict(include_dirs=["lzf/", "lzf/lzf/"])),
 )
 
 
