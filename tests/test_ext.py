@@ -125,7 +125,7 @@ class TestProfile(unittest.TestCase):
         self.case = "byte T elem SSE 96"
         n = self.data.size // 128 * 96
         dt = np.dtype(
-            [(str("a"), np.int32), (str("b"), np.int32), (str("c"), np.int32)]
+            [("a", np.int32), ("b", np.int32), ("c", np.int32)]
         )
         self.data = self.data[:n].view(dt)
         self.fun = ext.trans_byte_elem_SSE
@@ -136,11 +136,11 @@ class TestProfile(unittest.TestCase):
         n = self.data.size // 128 * 80
         dt = np.dtype(
             [
-                (str("a"), np.int16),
-                (str("b"), np.int16),
-                (str("c"), np.int16),
-                (str("d"), np.int16),
-                (str("e"), np.int16),
+                ("a", np.int16),
+                ("b", np.int16),
+                ("c", np.int16),
+                ("d", np.int16),
+                ("e", np.int16),
             ]
         )
         self.data = self.data[:n].view(dt)
