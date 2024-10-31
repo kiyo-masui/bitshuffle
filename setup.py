@@ -53,10 +53,7 @@ else:
 # Build against the native architecture unless overridden by an environment variable
 # This can also be overridden by a direct command line argument, or a `setup.cfg` entry
 # This option is needed for the cibuildwheel action
-if "BITSHUFFLE_ARCH" in os.environ:
-    MARCH_DEFAULT = os.environ["BITSHUFFLE_ARCH"]
-else:
-    MARCH_DEFAULT = "native"
+MARCH_DEFAULT = os.environ.get("BITSHUFFLE_ARCH", "native")
 
 FALLBACK_CONFIG = {
     "include_dirs": [],
