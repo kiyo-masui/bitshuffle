@@ -318,7 +318,7 @@ class build_ext(build_ext_):
             "omp=",
             None,
             "Whether to compile with OpenMP threading. Default"
-            f" on current system is {str(OMP_DEFAULT)}.",
+            f" on current system is {OMP_DEFAULT}.",
         ),
         (
             "march=",
