@@ -104,7 +104,7 @@ def pkgconfig(*packages, **kw):
         try:
             subprocess.check_output(["pkg-config", package])
         except (subprocess.CalledProcessError, OSError):
-            print("Can't find %s with pkg-config fallback to static config" % package)
+            print(f"Can't find {package} with pkg-config fallback to static config")
             for distutils_key in flag_map:
                 config.setdefault(distutils_key, []).extend(
                     FALLBACK_CONFIG[distutils_key]
@@ -259,7 +259,7 @@ class install(install_):
         (
             "h5plugin-dir=",
             None,
-            "Where to install filter plugins. Default %s." % H5PLUGINS_DEFAULT,
+            f"Where to install filter plugins. Default {H5PLUGINS_DEFAULT}.",
         ),
         ("zstd", None, "Install ZSTD support."),
     ]
@@ -311,7 +311,7 @@ class install(install_):
             for plugin_lib in plugin_libs:
                 plugin_name = path.split(plugin_lib)[1]
                 shutil.copy2(plugin_lib, path.join(self.h5plugin_dir, plugin_name))
-            print("Installed HDF5 filter plugins to %s" % self.h5plugin_dir)
+            print(f"Installed HDF5 filter plugins to {self.h5plugin_dir}")
 
 
 # Command line or site.cfg specification of OpenMP.
@@ -321,13 +321,12 @@ class build_ext(build_ext_):
             "omp=",
             None,
             "Whether to compile with OpenMP threading. Default"
-            " on current system is %s." % str(OMP_DEFAULT),
+            f" on current system is {str(OMP_DEFAULT)}.",
         ),
         (
             "march=",
             None,
-            "Generate instructions for a specific machine type. Default is %s."
-            % MARCH_DEFAULT,
+            f"Generate instructions for a specific machine type. Default is {MARCH_DEFAULT}.",
         ),
     ]
     boolean_options = build_ext_.boolean_options + ["omp"]
@@ -366,9 +365,9 @@ class build_ext(build_ext_):
             openmpflag = "-fopenmp"
             archi = platform.machine()
             if archi in ("i386", "x86_64"):
-                compileflags = COMPILE_FLAGS + ["-march=%s" % self.march]
+                compileflags = COMPILE_FLAGS + [f"-march={self.march}"]
             else:
-                compileflags = COMPILE_FLAGS + ["-mcpu=%s" % self.march]
+                compileflags = COMPILE_FLAGS + [f"-mcpu={self.march}"]
                 if archi == "ppc64le":
                     compileflags = COMPILE_FLAGS + ["-DNO_WARN_X86_INTRINSICS"]
 
@@ -433,6 +432,6 @@ setup(
     long_description=long_description,
     license="MIT",
     url="https://github.com/kiyo-masui/bitshuffle",
-    download_url=("https://github.com/kiyo-masui/bitshuffle/tarball/%s" % VERSION),
+    download_url=(f"https://github.com/kiyo-masui/bitshuffle/tarball/{VERSION}"),
     keywords=["compression", "hdf5", "numpy"],
 )

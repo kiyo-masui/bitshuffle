@@ -124,9 +124,7 @@ class TestProfile(unittest.TestCase):
     def test_01h_trans_byte_elem_96(self):
         self.case = "byte T elem SSE 96"
         n = self.data.size // 128 * 96
-        dt = np.dtype(
-            [("a", np.int32), ("b", np.int32), ("c", np.int32)]
-        )
+        dt = np.dtype([("a", np.int32), ("b", np.int32), ("c", np.int32)])
         self.data = self.data[:n].view(dt)
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
