@@ -47,7 +47,7 @@ class TestProfile(unittest.TestCase):
             reps = 1
         delta_ts = []
         try:
-            for ii in range(reps):
+            for _ in range(reps):
                 t0 = time.time()
                 out = self.fun(self.data)
                 delta_ts.append(time.time() - t0)
@@ -591,7 +591,7 @@ class TestOddLengths(unittest.TestCase):
                 nbyte_max = self.nmax * itemsize
                 dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
                 dbuf = dbuf.view(dtype)
-                for ii in range(self.reps):
+                for _ in range(self.reps):
                     n = random.randint(0, self.nmax // 8, 1)[0] * 8
                     data = dbuf[:n]
                     out = self.fun(data).view(np.uint8)
@@ -620,7 +620,7 @@ class TestBitShuffleCircle(unittest.TestCase):
             nbyte_max = nmax * itemsize
             dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
             dbuf = dbuf.view(dtype)
-            for ii in range(reps):
+            for _ in range(reps):
                 n = random.randint(0, nmax, 1)[0]
                 data = dbuf[:n]
                 shuff = ext.bitshuffle(data)
@@ -636,7 +636,7 @@ class TestBitShuffleCircle(unittest.TestCase):
             nbyte_max = nmax * itemsize
             dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
             dbuf = dbuf.view(dtype)
-            for ii in range(reps):
+            for _ in range(reps):
                 n = random.randint(0, nmax, 1)[0]
                 data = dbuf[:n]
                 shuff = ext.compress_lz4(data)
@@ -653,7 +653,7 @@ class TestBitShuffleCircle(unittest.TestCase):
             nbyte_max = nmax * itemsize
             dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
             dbuf = dbuf.view(dtype)
-            for ii in range(reps):
+            for _ in range(reps):
                 n = random.randint(0, nmax, 1)[0]
                 data = dbuf[:n]
                 shuff = ext.compress_zstd(data)
