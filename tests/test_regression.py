@@ -3,8 +3,6 @@ Test that data encoded with earlier versions can still be decoded correctly.
 
 """
 
-from __future__ import absolute_import, division, print_function
-
 import pathlib
 import unittest
 
@@ -29,14 +27,14 @@ class TestAll(unittest.TestCase):
             g_orig = f["original"]
             g_comp = f["compressed"]
 
-            for dset_name in g_comp.keys():
+            for dset_name in g_comp:
                 self.assertTrue(np.all(g_comp[dset_name][:] == g_orig[dset_name][:]))
 
             # Only run ZSTD comparison on versions >= 0.4.0 and if ZSTD support
             # has been built into bitshuffle
             if version.parse(rev) >= version.parse("0.4.0") and __zstd__:
                 g_comp_zstd = f["compressed_zstd"]
-                for dset_name in g_comp_zstd.keys():
+                for dset_name in g_comp_zstd:
                     self.assertTrue(
                         np.all(g_comp_zstd[dset_name][:] == g_orig[dset_name][:])
                     )

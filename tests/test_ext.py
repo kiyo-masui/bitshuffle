@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import unittest
 import time
 
@@ -49,7 +47,7 @@ class TestProfile(unittest.TestCase):
             reps = 1
         delta_ts = []
         try:
-            for ii in range(reps):
+            for _ in range(reps):
                 t0 = time.time()
                 out = self.fun(self.data)
                 delta_ts.append(time.time() - t0)
@@ -68,7 +66,7 @@ class TestProfile(unittest.TestCase):
         size = max([size_i, size_o])
         speed = ext.REPEAT * size / delta_t / 1024**3  # GB/s
         if TIME:
-            print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1.0 / speed, speed))
+            print(f"{self.case:-20}: {1.0 / speed:5.2f} s/GB,   {speed:%5.2f} GB/s")
         if self.check is not None:
             ans = self.check(self.data).view(np.uint8)
             self.assertTrue(np.all(ans == out.view(np.uint8)))
@@ -126,9 +124,7 @@ class TestProfile(unittest.TestCase):
     def test_01h_trans_byte_elem_96(self):
         self.case = "byte T elem SSE 96"
         n = self.data.size // 128 * 96
-        dt = np.dtype(
-            [(str("a"), np.int32), (str("b"), np.int32), (str("c"), np.int32)]
-        )
+        dt = np.dtype([("a", np.int32), ("b", np.int32), ("c", np.int32)])
         self.data = self.data[:n].view(dt)
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
@@ -138,11 +134,11 @@ class TestProfile(unittest.TestCase):
         n = self.data.size // 128 * 80
         dt = np.dtype(
             [
-                (str("a"), np.int16),
-                (str("b"), np.int16),
-                (str("c"), np.int16),
-                (str("d"), np.int16),
-                (str("e"), np.int16),
+                ("a", np.int16),
+                ("b", np.int16),
+                ("c", np.int16),
+                ("d", np.int16),
+                ("e", np.int16),
             ]
         )
         self.data = self.data[:n].view(dt)
@@ -595,7 +591,7 @@ class TestOddLengths(unittest.TestCase):
                 nbyte_max = self.nmax * itemsize
                 dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
                 dbuf = dbuf.view(dtype)
-                for ii in range(self.reps):
+                for _ in range(self.reps):
                     n = random.randint(0, self.nmax // 8, 1)[0] * 8
                     data = dbuf[:n]
                     out = self.fun(data).view(np.uint8)
@@ -624,7 +620,7 @@ class TestBitShuffleCircle(unittest.TestCase):
             nbyte_max = nmax * itemsize
             dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
             dbuf = dbuf.view(dtype)
-            for ii in range(reps):
+            for _ in range(reps):
                 n = random.randint(0, nmax, 1)[0]
                 data = dbuf[:n]
                 shuff = ext.bitshuffle(data)
@@ -640,7 +636,7 @@ class TestBitShuffleCircle(unittest.TestCase):
             nbyte_max = nmax * itemsize
             dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
             dbuf = dbuf.view(dtype)
-            for ii in range(reps):
+            for _ in range(reps):
                 n = random.randint(0, nmax, 1)[0]
                 data = dbuf[:n]
                 shuff = ext.compress_lz4(data)
@@ -657,7 +653,7 @@ class TestBitShuffleCircle(unittest.TestCase):
             nbyte_max = nmax * itemsize
             dbuf = random.randint(0, 255, nbyte_max).astype(np.uint8)
             dbuf = dbuf.view(dtype)
-            for ii in range(reps):
+            for _ in range(reps):
                 n = random.randint(0, nmax, 1)[0]
                 data = dbuf[:n]
                 shuff = ext.compress_zstd(data)
