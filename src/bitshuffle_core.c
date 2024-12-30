@@ -49,7 +49,11 @@ typedef int64_t omp_size_t;
 typedef size_t omp_size_t;
 #endif
 
-typedef uint16_t alias_uint16_t __attribute__((may_alias));
+#if defined(_MSC_VER)
+  typedef uint16_t alias_uint16_t;
+#else
+  typedef uint16_t alias_uint16_t __attribute__((may_alias));
+#endif
 
 // Macros.
 #define CHECK_MULT_EIGHT(n) do { if ((n) % 8) return -80; } while (0)
