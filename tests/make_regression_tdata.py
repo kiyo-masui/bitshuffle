@@ -19,7 +19,7 @@ FILTER_OPTS = [
     [(BLOCK_SIZE, h5.H5_COMPRESS_ZSTD, COMP_LVL)],
 ]
 
-OUT_FILE = "tests/data/regression_%s.h5" % bitshuffle.__version__
+OUT_FILE = f"tests/data/regression_{bitshuffle.__version__}.h5"
 
 DTYPES = ["a1", "a2", "a3", "a4", "a6", "a8", "a10"]
 
@@ -30,7 +30,7 @@ g_comp_zstd = f.create_group("compressed_zstd")
 
 for dtype in DTYPES:
     for rep in ["a", "b", "c"]:
-        dset_name = "%s_%s" % (dtype, rep)
+        dset_name = f"{dtype}_{rep}"
         dtype = np.dtype(dtype)
         n_elem = 3 * BLOCK_SIZE + random.randint(0, BLOCK_SIZE)
         shape = (n_elem,)
