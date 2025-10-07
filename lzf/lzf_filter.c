@@ -1,13 +1,13 @@
 /***** Preamble block *********************************************************
-* 
+*
 * This file is part of h5py, a low-level Python interface to the HDF5 library.
-* 
+*
 * Copyright (C) 2008 Andrew Collette
-* http://h5py.alfven.org
+* http://h5py.org
 * License: BSD  (See LICENSE.txt for full license)
-* 
+*
 * $Date$
-* 
+*
 ****** End preamble block ****************************************************/
 
 /*
@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include "hdf5.h"
-#include "lzf/lzf.h"
+#include "lzf.h"
 #include "lzf_filter.h"
 
 /* Our own versions of H5Epush_sim, as it changed in 1.8 */
@@ -42,10 +42,8 @@
 
 #endif
 
-/*  Deal with the mutiple definitions for H5Z_class_t.
-    Note: HDF5 1.6 and >= 1.8 are supported.
-    See https://hdfgroup.github.io/hdf5/develop/group___h5_z.html#ga93145acc38c2c60d832b7a9b0123706b
-    for version history.
+/*  Deal with the multiple definitions for H5Z_class_t.
+    Note: HDF5 >=1.6 are supported.
 
     (1) The old class should always be used for HDF5 1.6
     (2) The new class should always be used for HDF5 1.8 < 1.8.3
@@ -53,11 +51,13 @@
         macro H5_USE_16_API is set
 */
 
-#if H5_VERS_MAJOR == 1 && H5_VERS_MINOR < 8
+#if H5_VERS_MAJOR == 1 && H5_VERS_MINOR == 6
 #define H5PY_H5Z_NEWCLS 0
-#elif H5_VERS_MAJOR == 1 && H5_VERS_MINOR >= 8 && H5_VERS_RELEASE >= 3 && H5_USE_16_API
+#elif H5_VERS_MAJOR == 1 && H5_VERS_MINOR == 8 && H5_VERS_RELEASE < 3
+#define H5PY_H5Z_NEWCLS 1
+#elif H5_USE_16_API
 #define H5PY_H5Z_NEWCLS 0
-#else
+#else /* Default: use new class */
 #define H5PY_H5Z_NEWCLS 1
 #endif
 
@@ -67,31 +67,43 @@ size_t lzf_filter(unsigned flags, size_t cd_nelmts,
 
 herr_t lzf_set_local(hid_t dcpl, hid_t type, hid_t space);
 
+#if H5PY_H5Z_NEWCLS
+static const H5Z_class_t filter_class = {
+    H5Z_CLASS_T_VERS,
+    (H5Z_filter_t)(H5PY_FILTER_LZF),
+    1, 1,
+    "lzf",
+    NULL,
+    (H5Z_set_local_func_t)(lzf_set_local),
+    (H5Z_func_t)(lzf_filter)
+};
+#else
+static const H5Z_class_t filter_class = {
+    (H5Z_filter_t)(H5PY_FILTER_LZF),
+    "lzf",
+    NULL,
+    (H5Z_set_local_func_t)(lzf_set_local),
+    (H5Z_func_t)(lzf_filter)
+};
+#endif
+
+/* Support dynamical loading of LZF filter plugin */
+#if defined(H5_VERSION_GE)
+#if H5_VERSION_GE(1, 8, 11)
+
+#include "H5PLextern.h"
+
+H5PL_type_t H5PLget_plugin_type(void){ return H5PL_TYPE_FILTER; }
+
+const void *H5PLget_plugin_info(void){ return &filter_class; }
+
+#endif
+#endif
 
 /* Try to register the filter, passing on the HDF5 return value */
 int register_lzf(void){
 
     int retval;
-
-#if H5PY_H5Z_NEWCLS
-    H5Z_class_t filter_class = {
-        H5Z_CLASS_T_VERS,
-        (H5Z_filter_t)(H5PY_FILTER_LZF),
-        1, 1,
-        "lzf",
-        NULL,
-        (H5Z_set_local_func_t)(lzf_set_local),
-        (H5Z_func_t)(lzf_filter)
-    };
-#else
-    H5Z_class_t filter_class = {
-        (H5Z_filter_t)(H5PY_FILTER_LZF),
-        "lzf",
-        NULL,
-        (H5Z_set_local_func_t)(lzf_set_local),
-        (H5Z_func_t)(lzf_filter)
-    };
-#endif
 
     retval = H5Zregister(&filter_class);
     if(retval<0){
@@ -201,7 +213,7 @@ size_t lzf_filter(unsigned flags, size_t cd_nelmts,
 #endif
 
         while(!status){
-            
+
             free(outbuf);
             outbuf = malloc(outbuf_size);
 
@@ -242,7 +254,7 @@ size_t lzf_filter(unsigned flags, size_t cd_nelmts,
         *buf_size = outbuf_size;
 
         return status;  /* Size of compressed/decompressed data */
-    } 
+    }
 
     failed:
 
@@ -250,16 +262,3 @@ size_t lzf_filter(unsigned flags, size_t cd_nelmts,
     return 0;
 
 } /* End filter function */
-
-
-
-
-
-
-
-
-
-
-
-
-
