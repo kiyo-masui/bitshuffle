@@ -25,6 +25,7 @@ cdef extern from b"bitshuffle.h":
     int bshuf_using_SSE2()
     int bshuf_using_AVX2()
     int bshuf_using_AVX512()
+    int bshuf_using_GFNI()
     int bshuf_bitshuffle(void *A, void *B, int size, int elem_size,
                          int block_size) nogil
     int bshuf_bitunshuffle(void *A, void *B, int size, int elem_size,
@@ -116,6 +117,14 @@ def using_AVX2():
 def using_AVX512():
     """Whether compiled using AVX512 instructions."""
     if bshuf_using_AVX512():
+        return True
+    else:
+        return False
+
+
+def using_GFNI():
+    """Whether compiled using GFNI instructions."""
+    if bshuf_using_GFNI():
         return True
     else:
         return False

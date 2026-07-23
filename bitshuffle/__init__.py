@@ -9,6 +9,7 @@ Functions
     using_SSE2
     using_AVX2
     using_AVX512
+    using_GFNI
     bitshuffle
     bitunshuffle
     compress_lz4
@@ -30,6 +31,7 @@ from bitshuffle.ext import (
     using_SSE2,
     using_AVX2,
     using_AVX512,
+    using_GFNI,
     compress_lz4,
     decompress_lz4,
 )
@@ -52,6 +54,7 @@ __all__ = [
     "using_SSE2",
     "using_AVX2",
     "using_AVX512",
+    "using_GFNI",
     "compress_lz4",
     "decompress_lz4",
 ] + zstd_api
