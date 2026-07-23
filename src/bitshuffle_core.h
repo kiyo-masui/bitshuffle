@@ -104,6 +104,18 @@ int bshuf_using_AVX2(void);
 int bshuf_using_AVX512(void);
 
 
+/* ---- bshuf_using_GFNI ----
+ *
+ * Whether routines were compiled with the GFNI instruction set.
+ *
+ * Returns
+ * -------
+ *  1 if using GFNI, 0 otherwise.
+ *
+ */
+int bshuf_using_GFNI(void);
+
+
 /* ---- bshuf_default_block_size ----
  *
  * The default block size as function of element size.
