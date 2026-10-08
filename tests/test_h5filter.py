@@ -11,7 +11,6 @@ from h5py import h5z
 
 from bitshuffle import h5, __zstd__
 
-
 os.environ["HDF5_PLUGIN_PATH"] = ""
 
 

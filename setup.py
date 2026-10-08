@@ -16,7 +16,6 @@ import subprocess
 import sys
 import platform
 
-
 VERSION_MAJOR = 0
 VERSION_MINOR = 6
 VERSION_POINT = 0
