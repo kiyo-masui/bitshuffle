@@ -8,7 +8,6 @@ from numpy import random
 
 from bitshuffle import ext, __zstd__
 
-
 # If we are doing timeings by what factor to increase workload.
 # Remember to change `ext.REPEATC`.
 TIME = 0

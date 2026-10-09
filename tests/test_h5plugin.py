@@ -10,7 +10,6 @@ from subprocess import Popen, PIPE, STDOUT
 
 import bitshuffle
 
-
 plugin_dir = os.path.join(os.path.dirname(bitshuffle.__file__), "plugin")
 os.environ["HDF5_PLUGIN_PATH"] = plugin_dir
 

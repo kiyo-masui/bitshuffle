@@ -101,7 +101,9 @@ hid_t H5E_CANTREGISTER_g = -1;
 hid_t H5E_CALLBACK_g = -1;
 hid_t H5E_PLINE_g = -1;
 hid_t H5E_ERR_CLS_g = -1;
-
+/*Extra variables required by H5OPEN in HDF5 2.x*/
+bool H5_libinit_g = false;
+bool H5_libterm_g = false;
 
 static bool is_init = false;
 
