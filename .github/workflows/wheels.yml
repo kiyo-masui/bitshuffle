@@ -21,7 +21,7 @@ jobs:
 
       # Build wheels for linux and x86 platforms
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.19.2
+        uses: pypa/cibuildwheel@b9e566a2b284570af229f6c2a33673410d0389a3  # v4.3.4
         with:
           output-dir: ./wheelhouse-hdf5-${{ matrix.hdf5}}
         env:
@@ -99,7 +99,7 @@ jobs:
           name: artifact
           path: dist
 
-      - uses: pypa/gh-action-pypi-publish@v1.5.1
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086  # v1.14.3
         with:
           user: __token__
           password: ${{ secrets.pypi_password }}
