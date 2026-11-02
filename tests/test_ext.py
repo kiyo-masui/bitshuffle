@@ -720,6 +720,38 @@ class TestUntransWithBuf(unittest.TestCase):
             ext.untrans_bit_elem_with_buf(bad_data, tmp_buf=tmp_bad)
         self.assertEqual(cm.exception.args[1], -80)
 
+        # Partial slice overlap and shape/dtype validation
+        backing = np.zeros(24, dtype=np.uint8)
+        arr_slice = backing[:16]
+        overlap_slice = backing[8:24]
+        valid_tmp = np.empty(16, dtype=np.uint8)
+        valid_out = np.empty(16, dtype=np.uint8)
+
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                arr_slice, out=valid_out, tmp_buf=overlap_slice
+            )
+
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                valid_out, out=arr_slice, tmp_buf=overlap_slice
+            )
+
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                arr_slice, out=overlap_slice, tmp_buf=valid_tmp
+            )
+
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                arr_slice, out=np.empty(8, dtype=np.uint16), tmp_buf=valid_tmp
+            )
+
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                arr_slice, out=np.empty((2, 8), dtype=np.uint8), tmp_buf=valid_tmp
+            )
+
 
 class TestDecompressBlockReuse(unittest.TestCase):
     def test_decompress_lz4_and_zstd_block_sizes(self):
@@ -764,20 +796,39 @@ class TestDecompressBlockReuse(unittest.TestCase):
             )
 
     def test_decompress_lz4_corrupted_header_returns_error(self):
-        data = np.arange(1000, dtype=np.int32)
-        comp = ext.compress_lz4(data)
+        compressors = [("lz4", ext.compress_lz4, ext.decompress_lz4)]
+        if __zstd__:
+            compressors.append(("zstd", ext.compress_zstd, ext.decompress_zstd))
 
-        # Corrupted payload bytes
-        corrupted_payload = comp.copy()
-        corrupted_payload[8:24] = 255
-        with self.assertRaises(RuntimeError):
-            ext.decompress_lz4(corrupted_payload, data.shape, data.dtype)
+        for name, comp_fn, decomp_fn in compressors:
+            for n, dtype, block_size in (
+                (1000, np.int32, 0),
+                (4096, np.int64, 4096),
+            ):
+                data = np.arange(n, dtype=dtype)
+                comp = comp_fn(data, block_size=block_size)
 
-        # Corrupted header block length (0 length)
-        corrupted_hdr = comp.copy()
-        corrupted_hdr[:4] = 0
-        with self.assertRaises(RuntimeError):
-            ext.decompress_lz4(corrupted_hdr, data.shape, data.dtype)
+                # Corrupted payload bytes
+                corrupted_payload = comp.copy()
+                corrupted_payload[8:24] = 255
+                with self.assertRaises(RuntimeError):
+                    decomp_fn(
+                        corrupted_payload,
+                        data.shape,
+                        data.dtype,
+                        block_size=block_size,
+                    )
+
+                # Corrupted header block length (0 length)
+                corrupted_hdr = comp.copy()
+                corrupted_hdr[:4] = 0
+                with self.assertRaises(RuntimeError):
+                    decomp_fn(
+                        corrupted_hdr,
+                        data.shape,
+                        data.dtype,
+                        block_size=block_size,
+                    )
 
     def test_bitshuffle_c_uses_untrans_with_buf(self):
         c_src_path = os.path.join(

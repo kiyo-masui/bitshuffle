@@ -9,6 +9,7 @@ import numpy as np
 
 cimport numpy as np
 cimport cython
+from libc.stdint cimport uintptr_t
 
 
 np.import_array()
@@ -341,6 +342,9 @@ def untrans_bit_elem_with_buf(np.ndarray arr not None, np.ndarray out=None, np.n
         if not out.flags["C_CONTIGUOUS"]:
             msg = "Output array must be C-contiguous."
             raise ValueError(msg)
+        if out.dtype != arr.dtype or (<object>out).shape != (<object>arr).shape:
+            msg = "Output array must match input shape and dtype."
+            raise ValueError(msg)
         if <size_t> out.nbytes < nbytes:
             msg = "Output array too small."
             raise ValueError(msg)
@@ -367,9 +371,16 @@ def untrans_bit_elem_with_buf(np.ndarray arr not None, np.ndarray out=None, np.n
     cdef void* arr_ptr = <void*> &arr_flat[0]
     cdef void* out_ptr = <void*> &out_flat[0]
     cdef void* tmp_ptr = <void*> &tmp_flat[0]
+    cdef uintptr_t arr_addr = <uintptr_t> arr_ptr
+    cdef uintptr_t out_addr = <uintptr_t> out_ptr
+    cdef uintptr_t tmp_addr = <uintptr_t> tmp_ptr
 
-    if tmp_ptr == arr_ptr or tmp_ptr == out_ptr:
-        raise ValueError("tmp_buf must not alias arr or out")
+    if tmp_addr < arr_addr + nbytes and arr_addr < tmp_addr + nbytes:
+        raise ValueError("tmp_buf must not overlap arr or out")
+    if tmp_addr < out_addr + nbytes and out_addr < tmp_addr + nbytes:
+        raise ValueError("tmp_buf must not overlap arr or out")
+    if out_addr != arr_addr and arr_addr < out_addr + nbytes and out_addr < arr_addr + nbytes:
+        raise ValueError("out must not partially overlap arr")
 
     cdef int count = 0
     cdef int ii
