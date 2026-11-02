@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import os
 import unittest
 import time
 
@@ -65,8 +66,9 @@ class TestProfile(unittest.TestCase):
         size_i = self.data.size * self.data.dtype.itemsize
         size_o = out.size * out.dtype.itemsize
         size = max([size_i, size_o])
-        speed = ext.REPEAT * size / delta_t / 1024**3  # GB/s
         if TIME:
+            delta_t = max(delta_t, 1e-9)
+            speed = ext.REPEAT * size / delta_t / 1024**3  # GB/s
             print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1.0 / speed, speed))
         if self.check is not None:
             ans = self.check(self.data).view(np.uint8)
@@ -663,6 +665,232 @@ class TestBitShuffleCircle(unittest.TestCase):
                 out = ext.decompress_zstd(shuff, data.shape, data.dtype)
                 self.assertTrue(out.dtype is data.dtype)
                 self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
+
+
+class TestUntransWithBuf(unittest.TestCase):
+    def test_untrans_with_buf_out_of_place(self):
+        for dtype in TEST_DTYPES:
+            itemsize = np.dtype(dtype).itemsize
+            for n in (8, 16, 24, 128, 1024):
+                nbyte = n * itemsize
+                raw = random.randint(0, 255, nbyte).astype(np.uint8)
+                data = raw.view(dtype)
+                shuff = ext.trans_bit_elem(data)
+                out = np.empty_like(data)
+                tmp = np.empty_like(data)
+                res = ext.untrans_bit_elem_with_buf(shuff, out=out, tmp_buf=tmp)
+                self.assertTrue(res is out)
+                self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
+
+    def test_untrans_with_buf_in_place(self):
+        for dtype in TEST_DTYPES:
+            itemsize = np.dtype(dtype).itemsize
+            for n in (8, 16, 24, 128, 1024):
+                nbyte = n * itemsize
+                raw = random.randint(0, 255, nbyte).astype(np.uint8)
+                data = raw.view(dtype)
+                shuff = ext.trans_bit_elem(data)
+                buf = shuff.copy()
+                tmp = np.empty_like(buf)
+                res = ext.untrans_bit_elem_with_buf(buf, out=buf, tmp_buf=tmp)
+                self.assertTrue(res is buf)
+                self.assertTrue(np.all(data.view(np.uint8) == buf.view(np.uint8)))
+
+    def test_untrans_stack_vs_heap_block_sizes_and_errors(self):
+        # nbyte == 8192 (<= BSHUF_TARGET_BLOCK_SIZE_B stack buffer fast path)
+        data_8k = random.randint(0, 255, 8192).astype(np.uint8)
+        shuff_8k = ext.trans_bit_elem(data_8k)
+        out_8k = ext.untrans_bit_elem(shuff_8k)
+        self.assertTrue(np.all(data_8k == out_8k))
+
+        # nbyte == 16384 (> BSHUF_TARGET_BLOCK_SIZE_B heap path)
+        data_16k = random.randint(0, 255, 16384).astype(np.uint8)
+        shuff_16k = ext.trans_bit_elem(data_16k)
+        out_16k = ext.untrans_bit_elem(shuff_16k)
+        self.assertTrue(np.all(data_16k == out_16k))
+
+        # size = 14 (not a multiple of 8) raises RuntimeError with error code -80
+        bad_data = random.randint(0, 255, 14).astype(np.uint8)
+        with self.assertRaises(RuntimeError) as cm:
+            ext.untrans_bit_elem(bad_data)
+        self.assertEqual(cm.exception.args[1], -80)
+
+        tmp_bad = np.empty_like(bad_data)
+        with self.assertRaises(RuntimeError) as cm:
+            ext.untrans_bit_elem_with_buf(bad_data, tmp_buf=tmp_bad)
+        self.assertEqual(cm.exception.args[1], -80)
+
+        # Partial slice overlap and shape/dtype validation
+        backing = np.zeros(24, dtype=np.uint8)
+        arr_slice = backing[:16]
+        overlap_slice = backing[8:24]
+        valid_tmp = np.empty(16, dtype=np.uint8)
+        valid_out = np.empty(16, dtype=np.uint8)
+
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                arr_slice, out=valid_out, tmp_buf=overlap_slice
+            )
+
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                valid_out, out=arr_slice, tmp_buf=overlap_slice
+            )
+
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                arr_slice, out=overlap_slice, tmp_buf=valid_tmp
+            )
+
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                arr_slice, out=np.empty(8, dtype=np.uint16), tmp_buf=valid_tmp
+            )
+
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                arr_slice, out=np.empty((2, 8), dtype=np.uint8), tmp_buf=valid_tmp
+            )
+
+        # Read-only out and tmp_buf validation
+        ro_out = np.empty(16, dtype=np.uint8)
+        ro_out.setflags(write=False)
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(arr_slice, out=ro_out, tmp_buf=valid_tmp)
+
+        ro_tmp = np.empty(16, dtype=np.uint8)
+        ro_tmp.setflags(write=False)
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(arr_slice, out=valid_out, tmp_buf=ro_tmp)
+
+        # Unaligned out and tmp_buf validation
+        unaligned_out = np.empty(17, dtype=np.uint8)[1:].view(np.uint16)
+        aligned_arr_u16 = np.zeros(8, dtype=np.uint16)
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                aligned_arr_u16, out=unaligned_out, tmp_buf=valid_tmp
+            )
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                unaligned_out, out=unaligned_out, tmp_buf=valid_tmp
+            )
+
+        unaligned_tmp = np.empty(17, dtype=np.uint8)[1:]
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                arr_slice, out=valid_out, tmp_buf=unaligned_tmp
+            )
+
+
+class TestDecompressBlockReuse(unittest.TestCase):
+    def test_decompress_lz4_and_zstd_block_sizes(self):
+        compressors = [("lz4", ext.compress_lz4, ext.decompress_lz4)]
+        if __zstd__:
+            compressors.append(("zstd", ext.compress_zstd, ext.decompress_zstd))
+
+        for name, comp_fn, decomp_fn in compressors:
+            for dtype in TEST_DTYPES:
+                itemsize = np.dtype(dtype).itemsize
+                # Test default block_size=0 (<= 8 KB stack buffer path),
+                # small block_size=128 (<= 8 KB stack buffer path),
+                # with non-multiple-of-8 element counts (size = 4096 + 24 + 5)
+                # exercising full blocks, leftover multiple-of-8 block, and trailing bytes.
+                size = 4096 + 24 + 5
+                raw = random.randint(0, 255, size * itemsize).astype(np.uint8)
+                data = raw.view(dtype)
+                for block_size in (0, 128):
+                    compressed = comp_fn(data, block_size=block_size)
+                    decompressed = decomp_fn(
+                        compressed, data.shape, data.dtype, block_size=block_size
+                    )
+                    self.assertEqual(decompressed.dtype, data.dtype)
+                    self.assertTrue(
+                        np.all(data.view(np.uint8) == decompressed.view(np.uint8))
+                    )
+
+            # Test large block_size = 4096 with np.uint64 (32 KB > 8 KB heap buffer path)
+            size_large = 4096 + 24 + 5
+            raw_large = random.randint(0, 255, size_large * 8).astype(np.uint8)
+            data_large = raw_large.view(np.uint64)
+            compressed_large = comp_fn(data_large, block_size=4096)
+            decompressed_large = decomp_fn(
+                compressed_large,
+                data_large.shape,
+                data_large.dtype,
+                block_size=4096,
+            )
+            self.assertEqual(decompressed_large.dtype, data_large.dtype)
+            self.assertTrue(
+                np.all(data_large.view(np.uint8) == decompressed_large.view(np.uint8))
+            )
+
+    def test_decompress_lz4_corrupted_header_returns_error(self):
+        compressors = [("lz4", ext.compress_lz4, ext.decompress_lz4)]
+        if __zstd__:
+            compressors.append(("zstd", ext.compress_zstd, ext.decompress_zstd))
+
+        for name, comp_fn, decomp_fn in compressors:
+            for n, dtype, block_size in (
+                (1000, np.int32, 0),
+                (4096, np.int64, 4096),
+            ):
+                data = np.arange(n, dtype=dtype)
+                comp = comp_fn(data, block_size=block_size)
+
+                # Corrupted payload bytes
+                corrupted_payload = comp.copy()
+                corrupted_payload[8:24] = 255
+                with self.assertRaises(RuntimeError):
+                    decomp_fn(
+                        corrupted_payload,
+                        data.shape,
+                        data.dtype,
+                        block_size=block_size,
+                    )
+
+                # Corrupted header block length (0 length)
+                corrupted_hdr = comp.copy()
+                corrupted_hdr[:4] = 0
+                with self.assertRaises(RuntimeError):
+                    decomp_fn(
+                        corrupted_hdr,
+                        data.shape,
+                        data.dtype,
+                        block_size=block_size,
+                    )
+
+    def test_bitshuffle_c_uses_untrans_with_buf(self):
+        c_src_path = os.path.join(
+            os.path.dirname(__file__), "..", "src", "bitshuffle.c"
+        )
+        if not os.path.exists(c_src_path):
+            self.skipTest("C source not available")
+        with open(c_src_path, "r") as f:
+            c_src = f.read()
+
+        # Isolate bshuf_decompress_lz4_block
+        lz4_func_start = c_src.find("int64_t bshuf_decompress_lz4_block")
+        self.assertNotEqual(lz4_func_start, -1)
+        lz4_func_end = c_src.find("int64_t bshuf_compress_zstd_block", lz4_func_start)
+        if lz4_func_end == -1:
+            lz4_func_end = c_src.find("/* ---- Public functions ----", lz4_func_start)
+        lz4_code = c_src[lz4_func_start:lz4_func_end]
+
+        self.assertIn("bshuf_untrans_bit_elem_with_buf", lz4_code)
+        self.assertNotIn("bshuf_untrans_bit_elem(", lz4_code)
+        self.assertIn("LZ4_decompress_safe", lz4_code)
+        self.assertIn("(char *) out", lz4_code)
+
+        # Isolate bshuf_decompress_zstd_block
+        zstd_func_start = c_src.find("int64_t bshuf_decompress_zstd_block")
+        self.assertNotEqual(zstd_func_start, -1)
+        zstd_func_end = c_src.find("/* ---- Public functions ----", zstd_func_start)
+        zstd_code = c_src[zstd_func_start:zstd_func_end]
+
+        self.assertIn("bshuf_untrans_bit_elem_with_buf", zstd_code)
+        self.assertNotIn("bshuf_untrans_bit_elem(", zstd_code)
+        self.assertIn("ZSTD_decompress", zstd_code)
+        self.assertIn("out", zstd_code)
 
 
 # Python implementations for checking results.

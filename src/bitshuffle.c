@@ -88,6 +88,9 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
     const void *in;
     size_t this_iter;
     int32_t nbytes_from_header;
+    size_t nbytes_uncomp;
+    uint64_t stack_buf[BSHUF_TARGET_BLOCK_SIZE_B / sizeof(uint64_t)];
+    int need_free = 0;
 
     in = ioc_get_in(C_ptr, &this_iter);
     nbytes_from_header = bshuf_read_uint32_BE(in);
@@ -98,24 +101,27 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
     ioc_set_next_out(C_ptr, &this_iter,
             (void *) ((char *) out + size * elem_size));
 
-    tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return -1;
-
-    nbytes = LZ4_decompress_safe((const char*) in + 4, (char *) tmp_buf, nbytes_from_header,
+    nbytes = LZ4_decompress_safe((const char*) in + 4, (char *) out, nbytes_from_header,
                                  size * elem_size);
-    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    if (nbytes != size * elem_size) {
-        free(tmp_buf);
-        return -91;
+    if (nbytes < 0) return nbytes - 1000;
+    if (nbytes != (int64_t)(size * elem_size)) return -91;
+
+    nbytes_uncomp = size * elem_size;
+    if (nbytes_uncomp <= BSHUF_TARGET_BLOCK_SIZE_B) {
+        tmp_buf = stack_buf;
+    } else {
+        tmp_buf = malloc(nbytes_uncomp);
+        if (tmp_buf == NULL) return -1;
+        need_free = 1;
     }
-    nbytes = nbytes_from_header;
 
-    count = bshuf_untrans_bit_elem(tmp_buf, out, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
-    nbytes += 4;
+    count = bshuf_untrans_bit_elem_with_buf(out, out, size, elem_size, tmp_buf);
+    if (need_free) {
+        free(tmp_buf);
+    }
+    if (count < 0) return count;
 
-    free(tmp_buf);
-    return nbytes;
+    return nbytes_from_header + 4;
 }
 
 #ifdef ZSTD_SUPPORT
@@ -174,6 +180,9 @@ int64_t bshuf_decompress_zstd_block(ioc_chain *C_ptr,
     const void *in;
     size_t this_iter;
     int32_t nbytes_from_header;
+    size_t nbytes_uncomp;
+    uint64_t stack_buf[BSHUF_TARGET_BLOCK_SIZE_B / sizeof(uint64_t)];
+    int need_free = 0;
 
     in = ioc_get_in(C_ptr, &this_iter);
     nbytes_from_header = bshuf_read_uint32_BE(in);
@@ -184,23 +193,26 @@ int64_t bshuf_decompress_zstd_block(ioc_chain *C_ptr,
     ioc_set_next_out(C_ptr, &this_iter,
             (void *) ((char *) out + size * elem_size));
 
-    tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return -1;
+    nbytes = ZSTD_decompress(out, size * elem_size, (void *)((char *) in + 4), nbytes_from_header);
+    if (nbytes < 0) return nbytes - 1000;
+    if (nbytes != (int64_t)(size * elem_size)) return -91;
 
-    nbytes = ZSTD_decompress(tmp_buf, size * elem_size, (void *)((char *) in + 4), nbytes_from_header);
-    CHECK_ERR_FREE_LZ(nbytes, tmp_buf);
-    if (nbytes != size * elem_size) {
-        free(tmp_buf);
-        return -91;
+    nbytes_uncomp = size * elem_size;
+    if (nbytes_uncomp <= BSHUF_TARGET_BLOCK_SIZE_B) {
+        tmp_buf = stack_buf;
+    } else {
+        tmp_buf = malloc(nbytes_uncomp);
+        if (tmp_buf == NULL) return -1;
+        need_free = 1;
     }
 
-    nbytes = nbytes_from_header;
-    count = bshuf_untrans_bit_elem(tmp_buf, out, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
-    nbytes += 4;
+    count = bshuf_untrans_bit_elem_with_buf(out, out, size, elem_size, tmp_buf);
+    if (need_free) {
+        free(tmp_buf);
+    }
+    if (count < 0) return count;
 
-    free(tmp_buf);
-    return nbytes;
+    return nbytes_from_header + 4;
 }
 #endif // ZSTD_SUPPORT
 
