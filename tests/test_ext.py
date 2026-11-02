@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+import os
 import unittest
 import time
 
@@ -57,6 +58,8 @@ class TestProfile(unittest.TestCase):
                 return
             if len(err.args) > 1 and (err.args[1] == -12) and not ext.using_AVX2():
                 return
+            if len(err.args) > 1 and (err.args[1] == -13) and not ext.using_NEON():
+                return
             if len(err.args) > 1 and (err.args[1] == -14) and not ext.using_AVX512():
                 return
             else:
@@ -65,8 +68,9 @@ class TestProfile(unittest.TestCase):
         size_i = self.data.size * self.data.dtype.itemsize
         size_o = out.size * out.dtype.itemsize
         size = max([size_i, size_o])
-        speed = ext.REPEAT * size / delta_t / 1024**3  # GB/s
         if TIME:
+            delta_t = max(delta_t, 1e-9)
+            speed = ext.REPEAT * size / delta_t / 1024**3  # GB/s
             print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1.0 / speed, speed))
         if self.check is not None:
             ans = self.check(self.data).view(np.uint8)
@@ -148,6 +152,24 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.trans_byte_elem_SSE
         self.check = trans_byte_elem
 
+    def test_01j_trans_byte_elem_NEON_16(self):
+        self.case = "byte T elem NEON 16"
+        self.data = self.data.view(np.int16)
+        self.fun = ext.trans_byte_elem_NEON
+        self.check = trans_byte_elem
+
+    def test_01k_trans_byte_elem_NEON_32(self):
+        self.case = "byte T elem NEON 32"
+        self.data = self.data.view(np.float32)
+        self.fun = ext.trans_byte_elem_NEON
+        self.check = trans_byte_elem
+
+    def test_01l_trans_byte_elem_NEON_64(self):
+        self.case = "byte T elem NEON 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_byte_elem_NEON
+        self.check = trans_byte_elem
+
     def test_03a_trans_bit_byte(self):
         self.case = "bit T byte scal 64"
         self.data = self.data.view(np.float64)
@@ -182,6 +204,12 @@ class TestProfile(unittest.TestCase):
         self.case = "bit T byte AVX512 32"
         self.data = self.data.view(np.float32)
         self.fun = ext.trans_bit_byte_AVX512
+        self.check = trans_bit_byte
+
+    def test_03i_trans_bit_byte_NEON_64(self):
+        self.case = "bit T byte NEON 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_bit_byte_NEON
         self.check = trans_bit_byte
 
     def test_04a_trans_bit_elem_AVX(self):
@@ -250,6 +278,12 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.trans_bit_elem_AVX512
         self.check = trans_bit_elem
 
+    def test_04l_trans_bit_elem_NEON_64(self):
+        self.case = "bit T elem NEON 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_bit_elem_NEON
+        self.check = trans_bit_elem
+
     def test_06a_untrans_bit_elem_16(self):
         self.case = "bit U elem SSE 16"
         pre_trans = self.data.view(np.int16)
@@ -313,6 +347,34 @@ class TestProfile(unittest.TestCase):
         self.fun = ext.untrans_bit_elem_AVX512
         self.check_data = pre_trans
 
+    def test_06j_untrans_bit_elem_NEON_16(self):
+        self.case = "bit U elem NEON 16"
+        pre_trans = self.data.view(np.int16)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_NEON
+        self.check_data = pre_trans
+
+    def test_06k_untrans_bit_elem_NEON_32(self):
+        self.case = "bit U elem NEON 32"
+        pre_trans = self.data.view(np.float32)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_NEON
+        self.check_data = pre_trans
+
+    def test_06l_untrans_bit_elem_NEON_64(self):
+        self.case = "bit U elem NEON 64"
+        pre_trans = self.data.view(np.float64)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_NEON
+        self.check_data = pre_trans
+
+    def test_06m_untrans_bit_elem_NEON_8(self):
+        self.case = "bit U elem NEON 8"
+        pre_trans = self.data.view(np.uint8)
+        self.data = trans_bit_elem(pre_trans)
+        self.fun = ext.untrans_bit_elem_NEON
+        self.check_data = pre_trans
+
     def test_07a_trans_byte_bitrow_64(self):
         self.case = "byte T row scal 64"
         self.data = self.data.view(np.float64)
@@ -328,6 +390,18 @@ class TestProfile(unittest.TestCase):
         self.case = "byte T row AVX 64"
         self.data = self.data.view(np.float64)
         self.fun = ext.trans_byte_bitrow_AVX
+        self.check = ext.trans_byte_bitrow_scal
+
+    def test_07d_trans_byte_bitrow_NEON_64(self):
+        self.case = "byte T row NEON 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.trans_byte_bitrow_NEON
+        self.check = ext.trans_byte_bitrow_scal
+
+    def test_07e_trans_byte_bitrow_NEON_8(self):
+        self.case = "byte T row NEON 8"
+        self.data = self.data.view(np.uint8)
+        self.fun = ext.trans_byte_bitrow_NEON
         self.check = ext.trans_byte_bitrow_scal
 
     def test_08a_shuffle_bit_eight_scal_64(self):
@@ -387,6 +461,24 @@ class TestProfile(unittest.TestCase):
         self.case = "bit S eight AVX512 128"
         self.data = self.data.view(np.complex128)
         self.fun = ext.shuffle_bit_eightelem_AVX512
+        self.check = ext.shuffle_bit_eightelem_scal
+
+    def test_08j_shuffle_bit_eight_NEON_64(self):
+        self.case = "bit S eight NEON 64"
+        self.data = self.data.view(np.float64)
+        self.fun = ext.shuffle_bit_eightelem_NEON
+        self.check = ext.shuffle_bit_eightelem_scal
+
+    def test_08k_shuffle_bit_eight_NEON_8(self):
+        self.case = "bit S eight NEON 8"
+        self.data = self.data.view(np.uint8)
+        self.fun = ext.shuffle_bit_eightelem_NEON
+        self.check = ext.shuffle_bit_eightelem_scal
+
+    def test_08l_shuffle_bit_eight_scal_8(self):
+        self.case = "bit S eight scal 8"
+        self.data = self.data.view(np.uint8)
+        self.fun = ext.shuffle_bit_eightelem_scal
         self.check = ext.shuffle_bit_eightelem_scal
 
     def test_09a_trans_bit_elem_scal_64(self):
@@ -473,6 +565,22 @@ class TestProfile(unittest.TestCase):
         pre_trans = self.data.view(np.float64)
         self.data = ext.compress_zstd(pre_trans, BLOCK)
         self.fun = lambda x: ext.decompress_zstd(
+            x, pre_trans.shape, pre_trans.dtype, BLOCK
+        )
+        self.check_data = pre_trans
+
+    def test_10e_bitunshuffle_8(self):
+        self.case = "bitunshuffle 8"
+        pre_trans = self.data.view(np.uint8)
+        self.data = ext.bitshuffle(pre_trans, BLOCK)
+        self.fun = lambda x: ext.bitunshuffle(x, BLOCK)
+        self.check_data = pre_trans
+
+    def test_10f_decompress_8(self):
+        self.case = "decompress 8"
+        pre_trans = self.data.view(np.uint8)
+        self.data = ext.compress_lz4(pre_trans, BLOCK)
+        self.fun = lambda x: ext.decompress_lz4(
             x, pre_trans.shape, pre_trans.dtype, BLOCK
         )
         self.check_data = pre_trans
@@ -568,11 +676,19 @@ class TestOddLengths(unittest.TestCase):
         self.check = trans_bit_elem
 
     def test_untrans_bit_elem_AVX(self):
-        self.fun = lambda x: ext.untrans_bit_elem_SSE(ext.trans_bit_elem(x))
+        self.fun = lambda x: ext.untrans_bit_elem_AVX(ext.trans_bit_elem(x))
         self.check = lambda x: x
 
     def test_untrans_bit_elem_AVX512(self):
-        self.fun = lambda x: ext.untrans_bit_elem_SSE(ext.trans_bit_elem(x))
+        self.fun = lambda x: ext.untrans_bit_elem_AVX512(ext.trans_bit_elem(x))
+        self.check = lambda x: x
+
+    def test_trans_bit_elem_NEON(self):
+        self.fun = ext.trans_bit_elem_NEON
+        self.check = trans_bit_elem
+
+    def test_untrans_bit_elem_NEON(self):
+        self.fun = lambda x: ext.untrans_bit_elem_NEON(ext.trans_bit_elem(x))
         self.check = lambda x: x
 
     def test_trans_bit_elem_scal(self):
@@ -585,6 +701,10 @@ class TestOddLengths(unittest.TestCase):
 
     def test_trans_byte_elem_SSE(self):
         self.fun = ext.trans_byte_elem_SSE
+        self.check = trans_byte_elem
+
+    def test_trans_byte_elem_NEON(self):
+        self.fun = ext.trans_byte_elem_NEON
         self.check = trans_byte_elem
 
     def tearDown(self):
@@ -604,6 +724,8 @@ class TestOddLengths(unittest.TestCase):
             if len(err.args) > 1 and (err.args[1] == -11) and not ext.using_SSE2():
                 return
             if len(err.args) > 1 and (err.args[1] == -12) and not ext.using_AVX2():
+                return
+            if len(err.args) > 1 and (err.args[1] == -13) and not ext.using_NEON():
                 return
             if len(err.args) > 1 and (err.args[1] == -14) and not ext.using_AVX512():
                 return
@@ -663,6 +785,139 @@ class TestBitShuffleCircle(unittest.TestCase):
                 out = ext.decompress_zstd(shuff, data.shape, data.dtype)
                 self.assertTrue(out.dtype is data.dtype)
                 self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
+
+
+class TestNeonBitrowNoSpill(unittest.TestCase):
+    def test_trans_byte_bitrow_neon_matches_scal(self):
+        if not ext.using_NEON():
+            self.skipTest("NEON instruction set not supported")
+        dtype_map = {
+            1: np.uint8,
+            2: np.uint16,
+            4: np.uint32,
+            8: np.uint64,
+            16: np.complex128,
+        }
+        for elem_size in (1, 2, 4, 8, 16):
+            dtype = dtype_map[elem_size]
+            for size in (8, 16, 24, 128, 136, 1024):
+                data = (
+                    random.randint(0, 255, size * elem_size)
+                    .astype(np.uint8)
+                    .view(dtype)
+                )
+                out_neon = ext.trans_byte_bitrow_NEON(data).view(np.uint8)
+                out_scal = ext.trans_byte_bitrow_scal(data).view(np.uint8)
+                self.assertTrue(
+                    np.all(out_neon == out_scal),
+                    "Mismatch for elem_size=%d, size=%d" % (elem_size, size),
+                )
+
+    def test_trans_byte_bitrow_neon_uses_vst1q_lane_s64(self):
+        core_c_path = os.path.join(
+            os.path.dirname(__file__), "..", "src", "bitshuffle_core.c"
+        )
+        if not os.path.exists(core_c_path):
+            self.skipTest("C source not available")
+        with open(core_c_path, "r") as f:
+            content = f.read()
+        start = content.find("bshuf_trans_byte_bitrow_NEON")
+        self.assertNotEqual(
+            start, -1, "bshuf_trans_byte_bitrow_NEON not found in bitshuffle_core.c"
+        )
+        end = content.find("bshuf_shuffle_bit_eightelem_NEON", start)
+        func_body = content[start:end] if end != -1 else content[start:]
+
+        self.assertIn("vst1q_lane_s64", func_body)
+        self.assertNotIn("(int64x1_t *) &a1", func_body)
+        self.assertNotIn("int64x1_t *as", func_body)
+
+
+class TestNeonEightElemUnit(unittest.TestCase):
+    def test_neon_eightelem_elem1_single_bit_basis_vectors(self):
+        if not ext.using_NEON():
+            self.skipTest("NEON instruction set not supported")
+        for b in range(128):
+            arr = np.zeros(16, dtype=np.uint8)
+            arr[b // 8] = 1 << (b % 8)
+            out_neon = ext.shuffle_bit_eightelem_NEON(arr)
+            out_scal = ext.shuffle_bit_eightelem_scal(arr)
+            self.assertTrue(
+                np.all(out_neon == out_scal),
+                "Mismatch for size=16, bit=%d" % b,
+            )
+        for b in range(64):
+            arr = np.zeros(8, dtype=np.uint8)
+            arr[b // 8] = 1 << (b % 8)
+            out_neon = ext.shuffle_bit_eightelem_NEON(arr)
+            out_scal = ext.shuffle_bit_eightelem_scal(arr)
+            self.assertTrue(
+                np.all(out_neon == out_scal),
+                "Mismatch for size=8, bit=%d" % b,
+            )
+
+    def test_neon_eightelem_elem1_odd_multiples_of_8(self):
+        if not ext.using_NEON():
+            self.skipTest("NEON instruction set not supported")
+        sizes = (8, 16, 24, 32, 40, 120, 128, 136, 1024, 1032, 8192, 8200)
+        for size in sizes:
+            data = random.randint(0, 255, size).astype(np.uint8)
+            out_shuf_neon = ext.shuffle_bit_eightelem_NEON(data)
+            out_shuf_scal = ext.shuffle_bit_eightelem_scal(data)
+            self.assertTrue(
+                np.all(out_shuf_neon == out_shuf_scal),
+                "shuffle mismatch for size=%d" % size,
+            )
+            out_untrans_neon = ext.untrans_bit_elem_NEON(data)
+            out_untrans_scal = ext.untrans_bit_elem_scal(data)
+            self.assertTrue(
+                np.all(out_untrans_neon == out_untrans_scal),
+                "untrans mismatch for size=%d" % size,
+            )
+
+    def test_neon_eightelem_odd_elem_sizes_gt_1(self):
+        if not ext.using_NEON():
+            self.skipTest("NEON instruction set not supported")
+        for dtype in (b"S3", b"S5", b"S7", b"S9", b"S11"):
+            elem_size = np.dtype(dtype).itemsize
+            for size in (8, 16, 24, 64):
+                data = (
+                    random.randint(0, 255, size * elem_size)
+                    .astype(np.uint8)
+                    .view(dtype)
+                )
+                out_neon = ext.shuffle_bit_eightelem_NEON(data)
+                out_scal = ext.shuffle_bit_eightelem_scal(data)
+                self.assertTrue(
+                    np.all(out_neon.view(np.uint8) == out_scal.view(np.uint8)),
+                    "Mismatch for dtype=%s, size=%d" % (dtype, size),
+                )
+
+    def test_neon_eightelem_has_vectorized_elem1_branch(self):
+        core_c_path = os.path.join(
+            os.path.dirname(__file__), "..", "src", "bitshuffle_core.c"
+        )
+        if not os.path.exists(core_c_path):
+            self.skipTest("C source not available")
+        with open(core_c_path, "r") as f:
+            content = f.read()
+        start = content.find("bshuf_shuffle_bit_eightelem_NEON")
+        self.assertNotEqual(
+            start,
+            -1,
+            "bshuf_shuffle_bit_eightelem_NEON not found in bitshuffle_core.c",
+        )
+        end = content.find("bshuf_untrans_bit_elem_NEON", start)
+        func_body = content[start:end] if end != -1 else content[start:]
+
+        self.assertIn("elem_size == 1", func_body)
+        self.assertIn("else if (elem_size % 2)", func_body)
+        self.assertIn("vld1q_u8", func_body)
+        self.assertIn("vshrq_n_u64", func_body)
+        self.assertNotIn(
+            "\n    if (elem_size % 2) {",
+            func_body,
+        )
 
 
 # Python implementations for checking results.

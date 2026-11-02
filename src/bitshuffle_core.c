@@ -711,7 +711,6 @@ int64_t bshuf_trans_byte_bitrow_NEON(const void* in, void* out, const size_t siz
 
     int8x16_t a0, b0, c0, d0, e0, f0, g0, h0;
     int8x16_t a1, b1, c1, d1, e1, f1, g1, h1;
-    int64x1_t *as, *bs, *cs, *ds, *es, *fs, *gs, *hs;
 
     for (ii = 0; ii + 7 < nrows; ii += 8) {
         for (jj = 0; jj + 15 < nbyte_row; jj += 16) {
@@ -751,31 +750,22 @@ int64_t bshuf_trans_byte_bitrow_NEON(const void* in, void* out, const size_t siz
             g1 = (int8x16_t) vzip1q_s32 (vreinterpretq_s32_s8 (g0), vreinterpretq_s32_s8 (h0));
             h1 = (int8x16_t) vzip2q_s32 (vreinterpretq_s32_s8 (g0), vreinterpretq_s32_s8 (h0));
 
-            as = (int64x1_t *) &a1;
-            bs = (int64x1_t *) &b1;
-            cs = (int64x1_t *) &c1;
-            ds = (int64x1_t *) &d1;
-            es = (int64x1_t *) &e1;
-            fs = (int64x1_t *) &f1;
-            gs = (int64x1_t *) &g1;
-            hs = (int64x1_t *) &h1;
-
-            vst1_s64((int64_t *)(out_b + (jj + 0) * nrows + ii), *as);
-            vst1_s64((int64_t *)(out_b + (jj + 1) * nrows + ii), *(as + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 2) * nrows + ii), *bs);
-            vst1_s64((int64_t *)(out_b + (jj + 3) * nrows + ii), *(bs + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 4) * nrows + ii), *cs);
-            vst1_s64((int64_t *)(out_b + (jj + 5) * nrows + ii), *(cs + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 6) * nrows + ii), *ds);
-            vst1_s64((int64_t *)(out_b + (jj + 7) * nrows + ii), *(ds + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 8) * nrows + ii), *es);
-            vst1_s64((int64_t *)(out_b + (jj + 9) * nrows + ii), *(es + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 10) * nrows + ii), *fs);
-            vst1_s64((int64_t *)(out_b + (jj + 11) * nrows + ii), *(fs + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 12) * nrows + ii), *gs);
-            vst1_s64((int64_t *)(out_b + (jj + 13) * nrows + ii), *(gs + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 14) * nrows + ii), *hs);
-            vst1_s64((int64_t *)(out_b + (jj + 15) * nrows + ii), *(hs + 1));
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 0) * nrows + ii), vreinterpretq_s64_s8(a1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 1) * nrows + ii), vreinterpretq_s64_s8(a1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 2) * nrows + ii), vreinterpretq_s64_s8(b1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 3) * nrows + ii), vreinterpretq_s64_s8(b1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 4) * nrows + ii), vreinterpretq_s64_s8(c1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 5) * nrows + ii), vreinterpretq_s64_s8(c1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 6) * nrows + ii), vreinterpretq_s64_s8(d1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 7) * nrows + ii), vreinterpretq_s64_s8(d1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 8) * nrows + ii), vreinterpretq_s64_s8(e1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 9) * nrows + ii), vreinterpretq_s64_s8(e1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 10) * nrows + ii), vreinterpretq_s64_s8(f1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 11) * nrows + ii), vreinterpretq_s64_s8(f1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 12) * nrows + ii), vreinterpretq_s64_s8(g1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 13) * nrows + ii), vreinterpretq_s64_s8(g1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 14) * nrows + ii), vreinterpretq_s64_s8(h1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 15) * nrows + ii), vreinterpretq_s64_s8(h1), 1);
         }
         for (jj = nbyte_row - nbyte_row % 16; jj < nbyte_row; jj ++) {
             out_b[jj * nrows + ii + 0] = in_b[(ii + 0)*nbyte_row + jj];
@@ -806,7 +796,34 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
     size_t ii, jj, kk;
     size_t nbyte = elem_size * size;
 
-    if (elem_size % 2) {
+    if (elem_size == 1) {
+#if !defined(__AARCH64EB__) && (!defined(__BYTE_ORDER__) || (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__))
+        // 2-lane uint64x2_t TRANS_BIT_8X8 delta-swap assumes little-endian byte
+        // ordering within each 64-bit lane; big-endian targets fall back to
+        // bshuf_shuffle_bit_eightelem_scal (TRANS_BIT_8X8_BE).
+        uint8_t* out_b = (uint8_t*) out;
+        const uint64x2_t m0 = vdupq_n_u64(0x00AA00AA00AA00AAULL);
+        const uint64x2_t m1 = vdupq_n_u64(0x0000CCCC0000CCCCULL);
+        const uint64x2_t m2 = vdupq_n_u64(0x00000000F0F0F0F0ULL);
+        for (ii = 0; ii + 15 < nbyte; ii += 16) {
+            uint64x2_t x = vreinterpretq_u64_u8(
+                    vld1q_u8((const uint8_t *) &in_b[ii]));
+            uint64x2_t t;
+            t = vandq_u64(veorq_u64(x, vshrq_n_u64(x, 7)), m0);
+            x = veorq_u64(x, veorq_u64(t, vshlq_n_u64(t, 7)));
+            t = vandq_u64(veorq_u64(x, vshrq_n_u64(x, 14)), m1);
+            x = veorq_u64(x, veorq_u64(t, vshlq_n_u64(t, 14)));
+            t = vandq_u64(veorq_u64(x, vshrq_n_u64(x, 28)), m2);
+            x = veorq_u64(x, veorq_u64(t, vshlq_n_u64(t, 28)));
+            vst1q_u8(&out_b[ii], vreinterpretq_u8_u64(x));
+        }
+        if (ii < nbyte) {
+            bshuf_shuffle_bit_eightelem_scal(in_b + ii, out_b + ii, 8, 1);
+        }
+#else
+        bshuf_shuffle_bit_eightelem_scal(in, out, size, elem_size);
+#endif
+    } else if (elem_size % 2) {
         bshuf_shuffle_bit_eightelem_scal(in, out, size, elem_size);
     } else {
         const uint8x16_t a0 = vdupq_n_u8(0x80);
