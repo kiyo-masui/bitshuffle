@@ -84,6 +84,7 @@ cdef extern int bshuf_untrans_bit_elem_AVX512(void *A, void *B, int size, int el
 cdef extern int bshuf_untrans_bit_elem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_elem(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_untrans_bit_elem(void *A, void *B, int size, int elem_size)
+cdef extern int bshuf_untrans_bit_elem_with_buf(void *A, void *B, int size, int elem_size, void *tmp_buf)
 
 
 ctypedef int (*Cfptr) (void *A, void *B, int size, int elem_size)
@@ -304,6 +305,83 @@ def trans_bit_elem(np.ndarray arr not None):
 
 def untrans_bit_elem(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_untrans_bit_elem, arr)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def untrans_bit_elem_with_buf(np.ndarray arr not None, np.ndarray out=None, np.ndarray tmp_buf=None):
+    """Untranspose bits within elements with user-provided buffer.
+
+    Parameters
+    ----------
+    arr : numpy array
+        Data to be processed.
+    out : numpy array, optional
+        Pre-allocated output array. If None, a new array is allocated.
+        May be the same array as arr for in-place untransposition.
+    tmp_buf : numpy array, optional
+        Pre-allocated temporary scratch buffer. If None, a new buffer is allocated.
+
+    Returns
+    -------
+    out : numpy array
+        Untransposed array.
+    """
+    if not arr.flags["C_CONTIGUOUS"]:
+        msg = "Input array must be C-contiguous."
+        raise ValueError(msg)
+
+    cdef int size = arr.size
+    cdef int itemsize = arr.dtype.itemsize
+    cdef size_t nbytes = <size_t> size * itemsize
+
+    if out is None:
+        out = np.empty_like(arr)
+    else:
+        if not out.flags["C_CONTIGUOUS"]:
+            msg = "Output array must be C-contiguous."
+            raise ValueError(msg)
+        if <size_t> out.nbytes < nbytes:
+            msg = "Output array too small."
+            raise ValueError(msg)
+
+    if tmp_buf is None:
+        tmp_buf = np.empty(nbytes, dtype=np.uint8)
+    else:
+        if not tmp_buf.flags["C_CONTIGUOUS"]:
+            msg = "Temporary buffer must be C-contiguous."
+            raise ValueError(msg)
+        if <size_t> tmp_buf.nbytes < nbytes:
+            msg = "Temporary buffer too small."
+            raise ValueError(msg)
+
+    if size == 0:
+        return out
+
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] arr_flat
+    arr_flat = arr.view(np.uint8).ravel()
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] out_flat
+    out_flat = out.view(np.uint8).ravel()
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] tmp_flat
+    tmp_flat = tmp_buf.view(np.uint8).ravel()
+    cdef void* arr_ptr = <void*> &arr_flat[0]
+    cdef void* out_ptr = <void*> &out_flat[0]
+    cdef void* tmp_ptr = <void*> &tmp_flat[0]
+
+    if tmp_ptr == arr_ptr or tmp_ptr == out_ptr:
+        raise ValueError("tmp_buf must not alias arr or out")
+
+    cdef int count = 0
+    cdef int ii
+    cdef int reps = 1 if arr_ptr == out_ptr else REPEATC
+    for ii in range(reps):
+        count = bshuf_untrans_bit_elem_with_buf(arr_ptr, out_ptr, size, itemsize, tmp_ptr)
+
+    if count < 0:
+        msg = "Failed. Error code %d."
+        raise RuntimeError(msg % count, count)
+
+    return out
 
 
 @cython.boundscheck(False)
