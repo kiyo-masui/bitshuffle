@@ -816,6 +816,8 @@ class TestNeonBitrowNoSpill(unittest.TestCase):
         core_c_path = os.path.join(
             os.path.dirname(__file__), "..", "src", "bitshuffle_core.c"
         )
+        if not os.path.exists(core_c_path):
+            self.skipTest("C source not available")
         with open(core_c_path, "r") as f:
             content = f.read()
         start = content.find("bshuf_trans_byte_bitrow_NEON")
@@ -828,6 +830,90 @@ class TestNeonBitrowNoSpill(unittest.TestCase):
         self.assertIn("vst1q_lane_s64", func_body)
         self.assertNotIn("(int64x1_t *) &a1", func_body)
         self.assertNotIn("int64x1_t *as", func_body)
+
+
+class TestNeonEightElemUnit(unittest.TestCase):
+    def test_neon_eightelem_elem1_single_bit_basis_vectors(self):
+        if not ext.using_NEON():
+            self.skipTest("NEON instruction set not supported")
+        for b in range(128):
+            arr = np.zeros(16, dtype=np.uint8)
+            arr[b // 8] = 1 << (b % 8)
+            out_neon = ext.shuffle_bit_eightelem_NEON(arr)
+            out_scal = ext.shuffle_bit_eightelem_scal(arr)
+            self.assertTrue(
+                np.all(out_neon == out_scal),
+                "Mismatch for size=16, bit=%d" % b,
+            )
+        for b in range(64):
+            arr = np.zeros(8, dtype=np.uint8)
+            arr[b // 8] = 1 << (b % 8)
+            out_neon = ext.shuffle_bit_eightelem_NEON(arr)
+            out_scal = ext.shuffle_bit_eightelem_scal(arr)
+            self.assertTrue(
+                np.all(out_neon == out_scal),
+                "Mismatch for size=8, bit=%d" % b,
+            )
+
+    def test_neon_eightelem_elem1_odd_multiples_of_8(self):
+        if not ext.using_NEON():
+            self.skipTest("NEON instruction set not supported")
+        sizes = (8, 16, 24, 32, 40, 120, 128, 136, 1024, 1032, 8192, 8200)
+        for size in sizes:
+            data = random.randint(0, 255, size).astype(np.uint8)
+            out_shuf_neon = ext.shuffle_bit_eightelem_NEON(data)
+            out_shuf_scal = ext.shuffle_bit_eightelem_scal(data)
+            self.assertTrue(
+                np.all(out_shuf_neon == out_shuf_scal),
+                "shuffle mismatch for size=%d" % size,
+            )
+            out_untrans_neon = ext.untrans_bit_elem_NEON(data)
+            out_untrans_scal = ext.untrans_bit_elem_scal(data)
+            self.assertTrue(
+                np.all(out_untrans_neon == out_untrans_scal),
+                "untrans mismatch for size=%d" % size,
+            )
+
+    def test_neon_eightelem_odd_elem_sizes_gt_1(self):
+        if not ext.using_NEON():
+            self.skipTest("NEON instruction set not supported")
+        for dtype in (b"S3", b"S5", b"S7", b"S9", b"S11"):
+            elem_size = np.dtype(dtype).itemsize
+            for size in (8, 16, 24, 64):
+                data = (
+                    random.randint(0, 255, size * elem_size)
+                    .astype(np.uint8)
+                    .view(dtype)
+                )
+                out_neon = ext.shuffle_bit_eightelem_NEON(data)
+                out_scal = ext.shuffle_bit_eightelem_scal(data)
+                self.assertTrue(
+                    np.all(out_neon.view(np.uint8) == out_scal.view(np.uint8)),
+                    "Mismatch for dtype=%s, size=%d" % (dtype, size),
+                )
+
+    def test_neon_eightelem_has_vectorized_elem1_branch(self):
+        core_c_path = os.path.join(
+            os.path.dirname(__file__), "..", "src", "bitshuffle_core.c"
+        )
+        if not os.path.exists(core_c_path):
+            self.skipTest("C source not available")
+        with open(core_c_path, "r") as f:
+            content = f.read()
+        start = content.find("bshuf_shuffle_bit_eightelem_NEON")
+        self.assertNotEqual(
+            start,
+            -1,
+            "bshuf_shuffle_bit_eightelem_NEON not found in bitshuffle_core.c",
+        )
+        end = content.find("bshuf_untrans_bit_elem_NEON", start)
+        func_body = content[start:end] if end != -1 else content[start:]
+
+        self.assertIn("elem_size == 1", func_body)
+        self.assertNotIn(
+            "if (elem_size % 2) {\n        bshuf_shuffle_bit_eightelem_scal",
+            func_body,
+        )
 
 
 # Python implementations for checking results.
