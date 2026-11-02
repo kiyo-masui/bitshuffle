@@ -797,6 +797,10 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
     size_t nbyte = elem_size * size;
 
     if (elem_size == 1) {
+#if !defined(__AARCH64EB__) && (!defined(__BYTE_ORDER__) || (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__))
+        // 2-lane uint64x2_t TRANS_BIT_8X8 delta-swap assumes little-endian byte
+        // ordering within each 64-bit lane; big-endian targets fall back to
+        // bshuf_shuffle_bit_eightelem_scal (TRANS_BIT_8X8_BE).
         uint8_t* out_b = (uint8_t*) out;
         const uint64x2_t m0 = vdupq_n_u64(0x00AA00AA00AA00AAULL);
         const uint64x2_t m1 = vdupq_n_u64(0x0000CCCC0000CCCCULL);
@@ -816,6 +820,9 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
         if (ii < nbyte) {
             bshuf_shuffle_bit_eightelem_scal(in_b + ii, out_b + ii, 8, 1);
         }
+#else
+        bshuf_shuffle_bit_eightelem_scal(in, out, size, elem_size);
+#endif
     } else if (elem_size % 2) {
         bshuf_shuffle_bit_eightelem_scal(in, out, size, elem_size);
     } else {
