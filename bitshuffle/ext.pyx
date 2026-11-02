@@ -381,6 +381,8 @@ def untrans_bit_elem_with_buf(np.ndarray arr not None, np.ndarray out=None, np.n
     cdef uintptr_t out_addr = <uintptr_t> out_ptr
     cdef uintptr_t tmp_addr = <uintptr_t> tmp_ptr
 
+    if out_addr % 8 != 0:
+        raise ValueError("Output array must be 8-byte aligned.")
     if tmp_addr % 8 != 0:
         raise ValueError("Temporary buffer must be 8-byte aligned.")
     if tmp_addr < arr_addr + nbytes and arr_addr < tmp_addr + nbytes:

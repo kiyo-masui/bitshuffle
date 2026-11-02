@@ -763,7 +763,18 @@ class TestUntransWithBuf(unittest.TestCase):
         with self.assertRaises(ValueError):
             ext.untrans_bit_elem_with_buf(arr_slice, out=valid_out, tmp_buf=ro_tmp)
 
-        # Unaligned tmp_buf validation
+        # Unaligned out and tmp_buf validation
+        unaligned_out = np.empty(17, dtype=np.uint8)[1:].view(np.uint16)
+        aligned_arr_u16 = np.zeros(8, dtype=np.uint16)
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                aligned_arr_u16, out=unaligned_out, tmp_buf=valid_tmp
+            )
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                unaligned_out, out=unaligned_out, tmp_buf=valid_tmp
+            )
+
         unaligned_tmp = np.empty(17, dtype=np.uint8)[1:]
         with self.assertRaises(ValueError):
             ext.untrans_bit_elem_with_buf(
