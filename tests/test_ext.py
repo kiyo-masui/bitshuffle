@@ -752,6 +752,24 @@ class TestUntransWithBuf(unittest.TestCase):
                 arr_slice, out=np.empty((2, 8), dtype=np.uint8), tmp_buf=valid_tmp
             )
 
+        # Read-only out and tmp_buf validation
+        ro_out = np.empty(16, dtype=np.uint8)
+        ro_out.setflags(write=False)
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(arr_slice, out=ro_out, tmp_buf=valid_tmp)
+
+        ro_tmp = np.empty(16, dtype=np.uint8)
+        ro_tmp.setflags(write=False)
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(arr_slice, out=valid_out, tmp_buf=ro_tmp)
+
+        # Unaligned tmp_buf validation
+        unaligned_tmp = np.empty(17, dtype=np.uint8)[1:]
+        with self.assertRaises(ValueError):
+            ext.untrans_bit_elem_with_buf(
+                arr_slice, out=valid_out, tmp_buf=unaligned_tmp
+            )
+
 
 class TestDecompressBlockReuse(unittest.TestCase):
     def test_decompress_lz4_and_zstd_block_sizes(self):

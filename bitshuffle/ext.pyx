@@ -342,6 +342,9 @@ def untrans_bit_elem_with_buf(np.ndarray arr not None, np.ndarray out=None, np.n
         if not out.flags["C_CONTIGUOUS"]:
             msg = "Output array must be C-contiguous."
             raise ValueError(msg)
+        if not out.flags["WRITEABLE"]:
+            msg = "Output array must be writeable."
+            raise ValueError(msg)
         if out.dtype != arr.dtype or (<object>out).shape != (<object>arr).shape:
             msg = "Output array must match input shape and dtype."
             raise ValueError(msg)
@@ -354,6 +357,9 @@ def untrans_bit_elem_with_buf(np.ndarray arr not None, np.ndarray out=None, np.n
     else:
         if not tmp_buf.flags["C_CONTIGUOUS"]:
             msg = "Temporary buffer must be C-contiguous."
+            raise ValueError(msg)
+        if not tmp_buf.flags["WRITEABLE"]:
+            msg = "Temporary buffer must be writeable."
             raise ValueError(msg)
         if <size_t> tmp_buf.nbytes < nbytes:
             msg = "Temporary buffer too small."
@@ -375,6 +381,8 @@ def untrans_bit_elem_with_buf(np.ndarray arr not None, np.ndarray out=None, np.n
     cdef uintptr_t out_addr = <uintptr_t> out_ptr
     cdef uintptr_t tmp_addr = <uintptr_t> tmp_ptr
 
+    if tmp_addr % 8 != 0:
+        raise ValueError("Temporary buffer must be 8-byte aligned.")
     if tmp_addr < arr_addr + nbytes and arr_addr < tmp_addr + nbytes:
         raise ValueError("tmp_buf must not overlap arr or out")
     if tmp_addr < out_addr + nbytes and out_addr < tmp_addr + nbytes:
