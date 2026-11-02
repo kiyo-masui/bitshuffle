@@ -68,8 +68,9 @@ class TestProfile(unittest.TestCase):
         size_i = self.data.size * self.data.dtype.itemsize
         size_o = out.size * out.dtype.itemsize
         size = max([size_i, size_o])
-        speed = ext.REPEAT * size / delta_t / 1024**3  # GB/s
         if TIME:
+            delta_t = max(delta_t, 1e-9)
+            speed = ext.REPEAT * size / delta_t / 1024**3  # GB/s
             print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1.0 / speed, speed))
         if self.check is not None:
             ans = self.check(self.data).view(np.uint8)
@@ -910,8 +911,11 @@ class TestNeonEightElemUnit(unittest.TestCase):
         func_body = content[start:end] if end != -1 else content[start:]
 
         self.assertIn("elem_size == 1", func_body)
+        self.assertIn("else if (elem_size % 2)", func_body)
+        self.assertIn("vld1q_u8", func_body)
+        self.assertIn("vshrq_n_u64", func_body)
         self.assertNotIn(
-            "if (elem_size % 2) {\n        bshuf_shuffle_bit_eightelem_scal",
+            "\n    if (elem_size % 2) {",
             func_body,
         )
 

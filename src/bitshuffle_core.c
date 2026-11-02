@@ -796,7 +796,27 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
     size_t ii, jj, kk;
     size_t nbyte = elem_size * size;
 
-    if (elem_size % 2) {
+    if (elem_size == 1) {
+        uint8_t* out_b = (uint8_t*) out;
+        const uint64x2_t m0 = vdupq_n_u64(0x00AA00AA00AA00AAULL);
+        const uint64x2_t m1 = vdupq_n_u64(0x0000CCCC0000CCCCULL);
+        const uint64x2_t m2 = vdupq_n_u64(0x00000000F0F0F0F0ULL);
+        for (ii = 0; ii + 15 < nbyte; ii += 16) {
+            uint64x2_t x = vreinterpretq_u64_u8(
+                    vld1q_u8((const uint8_t *) &in_b[ii]));
+            uint64x2_t t;
+            t = vandq_u64(veorq_u64(x, vshrq_n_u64(x, 7)), m0);
+            x = veorq_u64(x, veorq_u64(t, vshlq_n_u64(t, 7)));
+            t = vandq_u64(veorq_u64(x, vshrq_n_u64(x, 14)), m1);
+            x = veorq_u64(x, veorq_u64(t, vshlq_n_u64(t, 14)));
+            t = vandq_u64(veorq_u64(x, vshrq_n_u64(x, 28)), m2);
+            x = veorq_u64(x, veorq_u64(t, vshlq_n_u64(t, 28)));
+            vst1q_u8(&out_b[ii], vreinterpretq_u8_u64(x));
+        }
+        if (ii < nbyte) {
+            bshuf_shuffle_bit_eightelem_scal(in_b + ii, out_b + ii, 8, 1);
+        }
+    } else if (elem_size % 2) {
         bshuf_shuffle_bit_eightelem_scal(in, out, size, elem_size);
     } else {
         const uint8x16_t a0 = vdupq_n_u8(0x80);
