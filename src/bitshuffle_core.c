@@ -711,7 +711,6 @@ int64_t bshuf_trans_byte_bitrow_NEON(const void* in, void* out, const size_t siz
 
     int8x16_t a0, b0, c0, d0, e0, f0, g0, h0;
     int8x16_t a1, b1, c1, d1, e1, f1, g1, h1;
-    int64x1_t *as, *bs, *cs, *ds, *es, *fs, *gs, *hs;
 
     for (ii = 0; ii + 7 < nrows; ii += 8) {
         for (jj = 0; jj + 15 < nbyte_row; jj += 16) {
@@ -751,31 +750,22 @@ int64_t bshuf_trans_byte_bitrow_NEON(const void* in, void* out, const size_t siz
             g1 = (int8x16_t) vzip1q_s32 (vreinterpretq_s32_s8 (g0), vreinterpretq_s32_s8 (h0));
             h1 = (int8x16_t) vzip2q_s32 (vreinterpretq_s32_s8 (g0), vreinterpretq_s32_s8 (h0));
 
-            as = (int64x1_t *) &a1;
-            bs = (int64x1_t *) &b1;
-            cs = (int64x1_t *) &c1;
-            ds = (int64x1_t *) &d1;
-            es = (int64x1_t *) &e1;
-            fs = (int64x1_t *) &f1;
-            gs = (int64x1_t *) &g1;
-            hs = (int64x1_t *) &h1;
-
-            vst1_s64((int64_t *)(out_b + (jj + 0) * nrows + ii), *as);
-            vst1_s64((int64_t *)(out_b + (jj + 1) * nrows + ii), *(as + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 2) * nrows + ii), *bs);
-            vst1_s64((int64_t *)(out_b + (jj + 3) * nrows + ii), *(bs + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 4) * nrows + ii), *cs);
-            vst1_s64((int64_t *)(out_b + (jj + 5) * nrows + ii), *(cs + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 6) * nrows + ii), *ds);
-            vst1_s64((int64_t *)(out_b + (jj + 7) * nrows + ii), *(ds + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 8) * nrows + ii), *es);
-            vst1_s64((int64_t *)(out_b + (jj + 9) * nrows + ii), *(es + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 10) * nrows + ii), *fs);
-            vst1_s64((int64_t *)(out_b + (jj + 11) * nrows + ii), *(fs + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 12) * nrows + ii), *gs);
-            vst1_s64((int64_t *)(out_b + (jj + 13) * nrows + ii), *(gs + 1));
-            vst1_s64((int64_t *)(out_b + (jj + 14) * nrows + ii), *hs);
-            vst1_s64((int64_t *)(out_b + (jj + 15) * nrows + ii), *(hs + 1));
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 0) * nrows + ii), vreinterpretq_s64_s8(a1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 1) * nrows + ii), vreinterpretq_s64_s8(a1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 2) * nrows + ii), vreinterpretq_s64_s8(b1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 3) * nrows + ii), vreinterpretq_s64_s8(b1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 4) * nrows + ii), vreinterpretq_s64_s8(c1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 5) * nrows + ii), vreinterpretq_s64_s8(c1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 6) * nrows + ii), vreinterpretq_s64_s8(d1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 7) * nrows + ii), vreinterpretq_s64_s8(d1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 8) * nrows + ii), vreinterpretq_s64_s8(e1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 9) * nrows + ii), vreinterpretq_s64_s8(e1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 10) * nrows + ii), vreinterpretq_s64_s8(f1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 11) * nrows + ii), vreinterpretq_s64_s8(f1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 12) * nrows + ii), vreinterpretq_s64_s8(g1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 13) * nrows + ii), vreinterpretq_s64_s8(g1), 1);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 14) * nrows + ii), vreinterpretq_s64_s8(h1), 0);
+            vst1q_lane_s64((int64_t *)(out_b + (jj + 15) * nrows + ii), vreinterpretq_s64_s8(h1), 1);
         }
         for (jj = nbyte_row - nbyte_row % 16; jj < nbyte_row; jj ++) {
             out_b[jj * nrows + ii + 0] = in_b[(ii + 0)*nbyte_row + jj];
