@@ -665,6 +665,60 @@ class TestBitShuffleCircle(unittest.TestCase):
                 self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
 
 
+class TestUntransWithBuf(unittest.TestCase):
+    def test_untrans_with_buf_out_of_place(self):
+        for dtype in TEST_DTYPES:
+            itemsize = np.dtype(dtype).itemsize
+            for n in (8, 16, 24, 128, 1024):
+                nbyte = n * itemsize
+                raw = random.randint(0, 255, nbyte).astype(np.uint8)
+                data = raw.view(dtype)
+                shuff = ext.trans_bit_elem(data)
+                out = np.empty_like(data)
+                tmp = np.empty_like(data)
+                res = ext.untrans_bit_elem_with_buf(shuff, out=out, tmp_buf=tmp)
+                self.assertTrue(res is out)
+                self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
+
+    def test_untrans_with_buf_in_place(self):
+        for dtype in TEST_DTYPES:
+            itemsize = np.dtype(dtype).itemsize
+            for n in (8, 16, 24, 128, 1024):
+                nbyte = n * itemsize
+                raw = random.randint(0, 255, nbyte).astype(np.uint8)
+                data = raw.view(dtype)
+                shuff = ext.trans_bit_elem(data)
+                buf = shuff.copy()
+                tmp = np.empty_like(buf)
+                res = ext.untrans_bit_elem_with_buf(buf, out=buf, tmp_buf=tmp)
+                self.assertTrue(res is buf)
+                self.assertTrue(np.all(data.view(np.uint8) == buf.view(np.uint8)))
+
+    def test_untrans_stack_vs_heap_block_sizes_and_errors(self):
+        # nbyte == 8192 (<= BSHUF_TARGET_BLOCK_SIZE_B stack buffer fast path)
+        data_8k = random.randint(0, 255, 8192).astype(np.uint8)
+        shuff_8k = ext.trans_bit_elem(data_8k)
+        out_8k = ext.untrans_bit_elem(shuff_8k)
+        self.assertTrue(np.all(data_8k == out_8k))
+
+        # nbyte == 16384 (> BSHUF_TARGET_BLOCK_SIZE_B heap path)
+        data_16k = random.randint(0, 255, 16384).astype(np.uint8)
+        shuff_16k = ext.trans_bit_elem(data_16k)
+        out_16k = ext.untrans_bit_elem(shuff_16k)
+        self.assertTrue(np.all(data_16k == out_16k))
+
+        # size = 14 (not a multiple of 8) raises RuntimeError with error code -80
+        bad_data = random.randint(0, 255, 14).astype(np.uint8)
+        with self.assertRaises(RuntimeError) as cm:
+            ext.untrans_bit_elem(bad_data)
+        self.assertEqual(cm.exception.args[1], -80)
+
+        tmp_bad = np.empty_like(bad_data)
+        with self.assertRaises(RuntimeError) as cm:
+            ext.untrans_bit_elem_with_buf(bad_data, tmp_buf=tmp_bad)
+        self.assertEqual(cm.exception.args[1], -80)
+
+
 # Python implementations for checking results.
 
 
