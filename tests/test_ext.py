@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
-import time
 import unittest
+import time
 
 import numpy as np
 from numpy import random
@@ -66,8 +66,9 @@ class TestProfile(unittest.TestCase):
         size_i = self.data.size * self.data.dtype.itemsize
         size_o = out.size * out.dtype.itemsize
         size = max([size_i, size_o])
-        speed = ext.REPEAT * size / delta_t / 1024**3  # GB/s
         if TIME:
+            delta_t = max(delta_t, 1e-9)
+            speed = ext.REPEAT * size / delta_t / 1024**3  # GB/s
             print("%-20s: %5.2f s/GB,   %5.2f GB/s" % (self.case, 1.0 / speed, speed))
         if self.check is not None:
             ans = self.check(self.data).view(np.uint8)
@@ -782,6 +783,8 @@ class TestDecompressBlockReuse(unittest.TestCase):
         c_src_path = os.path.join(
             os.path.dirname(__file__), "..", "src", "bitshuffle.c"
         )
+        if not os.path.exists(c_src_path):
+            self.skipTest("C source not available")
         with open(c_src_path, "r") as f:
             c_src = f.read()
 
