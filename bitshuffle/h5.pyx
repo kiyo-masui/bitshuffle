@@ -87,7 +87,7 @@ if not sys.platform.startswith('win'):
             break
 
     if success == -1:
-        raise RuntimeError("Failed to load all HDF5 symbols using these libs: {}".format(libs))
+        raise RuntimeError(f"Failed to load all HDF5 symbols using these libs: {libs}")
 
 
 def register_h5_filter():
@@ -134,7 +134,7 @@ def create_dataset(parent, name, shape, dtype, chunks=None, maxshape=None,
                      for i, j in zip(tmp_shape, chunks) if i is not None])).any()
     if isinstance(chunks, tuple) and chunks_larger:
         errmsg = ("Chunk shape must not be greater than data shape in any "
-                  "dimension. {} is not compatible with {}".format(chunks, shape))
+                  f"dimension. {chunks} is not compatible with {shape}")
         raise ValueError(errmsg)
 
     if isinstance(dtype, h5py.Datatype):
