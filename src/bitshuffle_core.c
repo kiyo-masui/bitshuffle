@@ -51,8 +51,10 @@ typedef size_t omp_size_t;
 
 #if defined(_MSC_VER)
   typedef uint16_t alias_uint16_t;
+  typedef uint64_t alias_uint64_t;
 #else
   typedef uint16_t alias_uint16_t __attribute__((may_alias));
+  typedef uint64_t alias_uint64_t __attribute__((may_alias));
 #endif
 
 // Macros.
@@ -625,10 +627,98 @@ uint64_t neonmovemask_bulk(uint8x16_t p0, uint8x16_t p1, uint8x16_t p2, uint8x16
   return vgetq_lane_u64(vreinterpretq_u64_u8(sum0), 0);
 }
 
+#if !defined(__AARCH64EB__) && (!defined(__BYTE_ORDER__) || (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__))
+
+/* Transpose two 8x8 bit-matrices in parallel across the two 64-bit lanes. */
+static inline uint64x2_t bshuf_neon_trans_bit_8x8(uint64x2_t x) {
+    const uint64x2_t m0 = vdupq_n_u64(0x00AA00AA00AA00AAULL);
+    const uint64x2_t m1 = vdupq_n_u64(0x0000CCCC0000CCCCULL);
+    const uint64x2_t m2 = vdupq_n_u64(0x00000000F0F0F0F0ULL);
+    uint64x2_t t;
+    t = vandq_u64(veorq_u64(x, vshrq_n_u64(x, 7)), m0);
+    x = veorq_u64(x, veorq_u64(t, vshlq_n_u64(t, 7)));
+    t = vandq_u64(veorq_u64(x, vshrq_n_u64(x, 14)), m1);
+    x = veorq_u64(x, veorq_u64(t, vshlq_n_u64(t, 14)));
+    t = vandq_u64(veorq_u64(x, vshrq_n_u64(x, 28)), m2);
+    x = veorq_u64(x, veorq_u64(t, vshlq_n_u64(t, 28)));
+    return x;
+}
+
+/* Zip two 8-byte halves of a bit-transposed vector into 8 uint16_t bit-rows. */
+static inline uint8x16_t bshuf_neon_zip_bitrows_16(uint8x16_t v) {
+    return vzip1q_u8(v, vextq_u8(v, v, 8));
+}
+
+/* Regroup 4 already-bit-transposed 16B vectors into 8 contiguous 8B rows
+ * across r[0..3]: lane l of r[m] holds row kk = 2*m + l. */
+static inline void bshuf_neon_transpose_bytes_64(uint8x16_t v0, uint8x16_t v1,
+        uint8x16_t v2, uint8x16_t v3, uint64x2_t r[4]) {
+    uint16x8_t t0 = vreinterpretq_u16_u8(bshuf_neon_zip_bitrows_16(v0));
+    uint16x8_t t1 = vreinterpretq_u16_u8(bshuf_neon_zip_bitrows_16(v1));
+    uint16x8_t t2 = vreinterpretq_u16_u8(bshuf_neon_zip_bitrows_16(v2));
+    uint16x8_t t3 = vreinterpretq_u16_u8(bshuf_neon_zip_bitrows_16(v3));
+    uint32x4_t u0 = vreinterpretq_u32_u16(vzip1q_u16(t0, t1));
+    uint32x4_t u1 = vreinterpretq_u32_u16(vzip2q_u16(t0, t1));
+    uint32x4_t u2 = vreinterpretq_u32_u16(vzip1q_u16(t2, t3));
+    uint32x4_t u3 = vreinterpretq_u32_u16(vzip2q_u16(t2, t3));
+    r[0] = vreinterpretq_u64_u32(vzip1q_u32(u0, u2));
+    r[1] = vreinterpretq_u64_u32(vzip2q_u32(u0, u2));
+    r[2] = vreinterpretq_u64_u32(vzip1q_u32(u1, u3));
+    r[3] = vreinterpretq_u64_u32(vzip2q_u32(u1, u3));
+}
+
+#endif
+
 /* Transpose bits within bytes. */
 int64_t bshuf_trans_bit_byte_NEON(const void* in, void* out, const size_t size,
          const size_t elem_size) {
+#if !defined(__AARCH64EB__) && (!defined(__BYTE_ORDER__) || (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__))
+    size_t ii;
+    const uint8_t* in_b = (const uint8_t*) in;
+    uint8_t* out_b = (uint8_t*) out;
+    size_t nbyte = elem_size * size;
+    size_t nbyte_bitrow = nbyte / 8;
 
+    CHECK_MULT_EIGHT(nbyte);
+
+    for (ii = 0; ii + 63 < nbyte; ii += 64) {
+        uint64x2_t r[4];
+        uint8x16_t v0 = vreinterpretq_u8_u64(bshuf_neon_trans_bit_8x8(
+                vreinterpretq_u64_u8(vld1q_u8(in_b + ii))));
+        uint8x16_t v1 = vreinterpretq_u8_u64(bshuf_neon_trans_bit_8x8(
+                vreinterpretq_u64_u8(vld1q_u8(in_b + ii + 16))));
+        uint8x16_t v2 = vreinterpretq_u8_u64(bshuf_neon_trans_bit_8x8(
+                vreinterpretq_u64_u8(vld1q_u8(in_b + ii + 32))));
+        uint8x16_t v3 = vreinterpretq_u8_u64(bshuf_neon_trans_bit_8x8(
+                vreinterpretq_u64_u8(vld1q_u8(in_b + ii + 48))));
+        bshuf_neon_transpose_bytes_64(v0, v1, v2, v3, r);
+        vst1q_lane_u64((alias_uint64_t *) &out_b[0 * nbyte_bitrow + ii / 8], r[0], 0);
+        vst1q_lane_u64((alias_uint64_t *) &out_b[1 * nbyte_bitrow + ii / 8], r[0], 1);
+        vst1q_lane_u64((alias_uint64_t *) &out_b[2 * nbyte_bitrow + ii / 8], r[1], 0);
+        vst1q_lane_u64((alias_uint64_t *) &out_b[3 * nbyte_bitrow + ii / 8], r[1], 1);
+        vst1q_lane_u64((alias_uint64_t *) &out_b[4 * nbyte_bitrow + ii / 8], r[2], 0);
+        vst1q_lane_u64((alias_uint64_t *) &out_b[5 * nbyte_bitrow + ii / 8], r[2], 1);
+        vst1q_lane_u64((alias_uint64_t *) &out_b[6 * nbyte_bitrow + ii / 8], r[3], 0);
+        vst1q_lane_u64((alias_uint64_t *) &out_b[7 * nbyte_bitrow + ii / 8], r[3], 1);
+    }
+    for (; ii + 15 < nbyte; ii += 16) {
+        uint16x8_t t = vreinterpretq_u16_u8(bshuf_neon_zip_bitrows_16(
+                vreinterpretq_u8_u64(bshuf_neon_trans_bit_8x8(
+                        vreinterpretq_u64_u8(vld1q_u8(in_b + ii))))));
+        vst1q_lane_u16((alias_uint16_t *) &out_b[0 * nbyte_bitrow + ii / 8], t, 0);
+        vst1q_lane_u16((alias_uint16_t *) &out_b[1 * nbyte_bitrow + ii / 8], t, 1);
+        vst1q_lane_u16((alias_uint16_t *) &out_b[2 * nbyte_bitrow + ii / 8], t, 2);
+        vst1q_lane_u16((alias_uint16_t *) &out_b[3 * nbyte_bitrow + ii / 8], t, 3);
+        vst1q_lane_u16((alias_uint16_t *) &out_b[4 * nbyte_bitrow + ii / 8], t, 4);
+        vst1q_lane_u16((alias_uint16_t *) &out_b[5 * nbyte_bitrow + ii / 8], t, 5);
+        vst1q_lane_u16((alias_uint16_t *) &out_b[6 * nbyte_bitrow + ii / 8], t, 6);
+        vst1q_lane_u16((alias_uint16_t *) &out_b[7 * nbyte_bitrow + ii / 8], t, 7);
+    }
+    if (ii < nbyte) {
+        return bshuf_trans_bit_byte_remainder(in, out, size, elem_size, ii);
+    }
+    return (int64_t) nbyte;
+#else
     size_t ii;
     const char* in_b = (const char*) in;
     char* out_b = (char*) out;
@@ -669,6 +759,7 @@ int64_t bshuf_trans_bit_byte_NEON(const void* in, void* out, const size_t size,
     count = bshuf_trans_bit_byte_remainder(in, out, size, elem_size,
             nbyte - nbyte % 16);
     return count;
+#endif
 }
 
 
