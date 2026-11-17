@@ -35,9 +35,9 @@ typedef struct {
 
 static const kernel_pair KERNELS[] = {
     {"trans_bit_byte", bshuf_trans_bit_byte_scal, bshuf_trans_bit_byte_NEON},
-#ifndef BSHUF_UBSAN_ENCODE_ONLY
     {"shuffle_bit_eightelem", bshuf_shuffle_bit_eightelem_scal,
      bshuf_shuffle_bit_eightelem_NEON},
+#ifndef BSHUF_UBSAN
     {"trans_bit_elem", bshuf_trans_bit_elem_scal, bshuf_trans_bit_elem_NEON},
     {"untrans_bit_elem", bshuf_untrans_bit_elem_scal,
      bshuf_untrans_bit_elem_NEON},
@@ -76,44 +76,89 @@ static void record_failure(run_stats *st, const char *kind, const char *fn_name,
     }
 }
 
+static void run_case_pair(const kernel_pair *kp, const uint8_t *in_ptr,
+                          size_t es, size_t size, size_t nb, size_t in_off,
+                          size_t out_off, uint8_t *out_scal, uint8_t *out_neon,
+                          size_t out_cap, const char *kind, run_stats *st) {
+    size_t pre_end = GUARD_BYTES + out_off;
+    size_t post_start = pre_end + nb;
+
+    memset(out_scal, CANARY, out_cap);
+    memset(out_neon, CANARY, out_cap);
+
+    int64_t rc_scal = kp->scal(in_ptr, out_scal + pre_end, size, es);
+    int64_t rc_neon = kp->neon(in_ptr, out_neon + pre_end, size, es);
+    st->cases++;
+
+    if (rc_scal != (int64_t)nb || rc_neon != (int64_t)nb) {
+        record_failure(st, kind, kp->name, es, size, in_off, out_off,
+                       "return code mismatch");
+        return;
+    }
+    if (memcmp(out_scal + pre_end, out_neon + pre_end, nb) != 0) {
+        record_failure(st, kind, kp->name, es, size, in_off, out_off,
+                       "output mismatch");
+        return;
+    }
+    if (!check_guard(out_neon, 0, pre_end) ||
+        !check_guard(out_neon, post_start, out_cap) ||
+        !check_guard(out_scal, 0, pre_end) ||
+        !check_guard(out_scal, post_start, out_cap)) {
+        record_failure(st, kind, kp->name, es, size, in_off, out_off,
+                       "guard byte clobbered");
+    }
+}
+
 static void run_case_all_kernels(const uint8_t *in_ptr, size_t es, size_t size,
                                  size_t nb, size_t in_off, size_t out_off,
                                  uint8_t *out_scal, uint8_t *out_neon,
                                  size_t out_cap, const char *kind,
                                  run_stats *st) {
-    size_t pre_end = GUARD_BYTES + out_off;
-    size_t post_start = pre_end + nb;
     size_t nkernels = sizeof(KERNELS) / sizeof(KERNELS[0]);
 
     for (size_t k = 0; k < nkernels; k++) {
-        memset(out_scal, CANARY, out_cap);
-        memset(out_neon, CANARY, out_cap);
+        run_case_pair(&KERNELS[k], in_ptr, es, size, nb, in_off, out_off,
+                      out_scal, out_neon, out_cap, kind, st);
+    }
+}
 
-        int64_t rc_scal =
-            KERNELS[k].scal(in_ptr, out_scal + pre_end, size, es);
-        int64_t rc_neon =
-            KERNELS[k].neon(in_ptr, out_neon + pre_end, size, es);
-        st->cases++;
+#ifdef BSHUF_UBSAN
+static void run_ubsan_unaligned_in(const kernel_pair *kp, const uint8_t *raw,
+                                   size_t in_cap, size_t es, size_t size,
+                                   size_t nb, uint8_t *in_buf,
+                                   uint8_t *out_scal, uint8_t *out_neon,
+                                   size_t out_cap, const char *kind,
+                                   run_stats *st) {
+    /* Scalar reference casts input to uint64_t*; compute once on aligned in_buf. */
+    memset(in_buf, IN_FILL, in_cap);
+    memcpy(in_buf, raw, nb);
+    kp->scal(in_buf, out_scal + GUARD_BYTES, size, es);
 
-        if (rc_scal != (int64_t)nb || rc_neon != (int64_t)nb) {
-            record_failure(st, kind, KERNELS[k].name, es, size, in_off, out_off,
-                           "return code mismatch");
-            continue;
-        }
-        if (memcmp(out_scal + pre_end, out_neon + pre_end, nb) != 0) {
-            record_failure(st, kind, KERNELS[k].name, es, size, in_off, out_off,
-                           "output mismatch");
-            continue;
-        }
-        if (!check_guard(out_neon, 0, pre_end) ||
-            !check_guard(out_neon, post_start, out_cap) ||
-            !check_guard(out_scal, 0, pre_end) ||
-            !check_guard(out_scal, post_start, out_cap)) {
-            record_failure(st, kind, KERNELS[k].name, es, size, in_off, out_off,
-                           "guard byte clobbered");
+    for (size_t in_off = 1; in_off <= MAX_OFF; in_off++) {
+        memset(in_buf, IN_FILL, in_cap);
+        memcpy(in_buf + in_off, raw, nb);
+        for (size_t out_off = 0; out_off <= MAX_OFF; out_off++) {
+            size_t pre_end = GUARD_BYTES + out_off;
+            size_t post_start = pre_end + nb;
+            memset(out_neon, CANARY, out_cap);
+            int64_t rc = kp->neon(in_buf + in_off, out_neon + pre_end, size, es);
+            st->cases++;
+            if (rc != (int64_t)nb) {
+                record_failure(st, kind, kp->name, es, size, in_off, out_off,
+                               "return code mismatch");
+            } else if (memcmp(out_scal + GUARD_BYTES, out_neon + pre_end,
+                              nb) != 0) {
+                record_failure(st, kind, kp->name, es, size, in_off, out_off,
+                               "output mismatch");
+            } else if (!check_guard(out_neon, 0, pre_end) ||
+                       !check_guard(out_neon, post_start, out_cap)) {
+                record_failure(st, kind, kp->name, es, size, in_off, out_off,
+                               "guard byte clobbered");
+            }
         }
     }
 }
+#endif
 
 static void test_size(size_t es, size_t size, run_stats *st) {
     size_t nb = es * size;
@@ -134,42 +179,30 @@ static void test_size(size_t es, size_t size, run_stats *st) {
         raw[i] = (uint8_t)(rand() & 0xFF);
     }
 
-#ifdef BSHUF_UBSAN_ENCODE_ONLY
+#ifdef BSHUF_UBSAN
+    /* Master's movemask decode writes alias_uint16_t* (traps on odd out_off). */
+    int decode_movemask =
+        (es % 2 == 0 && es != 2 && es != 4 && es % 8 != 0);
     memset(in_buf, IN_FILL, in_cap);
     memcpy(in_buf, raw, nb);
     for (size_t out_off = 0; out_off <= MAX_OFF; out_off++) {
-        run_case_all_kernels(in_buf, es, size, nb, 0, out_off, out_scal,
-                             out_neon, out_cap, "ubsan_encode", st);
+        run_case_pair(&KERNELS[0], in_buf, es, size, nb, 0, out_off, out_scal,
+                      out_neon, out_cap, "ubsan_encode", st);
+        if (!decode_movemask || out_off % 2 == 0) {
+            run_case_pair(&KERNELS[1], in_buf, es, size, nb, 0, out_off,
+                          out_scal, out_neon, out_cap, "ubsan_decode", st);
+        }
     }
     if (nb % 16 == 0) {
-        bshuf_trans_bit_byte_scal(in_buf, out_scal + GUARD_BYTES, size, es);
-        for (size_t in_off = 1; in_off <= MAX_OFF; in_off++) {
-            memset(in_buf, IN_FILL, in_cap);
-            memcpy(in_buf + in_off, raw, nb);
-            for (size_t out_off = 0; out_off <= MAX_OFF; out_off++) {
-                size_t pre_end = GUARD_BYTES + out_off;
-                size_t post_start = pre_end + nb;
-                memset(out_neon, CANARY, out_cap);
-                int64_t rc = bshuf_trans_bit_byte_NEON(
-                    in_buf + in_off, out_neon + pre_end, size, es);
-                st->cases++;
-                if (rc != (int64_t)nb) {
-                    record_failure(st, "ubsan_encode_unaligned",
-                                   "trans_bit_byte", es, size, in_off, out_off,
-                                   "return code mismatch");
-                } else if (memcmp(out_scal + GUARD_BYTES, out_neon + pre_end,
-                                  nb) != 0) {
-                    record_failure(st, "ubsan_encode_unaligned",
-                                   "trans_bit_byte", es, size, in_off, out_off,
-                                   "output mismatch");
-                } else if (!check_guard(out_neon, 0, pre_end) ||
-                           !check_guard(out_neon, post_start, out_cap)) {
-                    record_failure(st, "ubsan_encode_unaligned",
-                                   "trans_bit_byte", es, size, in_off, out_off,
-                                   "guard byte clobbered");
-                }
-            }
-        }
+        run_ubsan_unaligned_in(&KERNELS[0], raw, in_cap, es, size, nb, in_buf,
+                               out_scal, out_neon, out_cap,
+                               "ubsan_encode_unaligned", st);
+    }
+    if ((es == 1 && nb % 16 == 0) || es == 2 || es == 4 || es == 8 ||
+        es % 8 == 0) {
+        run_ubsan_unaligned_in(&KERNELS[1], raw, in_cap, es, size, nb, in_buf,
+                               out_scal, out_neon, out_cap,
+                               "ubsan_decode_unaligned", st);
     }
 #else
     for (size_t in_off = 0; in_off <= MAX_OFF; in_off++) {

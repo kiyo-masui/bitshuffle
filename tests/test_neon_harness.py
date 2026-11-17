@@ -97,7 +97,7 @@ class TestNeonCHarness(unittest.TestCase):
         _find_gnu_gcc() is not None,
         "GNU GCC on aarch64 not available for UBSan trap check",
     )
-    def test_c_encode_ubsan_gcc(self):
+    def test_c_ubsan_gcc(self):
         gcc_bin = _find_gnu_gcc()
         self._compile_and_run(
             gcc_bin,
@@ -107,7 +107,7 @@ class TestNeonCHarness(unittest.TestCase):
                 "-fstrict-aliasing",
                 "-fsanitize=undefined",
                 "-fsanitize-undefined-trap-on-error",
-                "-DBSHUF_UBSAN_ENCODE_ONLY",
+                "-DBSHUF_UBSAN",
             ],
         )
 
