@@ -35,11 +35,13 @@ typedef struct {
 
 static const kernel_pair KERNELS[] = {
     {"trans_bit_byte", bshuf_trans_bit_byte_scal, bshuf_trans_bit_byte_NEON},
+#ifndef BSHUF_UBSAN_ENCODE_ONLY
     {"shuffle_bit_eightelem", bshuf_shuffle_bit_eightelem_scal,
      bshuf_shuffle_bit_eightelem_NEON},
     {"trans_bit_elem", bshuf_trans_bit_elem_scal, bshuf_trans_bit_elem_NEON},
     {"untrans_bit_elem", bshuf_untrans_bit_elem_scal,
      bshuf_untrans_bit_elem_NEON},
+#endif
 };
 
 enum {
@@ -119,18 +121,57 @@ static void test_size(size_t es, size_t size, run_stats *st) {
     size_t out_cap = GUARD_BYTES + MAX_OFF + nb + GUARD_BYTES;
 
     uint8_t *raw = malloc(nb);
-    uint8_t *in_buf = malloc(in_cap);
+    uint8_t *in_raw = malloc(in_cap + 15);
     uint8_t *out_scal = malloc(out_cap);
     uint8_t *out_neon = malloc(out_cap);
-    if (!raw || !in_buf || !out_scal || !out_neon) {
+    if (!raw || !in_raw || !out_scal || !out_neon) {
         fprintf(stderr, "allocation failed for es=%zu size=%zu\n", es, size);
         exit(2);
     }
+    uint8_t *in_buf = in_raw + ((16 - ((uintptr_t)in_raw & 15)) & 15);
 
     for (size_t i = 0; i < nb; i++) {
         raw[i] = (uint8_t)(rand() & 0xFF);
     }
 
+#ifdef BSHUF_UBSAN_ENCODE_ONLY
+    memset(in_buf, IN_FILL, in_cap);
+    memcpy(in_buf, raw, nb);
+    for (size_t out_off = 0; out_off <= MAX_OFF; out_off++) {
+        run_case_all_kernels(in_buf, es, size, nb, 0, out_off, out_scal,
+                             out_neon, out_cap, "ubsan_encode", st);
+    }
+    if (nb % 16 == 0) {
+        bshuf_trans_bit_byte_scal(in_buf, out_scal + GUARD_BYTES, size, es);
+        for (size_t in_off = 1; in_off <= MAX_OFF; in_off++) {
+            memset(in_buf, IN_FILL, in_cap);
+            memcpy(in_buf + in_off, raw, nb);
+            for (size_t out_off = 0; out_off <= MAX_OFF; out_off++) {
+                size_t pre_end = GUARD_BYTES + out_off;
+                size_t post_start = pre_end + nb;
+                memset(out_neon, CANARY, out_cap);
+                int64_t rc = bshuf_trans_bit_byte_NEON(
+                    in_buf + in_off, out_neon + pre_end, size, es);
+                st->cases++;
+                if (rc != (int64_t)nb) {
+                    record_failure(st, "ubsan_encode_unaligned",
+                                   "trans_bit_byte", es, size, in_off, out_off,
+                                   "return code mismatch");
+                } else if (memcmp(out_scal + GUARD_BYTES, out_neon + pre_end,
+                                  nb) != 0) {
+                    record_failure(st, "ubsan_encode_unaligned",
+                                   "trans_bit_byte", es, size, in_off, out_off,
+                                   "output mismatch");
+                } else if (!check_guard(out_neon, 0, pre_end) ||
+                           !check_guard(out_neon, post_start, out_cap)) {
+                    record_failure(st, "ubsan_encode_unaligned",
+                                   "trans_bit_byte", es, size, in_off, out_off,
+                                   "guard byte clobbered");
+                }
+            }
+        }
+    }
+#else
     for (size_t in_off = 0; in_off <= MAX_OFF; in_off++) {
         memset(in_buf, IN_FILL, in_cap);
         memcpy(in_buf + in_off, raw, nb);
@@ -139,9 +180,10 @@ static void test_size(size_t es, size_t size, run_stats *st) {
                                  out_scal, out_neon, out_cap, "random", st);
         }
     }
+#endif
 
     free(raw);
-    free(in_buf);
+    free(in_raw);
     free(out_scal);
     free(out_neon);
 }
