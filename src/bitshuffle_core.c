@@ -642,7 +642,7 @@ static inline uint64x2_t bshuf_neon_trans_bit_8x8(uint64x2_t x) {
     return x;
 }
 
-/* Zip two 8-byte halves of a bit-transposed vector into 8 uint16_t bit-rows. */
+/* Zip two 8-byte halves of a bit-transposed vector into 8 uint16_t lanes. */
 static inline uint8x16_t bshuf_neon_zip_bitrows_16(uint8x16_t v) {
     return vzip1q_u8(v, vextq_u8(v, v, 8));
 }
@@ -704,15 +704,7 @@ int64_t bshuf_trans_bit_byte_NEON(const void* in, void* out, const size_t size,
 
     for (ii = 0; ii + 63 < nbyte; ii += 64) {
         uint64x2_t r[4];
-        uint8x16_t v0 = vreinterpretq_u8_u64(bshuf_neon_trans_bit_8x8(
-                vreinterpretq_u64_u8(vld1q_u8(in_b + ii))));
-        uint8x16_t v1 = vreinterpretq_u8_u64(bshuf_neon_trans_bit_8x8(
-                vreinterpretq_u64_u8(vld1q_u8(in_b + ii + 16))));
-        uint8x16_t v2 = vreinterpretq_u8_u64(bshuf_neon_trans_bit_8x8(
-                vreinterpretq_u64_u8(vld1q_u8(in_b + ii + 32))));
-        uint8x16_t v3 = vreinterpretq_u8_u64(bshuf_neon_trans_bit_8x8(
-                vreinterpretq_u64_u8(vld1q_u8(in_b + ii + 48))));
-        bshuf_neon_transpose_bytes_64(v0, v1, v2, v3, r);
+        bshuf_neon_trans_bit_64(in_b + ii, r);
         bshuf_neon_store_u64(&out_b[0 * nbyte_bitrow + ii / 8], vgetq_lane_u64(r[0], 0));
         bshuf_neon_store_u64(&out_b[1 * nbyte_bitrow + ii / 8], vgetq_lane_u64(r[0], 1));
         bshuf_neon_store_u64(&out_b[2 * nbyte_bitrow + ii / 8], vgetq_lane_u64(r[1], 0));
