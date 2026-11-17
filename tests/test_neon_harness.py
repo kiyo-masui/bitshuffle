@@ -1,4 +1,6 @@
+import os
 import pathlib
+import re
 import shutil
 import subprocess
 import tempfile
@@ -10,7 +12,26 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
 def _find_gnu_gcc():
-    for candidate in ("gcc-14", "gcc-13", "gcc-12", "gcc"):
+    versioned = []
+    for entry in os.environ.get("PATH", "").split(os.pathsep):
+        if not entry:
+            continue
+        try:
+            for item in pathlib.Path(entry).iterdir():
+                m = re.fullmatch(r"gcc-(\d+)", item.name)
+                if m and item.is_file():
+                    versioned.append((int(m.group(1)), item.name))
+        except OSError:
+            continue
+    seen = set()
+    candidates = []
+    for _, name in sorted(versioned, reverse=True):
+        if name not in seen:
+            seen.add(name)
+            candidates.append(name)
+    candidates.append("gcc")
+
+    for candidate in candidates:
         path = shutil.which(candidate)
         if not path:
             continue
@@ -40,9 +61,15 @@ def _find_gnu_gcc():
     return None
 
 
+GNU_GCC = _find_gnu_gcc()
+
+
 @unittest.skipUnless(
-    ext.using_NEON() and shutil.which("cc"),
-    "NEON or C compiler not available",
+    ext.using_NEON()
+    and shutil.which("cc")
+    and (REPO_ROOT / "src" / "bitshuffle_core.c").exists()
+    and (REPO_ROOT / "src" / "iochain.c").exists(),
+    "NEON, C compiler, or C source files not available",
 )
 class TestNeonCHarness(unittest.TestCase):
     def _compile_and_run(self, compiler, extra_flags):
@@ -94,13 +121,12 @@ class TestNeonCHarness(unittest.TestCase):
         self._compile_and_run("cc", ["-O2", "-std=c99", "-fno-strict-aliasing"])
 
     @unittest.skipUnless(
-        _find_gnu_gcc() is not None,
+        GNU_GCC is not None,
         "GNU GCC on aarch64 not available for UBSan trap check",
     )
     def test_c_ubsan_gcc(self):
-        gcc_bin = _find_gnu_gcc()
         self._compile_and_run(
-            gcc_bin,
+            GNU_GCC,
             [
                 "-O3",
                 "-std=c99",

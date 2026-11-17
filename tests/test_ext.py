@@ -769,6 +769,7 @@ class TestNeonDifferential(unittest.TestCase):
                 buf = rng.randint(0, 256, nbytes + 16, dtype=np.uint8)
                 for off in (1, 3, 7):
                     arr = buf[off : off + nbytes].view(dtype)
+                    self.assertFalse(arr.flags["ALIGNED"])
                     self._assert_matches_scalar(arr)
 
     def test_roundtrip_api(self):

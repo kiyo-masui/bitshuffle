@@ -98,7 +98,6 @@ static void run_case_pair(const kernel_pair *kp, const uint8_t *in_ptr,
     if (memcmp(out_scal + pre_end, out_neon + pre_end, nb) != 0) {
         record_failure(st, kind, kp->name, es, size, in_off, out_off,
                        "output mismatch");
-        return;
     }
     if (!check_guard(out_neon, 0, pre_end) ||
         !check_guard(out_neon, post_start, out_cap) ||
@@ -146,14 +145,17 @@ static void run_ubsan_unaligned_in(const kernel_pair *kp, const uint8_t *raw,
             if (rc != (int64_t)nb) {
                 record_failure(st, kind, kp->name, es, size, in_off, out_off,
                                "return code mismatch");
-            } else if (memcmp(out_scal + GUARD_BYTES, out_neon + pre_end,
-                              nb) != 0) {
-                record_failure(st, kind, kp->name, es, size, in_off, out_off,
-                               "output mismatch");
-            } else if (!check_guard(out_neon, 0, pre_end) ||
-                       !check_guard(out_neon, post_start, out_cap)) {
-                record_failure(st, kind, kp->name, es, size, in_off, out_off,
-                               "guard byte clobbered");
+            } else {
+                if (memcmp(out_scal + GUARD_BYTES, out_neon + pre_end,
+                           nb) != 0) {
+                    record_failure(st, kind, kp->name, es, size, in_off,
+                                   out_off, "output mismatch");
+                }
+                if (!check_guard(out_neon, 0, pre_end) ||
+                    !check_guard(out_neon, post_start, out_cap)) {
+                    record_failure(st, kind, kp->name, es, size, in_off,
+                                   out_off, "guard byte clobbered");
+                }
             }
         }
     }
