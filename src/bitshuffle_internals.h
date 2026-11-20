@@ -65,6 +65,30 @@ void bshuf_write_uint32_BE(void* buf, uint32_t num);
 int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
         const size_t elem_size);
 
+int64_t bshuf_untrans_bit_elem_with_buf(const void* in, void* out, const size_t size,
+        const size_t elem_size, void* tmp_buf);
+
+int64_t bshuf_untrans_bit_elem_scal_with_buf(const void *in, void *out,
+                                             const size_t size,
+                                             const size_t elem_size,
+                                             void *tmp_buf);
+int64_t bshuf_untrans_bit_elem_NEON_with_buf(const void *in, void *out,
+                                             const size_t size,
+                                             const size_t elem_size,
+                                             void *tmp_buf);
+int64_t bshuf_untrans_bit_elem_SSE_with_buf(const void *in, void *out,
+                                            const size_t size,
+                                            const size_t elem_size,
+                                            void *tmp_buf);
+int64_t bshuf_untrans_bit_elem_AVX_with_buf(const void *in, void *out,
+                                            const size_t size,
+                                            const size_t elem_size,
+                                            void *tmp_buf);
+int64_t bshuf_untrans_bit_elem_AVX512_with_buf(const void *in, void *out,
+                                               const size_t size,
+                                               const size_t elem_size,
+                                               void *tmp_buf);
+
 /* Function definition for worker functions that process a single block. */
 typedef int64_t (*bshufBlockFunDef)(ioc_chain* C_ptr,
         const size_t size, const size_t elem_size, const int option);
