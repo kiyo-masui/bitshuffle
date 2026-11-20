@@ -732,15 +732,16 @@ class TestNeonDifferential(unittest.TestCase):
         (ext.untrans_bit_elem_NEON, ext.untrans_bit_elem_scal),
     )
 
-    def _assert_matches_scalar(self, arr):
-        for neon_fn, scal_fn in self._KERNEL_PAIRS:
+    def _assert_matches_scalar(self, arr, kernel_pairs=None, msg_suffix=""):
+        pairs = self._KERNEL_PAIRS if kernel_pairs is None else kernel_pairs
+        for neon_fn, scal_fn in pairs:
             out_neon = neon_fn(arr).view(np.uint8)
             out_scal = scal_fn(arr).view(np.uint8)
             self.assertTrue(
                 np.array_equal(out_neon, out_scal),
                 msg=(
                     f"{neon_fn.__name__} != {scal_fn.__name__} "
-                    f"for dtype={arr.dtype} size={arr.size}"
+                    f"for dtype={arr.dtype} size={arr.size}{msg_suffix}"
                 ),
             )
 
@@ -762,15 +763,39 @@ class TestNeonDifferential(unittest.TestCase):
 
     def test_unaligned_input(self):
         rng = np.random.RandomState(0x5EED0003)
-        for dtype in (np.uint16, np.uint32, np.uint64):
-            itemsize = np.dtype(dtype).itemsize
-            for count in (8, 16, 72, 136):
-                nbytes = count * itemsize
-                buf = rng.randint(0, 256, nbytes + 16, dtype=np.uint8)
-                for off in (1, 3, 7):
-                    arr = buf[off : off + nbytes].view(dtype)
-                    self.assertFalse(arr.flags["ALIGNED"])
-                    self._assert_matches_scalar(arr)
+        full_dtypes = (
+            np.uint8,
+            np.uint16,
+            b"S3",
+            np.uint32,
+            b"S6",
+            np.uint64,
+        )
+        bit_pairs = (
+            (ext.trans_bit_byte_NEON, ext.trans_bit_byte_scal),
+            (ext.shuffle_bit_eightelem_NEON, ext.shuffle_bit_eightelem_scal),
+        )
+        groups = (
+            (full_dtypes, self._KERNEL_PAIRS),
+            ((b"S12", np.complex128, b"S24"), bit_pairs),
+        )
+        for dtypes, kernel_pairs in groups:
+            for dtype in dtypes:
+                dt = np.dtype(dtype)
+                itemsize = dt.itemsize
+                alignment = dt.alignment
+                for count in (8, 16, 24, 72, 136):
+                    nbytes = count * itemsize
+                    buf = rng.randint(0, 256, nbytes + 16, dtype=np.uint8)
+                    for off in range(1, 8):
+                        arr = buf[off : off + nbytes].view(dtype)
+                        if alignment > 1 and off % alignment != 0:
+                            self.assertFalse(arr.flags["ALIGNED"])
+                        self._assert_matches_scalar(
+                            arr,
+                            kernel_pairs=kernel_pairs,
+                            msg_suffix=f" off={off}",
+                        )
 
     def test_roundtrip_api(self):
         import bitshuffle
