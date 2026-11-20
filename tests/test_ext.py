@@ -781,6 +781,26 @@ class TestUntransWithBuf(unittest.TestCase):
                 arr_slice, out=valid_out, tmp_buf=unaligned_tmp
             )
 
+    def test_untrans_with_buf_unaligned_input_offsets(self):
+        for dtype in TEST_DTYPES:
+            itemsize = np.dtype(dtype).itemsize
+            for n in (8, 16, 24, 32, 64, 136):
+                nbyte = n * itemsize
+                raw = random.randint(0, 255, nbyte).astype(np.uint8)
+                data = raw.view(dtype)
+                shuff_bytes = ext.trans_bit_elem(data).view(np.uint8)
+                out = np.empty_like(data)
+                tmp = np.empty_like(data)
+                for offset in range(1, 8):
+                    padded = np.empty(nbyte + offset, dtype=np.uint8)
+                    padded[offset : offset + nbyte] = shuff_bytes
+                    unaligned_in = padded[offset : offset + nbyte].view(dtype)
+                    res = ext.untrans_bit_elem_with_buf(
+                        unaligned_in, out=out, tmp_buf=tmp
+                    )
+                    self.assertTrue(res is out)
+                    self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
+
 
 class TestDecompressBlockReuse(unittest.TestCase):
     def test_decompress_lz4_and_zstd_block_sizes(self):
