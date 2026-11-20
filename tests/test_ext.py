@@ -715,5 +715,185 @@ def trans_bit_elem(arr):
     return arr_bt.view(dtype)
 
 
+@unittest.skipUnless(ext.using_NEON(), "NEON not available")
+class TestNeonDifferential(unittest.TestCase):
+    _DTYPES = TEST_DTYPES + [
+        np.bool_,
+        np.int8,
+        np.int16,
+        np.float16,
+        np.complex64,
+        b"S10",
+    ]
+    _KERNEL_PAIRS = (
+        (ext.trans_bit_byte_NEON, ext.trans_bit_byte_scal),
+        (ext.trans_bit_elem_NEON, ext.trans_bit_elem_scal),
+        (ext.shuffle_bit_eightelem_NEON, ext.shuffle_bit_eightelem_scal),
+        (ext.untrans_bit_elem_NEON, ext.untrans_bit_elem_scal),
+    )
+
+    def _assert_matches_scalar(self, arr, kernel_pairs=None, msg_suffix=""):
+        pairs = self._KERNEL_PAIRS if kernel_pairs is None else kernel_pairs
+        for neon_fn, scal_fn in pairs:
+            out_neon = neon_fn(arr).view(np.uint8)
+            out_scal = scal_fn(arr).view(np.uint8)
+            self.assertTrue(
+                np.array_equal(out_neon, out_scal),
+                msg=(
+                    f"{neon_fn.__name__} != {scal_fn.__name__} "
+                    f"for dtype={arr.dtype} size={arr.size}{msg_suffix}"
+                ),
+            )
+
+    def test_dtypes_match_scalar(self):
+        rng = np.random.RandomState(0x5EED0001)
+        counts = [8 * k for k in range(1, 17)]
+        for dtype in self._DTYPES:
+            itemsize = np.dtype(dtype).itemsize
+            for count in counts:
+                raw = rng.randint(0, 256, count * itemsize, dtype=np.uint8)
+                self._assert_matches_scalar(raw.view(dtype))
+
+    def test_remainder_boundaries(self):
+        rng = np.random.RandomState(0x5EED0002)
+        sizes = list(range(8, 137, 8)) + [8192, 8200, 8208, 8216]
+        for size in sizes:
+            arr = rng.randint(0, 256, size, dtype=np.uint8)
+            self._assert_matches_scalar(arr)
+
+    def test_unaligned_input(self):
+        rng = np.random.RandomState(0x5EED0003)
+        full_dtypes = (
+            np.uint8,
+            np.uint16,
+            b"S3",
+            np.uint32,
+            b"S6",
+            np.uint64,
+        )
+        bit_pairs = (
+            (ext.trans_bit_byte_NEON, ext.trans_bit_byte_scal),
+            (ext.shuffle_bit_eightelem_NEON, ext.shuffle_bit_eightelem_scal),
+        )
+        groups = (
+            (full_dtypes, self._KERNEL_PAIRS),
+            ((b"S12", np.complex128, b"S24"), bit_pairs),
+        )
+        for dtypes, kernel_pairs in groups:
+            for dtype in dtypes:
+                dt = np.dtype(dtype)
+                itemsize = dt.itemsize
+                alignment = dt.alignment
+                for count in (8, 16, 24, 72, 136):
+                    nbytes = count * itemsize
+                    buf = rng.randint(0, 256, nbytes + 16, dtype=np.uint8)
+                    for off in range(1, 8):
+                        arr = buf[off : off + nbytes].view(dtype)
+                        if alignment > 1 and off % alignment != 0:
+                            self.assertFalse(arr.flags["ALIGNED"])
+                        self._assert_matches_scalar(
+                            arr,
+                            kernel_pairs=kernel_pairs,
+                            msg_suffix=f" off={off}",
+                        )
+
+    def test_roundtrip_api(self):
+        import bitshuffle
+
+        rng = np.random.RandomState(0x5EED0004)
+        odd_counts = (1, 3, 7, 9, 15, 17, 63, 65, 129, 513, 1029, 8195)
+        for dtype in self._DTYPES:
+            itemsize = np.dtype(dtype).itemsize
+            for count in odd_counts:
+                arr = rng.randint(0, 256, count * itemsize, dtype=np.uint8).view(dtype)
+                unshuf = bitshuffle.bitunshuffle(bitshuffle.bitshuffle(arr))
+                self.assertEqual(unshuf.dtype, arr.dtype)
+                self.assertTrue(
+                    np.array_equal(unshuf.view(np.uint8), arr.view(np.uint8)),
+                    msg=f"bitshuffle roundtrip failed for dtype={dtype} count={count}",
+                )
+                comp = bitshuffle.compress_lz4(arr)
+                decomp = bitshuffle.decompress_lz4(comp, arr.shape, arr.dtype)
+                self.assertEqual(decomp.dtype, arr.dtype)
+                self.assertTrue(
+                    np.array_equal(decomp.view(np.uint8), arr.view(np.uint8)),
+                    msg=f"lz4 roundtrip failed for dtype={dtype} count={count}",
+                )
+
+
+@unittest.skipUnless(ext.using_NEON(), "NEON not available")
+class TestNeonGoldenWireFormat(unittest.TestCase):
+    GOLDEN = {
+        1: (
+            "5e2712e9c444837db0d7f0541233a155baa2d3eefa4de5a609edf4f5f2aa19cd",
+            "cc1ffb4a429be6a0163a80213569427a2cc779e57f122f6c30d9505451af5c6e",
+        ),
+        2: (
+            "46168a187c1f4060dacf31f97088e753da9a8a4f1eb6a85a297353a4c3c6f400",
+            "e9d96f07cfced5b883304da6cda04ba8cc99698c592a36773a74fc29dd12aa5c",
+        ),
+        3: (
+            "cd302c4a6bba685a3a27bfcb327e6160530ee9bd8e342f78f5ee50eeba3c7b6b",
+            "d9fb8a0e9421e657190ef2336c29dcfc51c9da8285ab022ab0705eb97e9ef1f0",
+        ),
+        4: (
+            "1085031fe02715599f29e2df227cb3a61627435aa36da070a759f65a078e6b0c",
+            "6e7d9f4d2c0da22acedd704074d4506c843891e79c0686f4e579abde2bc77724",
+        ),
+        6: (
+            "7587006d96a6af61e5137cf8b775a5c564fae452f2a40ab91d9396c5170f2fe5",
+            "9b61a41331a921d6eaa2f4601543b7c2739f945f95e180044b847bfaa3c7012e",
+        ),
+        8: (
+            "361ba4f63713c5235e2fc9e04cc45293e65d4c6078ef8a4787d5f8014e146817",
+            "11ffacfd803d475a492a6ac028ef0ec0738075f69c7d08d5aa54c27fa417fc42",
+        ),
+        12: (
+            "d21e7f6cc5807002b9f0ec78aa6c9d1ce43d0389e7035bbbea8c220122ec702f",
+            "23bda51391486c887d08af85f1fd212f2d751941054f587bc1e02085e0a975be",
+        ),
+        16: (
+            "7369ba92ac6640a7b46f224f9f45e52e0d3dea39cc8fdcc15ce2839517af5543",
+            "19b2a1541671af9e48935bc65587f8ee52082ba2c386c710f86c86ffea20ddfb",
+        ),
+        24: (
+            "bef6dd62af139ae112e6f872f5b424a3de3d539b9951c536bf5eb8149009f00e",
+            "3674b37909073c3c811cbbb668a4e2d9716c327807362ab95e01f87609e21a76",
+        ),
+    }
+
+    def test_golden_digests(self):
+        import hashlib
+        import bitshuffle
+
+        self.assertEqual(len(self.GOLDEN), 9)
+        buf = np.random.RandomState(0xB17540FF).randint(0, 256, 8208, dtype=np.uint8)
+        dtype_map = {
+            1: np.uint8,
+            2: np.uint16,
+            3: b"S3",
+            4: np.uint32,
+            6: b"S6",
+            8: np.uint64,
+            12: b"S12",
+            16: b"S16",
+            24: b"S24",
+        }
+        for elem_size, (exp_shuf, exp_lz4) in self.GOLDEN.items():
+            arr = buf.view(dtype_map[elem_size])
+            got_shuf = hashlib.sha256(bitshuffle.bitshuffle(arr).tobytes()).hexdigest()
+            got_lz4 = hashlib.sha256(bitshuffle.compress_lz4(arr).tobytes()).hexdigest()
+            self.assertEqual(
+                got_shuf,
+                exp_shuf,
+                msg=f"bitshuffle digest mismatch for elem_size={elem_size}",
+            )
+            self.assertEqual(
+                got_lz4,
+                exp_lz4,
+                msg=f"compress_lz4 digest mismatch for elem_size={elem_size}",
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
