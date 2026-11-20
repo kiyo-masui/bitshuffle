@@ -801,6 +801,26 @@ class TestUntransWithBuf(unittest.TestCase):
                     self.assertTrue(res is out)
                     self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
 
+    def test_untrans_with_buf_docstring_and_cython_types(self):
+        doc = ext.untrans_bit_elem_with_buf.__doc__
+        self.assertIsNotNone(doc)
+        self.assertIn("C-contiguous", doc)
+        self.assertIn("8-byte aligned", doc)
+        self.assertIn("writeable", doc)
+        self.assertIn("overlap", doc)
+
+        pyx_path = os.path.join(
+            os.path.dirname(__file__), "..", "bitshuffle", "ext.pyx"
+        )
+        if os.path.exists(pyx_path):
+            with open(pyx_path, "r") as f:
+                pyx_src = f.read()
+            self.assertIn(
+                "cdef extern int64_t bshuf_untrans_bit_elem_with_buf("
+                "const void *A, void *B, size_t size, size_t elem_size, void *tmp_buf)",
+                pyx_src,
+            )
+
 
 class TestDecompressBlockReuse(unittest.TestCase):
     def test_decompress_lz4_and_zstd_block_sizes(self):

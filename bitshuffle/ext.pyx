@@ -9,7 +9,7 @@ import numpy as np
 
 cimport numpy as np
 cimport cython
-from libc.stdint cimport uintptr_t
+from libc.stdint cimport int64_t, uintptr_t
 
 
 np.import_array()
@@ -85,7 +85,7 @@ cdef extern int bshuf_untrans_bit_elem_AVX512(void *A, void *B, int size, int el
 cdef extern int bshuf_untrans_bit_elem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_elem(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_untrans_bit_elem(void *A, void *B, int size, int elem_size)
-cdef extern int bshuf_untrans_bit_elem_with_buf(void *A, void *B, int size, int elem_size, void *tmp_buf)
+cdef extern int64_t bshuf_untrans_bit_elem_with_buf(const void *A, void *B, size_t size, size_t elem_size, void *tmp_buf)
 
 
 ctypedef int (*Cfptr) (void *A, void *B, int size, int elem_size)
@@ -316,12 +316,16 @@ def untrans_bit_elem_with_buf(np.ndarray arr not None, np.ndarray out=None, np.n
     Parameters
     ----------
     arr : numpy array
-        Data to be processed.
+        Data to be processed. Must be C-contiguous.
     out : numpy array, optional
         Pre-allocated output array. If None, a new array is allocated.
-        May be the same array as arr for in-place untransposition.
+        Must be C-contiguous, writeable, 8-byte aligned, and match ``arr``'s
+        shape and dtype. May be identical to ``arr`` for in-place
+        untransposition, or distinct without partial memory overlap.
     tmp_buf : numpy array, optional
-        Pre-allocated temporary scratch buffer. If None, a new buffer is allocated.
+        Pre-allocated temporary scratch buffer. If None, a new buffer is
+        allocated. Must be C-contiguous, writeable, 8-byte aligned, at least
+        ``arr.nbytes`` bytes in size, and must not overlap ``arr`` or ``out``.
 
     Returns
     -------
@@ -332,9 +336,9 @@ def untrans_bit_elem_with_buf(np.ndarray arr not None, np.ndarray out=None, np.n
         msg = "Input array must be C-contiguous."
         raise ValueError(msg)
 
-    cdef int size = arr.size
-    cdef int itemsize = arr.dtype.itemsize
-    cdef size_t nbytes = <size_t> size * itemsize
+    cdef size_t size = <size_t> arr.size
+    cdef size_t itemsize = <size_t> arr.dtype.itemsize
+    cdef size_t nbytes = size * itemsize
 
     if out is None:
         out = np.empty_like(arr)
@@ -392,7 +396,7 @@ def untrans_bit_elem_with_buf(np.ndarray arr not None, np.ndarray out=None, np.n
     if out_addr != arr_addr and arr_addr < out_addr + nbytes and out_addr < arr_addr + nbytes:
         raise ValueError("out must not partially overlap arr")
 
-    cdef int count = 0
+    cdef int64_t count = 0
     cdef int ii
     cdef int reps = 1 if arr_ptr == out_ptr else REPEATC
     for ii in range(reps):
