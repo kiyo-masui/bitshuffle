@@ -93,13 +93,17 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
     int need_free = 0;
 
     in = ioc_get_in(C_ptr, &this_iter);
-    nbytes_from_header = bshuf_read_uint32_BE(in);
+    nbytes_from_header = (int32_t)bshuf_read_uint32_BE(in);
     ioc_set_next_in(C_ptr, &this_iter,
-            (void*) ((char*) in + nbytes_from_header + 4));
+                    (void *)((char *)in +
+                             (nbytes_from_header > 0 ? nbytes_from_header : 0) +
+                             4));
 
     out = ioc_get_out(C_ptr, &this_iter);
     ioc_set_next_out(C_ptr, &this_iter,
-            (void *) ((char *) out + size * elem_size));
+                     (void *)((char *)out + size * elem_size));
+
+    if (nbytes_from_header < 0) return -91;
 
     nbytes = LZ4_decompress_safe((const char*) in + 4, (char *) out, nbytes_from_header,
                                  size * elem_size);
@@ -185,16 +189,23 @@ int64_t bshuf_decompress_zstd_block(ioc_chain *C_ptr,
     int need_free = 0;
 
     in = ioc_get_in(C_ptr, &this_iter);
-    nbytes_from_header = bshuf_read_uint32_BE(in);
+    nbytes_from_header = (int32_t)bshuf_read_uint32_BE(in);
     ioc_set_next_in(C_ptr, &this_iter,
-            (void*) ((char*) in + nbytes_from_header + 4));
+                    (void *)((char *)in +
+                             (nbytes_from_header > 0 ? nbytes_from_header : 0) +
+                             4));
 
     out = ioc_get_out(C_ptr, &this_iter);
     ioc_set_next_out(C_ptr, &this_iter,
-            (void *) ((char *) out + size * elem_size));
+                     (void *)((char *)out + size * elem_size));
 
-    nbytes = ZSTD_decompress(out, size * elem_size, (void *)((char *) in + 4), nbytes_from_header);
-    if (nbytes < 0) return nbytes - 1000;
+    if (nbytes_from_header < 0) return -91;
+
+    size_t zstd_ret =
+        ZSTD_decompress(out, size * elem_size, (const char *)in + 4,
+                        (size_t)nbytes_from_header);
+    if (ZSTD_isError(zstd_ret)) return (int64_t)(intptr_t)zstd_ret - 1000;
+    nbytes = (int64_t)zstd_ret;
     if (nbytes != (int64_t)(size * elem_size)) return -91;
 
     nbytes_uncomp = size * elem_size;

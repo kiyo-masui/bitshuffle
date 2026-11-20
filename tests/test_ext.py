@@ -879,6 +879,18 @@ class TestDecompressBlockReuse(unittest.TestCase):
                         block_size=block_size,
                     )
 
+                # Corrupted negative header block length (0xFFFFFFFF -> -1)
+                corrupted_neg_hdr = comp.copy()
+                corrupted_neg_hdr[:4] = 255
+                with self.assertRaises(RuntimeError) as cm:
+                    decomp_fn(
+                        corrupted_neg_hdr,
+                        data.shape,
+                        data.dtype,
+                        block_size=block_size,
+                    )
+                self.assertEqual(cm.exception.args[1], -91)
+
     def test_bitshuffle_c_uses_untrans_with_buf(self):
         c_src_path = os.path.join(
             os.path.dirname(__file__), "..", "src", "bitshuffle.c"
