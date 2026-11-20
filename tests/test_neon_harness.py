@@ -64,6 +64,30 @@ def _find_gnu_gcc():
 GNU_GCC = _find_gnu_gcc()
 
 
+def _compiler_supports_flags(compiler, flags):
+    if not shutil.which(compiler):
+        return False
+    with tempfile.TemporaryDirectory() as tmpdir:
+        src_path = pathlib.Path(tmpdir) / "probe.c"
+        exe_path = pathlib.Path(tmpdir) / "probe"
+        src_path.write_text("int main(void) { return 0; }\n", encoding="utf-8")
+        compile_res = subprocess.run(
+            [compiler, *flags, str(src_path), "-o", str(exe_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if compile_res.returncode != 0:
+            return False
+        run_res = subprocess.run(
+            [str(exe_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return run_res.returncode == 0
+
+
 @unittest.skipUnless(
     ext.using_NEON()
     and shutil.which("cc")
@@ -72,7 +96,7 @@ GNU_GCC = _find_gnu_gcc()
     "NEON, C compiler, or C source files not available",
 )
 class TestNeonCHarness(unittest.TestCase):
-    def _compile_and_run(self, compiler, extra_flags):
+    def _compile_and_run(self, compiler, extra_flags, extra_env=None):
         with tempfile.TemporaryDirectory() as tmpdir:
             exe_path = pathlib.Path(tmpdir) / "test_neon_kernels"
             compile_cmd = [
@@ -101,10 +125,16 @@ class TestNeonCHarness(unittest.TestCase):
                 ),
             )
 
+            env = None
+            if extra_env:
+                env = os.environ.copy()
+                env.update(extra_env)
+
             run_res = subprocess.run(
                 [str(exe_path)],
                 capture_output=True,
                 text=True,
+                env=env,
                 check=False,
             )
             self.assertEqual(
@@ -118,7 +148,32 @@ class TestNeonCHarness(unittest.TestCase):
             )
 
     def test_c_differential_harness(self):
-        self._compile_and_run("cc", ["-O2", "-std=c99", "-fno-strict-aliasing"])
+        self._compile_and_run("cc", ["-O2", "-std=c99", "-fstrict-aliasing"])
+
+    @unittest.skipUnless(
+        _compiler_supports_flags(
+            "cc",
+            ["-fsanitize=address,undefined", "-fno-sanitize-recover=all"],
+        ),
+        "cc does not support -fsanitize=address,undefined",
+    )
+    def test_c_asan_ubsan_cc(self):
+        self._compile_and_run(
+            "cc",
+            [
+                "-O1",
+                "-g",
+                "-std=c99",
+                "-fstrict-aliasing",
+                "-fsanitize=address,undefined",
+                "-fno-sanitize-recover=all",
+                "-DBSHUF_UBSAN",
+            ],
+            extra_env={
+                "UBSAN_OPTIONS": "print_stacktrace=1:halt_on_error=1",
+                "ASAN_OPTIONS": "halt_on_error=1",
+            },
+        )
 
     @unittest.skipUnless(
         GNU_GCC is not None,

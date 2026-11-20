@@ -121,111 +121,53 @@ static void run_case_all_kernels(const uint8_t *in_ptr, size_t es, size_t size,
     }
 }
 
-#ifdef BSHUF_UBSAN
-static void run_ubsan_unaligned_in(const kernel_pair *kp, const uint8_t *raw,
-                                   size_t in_cap, size_t es, size_t size,
-                                   size_t nb, uint8_t *in_buf,
-                                   uint8_t *out_scal, uint8_t *out_neon,
-                                   size_t out_cap, const char *kind,
-                                   run_stats *st) {
-    /* Scalar reference casts input to uint64_t*; compute once on aligned in_buf. */
-    memset(in_buf, IN_FILL, in_cap);
-    memcpy(in_buf, raw, nb);
-    kp->scal(in_buf, out_scal + GUARD_BYTES, size, es);
-
-    for (size_t in_off = 1; in_off <= MAX_OFF; in_off++) {
-        memset(in_buf, IN_FILL, in_cap);
-        memcpy(in_buf + in_off, raw, nb);
-        for (size_t out_off = 0; out_off <= MAX_OFF; out_off++) {
-            size_t pre_end = GUARD_BYTES + out_off;
-            size_t post_start = pre_end + nb;
-            memset(out_neon, CANARY, out_cap);
-            int64_t rc = kp->neon(in_buf + in_off, out_neon + pre_end, size, es);
-            st->cases++;
-            if (rc != (int64_t)nb) {
-                record_failure(st, kind, kp->name, es, size, in_off, out_off,
-                               "return code mismatch");
-            } else {
-                if (memcmp(out_scal + GUARD_BYTES, out_neon + pre_end,
-                           nb) != 0) {
-                    record_failure(st, kind, kp->name, es, size, in_off,
-                                   out_off, "output mismatch");
-                }
-                if (!check_guard(out_neon, 0, pre_end) ||
-                    !check_guard(out_neon, post_start, out_cap)) {
-                    record_failure(st, kind, kp->name, es, size, in_off,
-                                   out_off, "guard byte clobbered");
-                }
-            }
-        }
-    }
-}
-#endif
-
 static void test_size(size_t es, size_t size, run_stats *st) {
     size_t nb = es * size;
-    size_t in_cap = nb + MAX_OFF;
     size_t out_cap = GUARD_BYTES + MAX_OFF + nb + GUARD_BYTES;
 
     uint8_t *raw = malloc(nb);
-    uint8_t *in_raw = malloc(in_cap + 15);
     uint8_t *out_scal = malloc(out_cap);
     uint8_t *out_neon = malloc(out_cap);
-    if (!raw || !in_raw || !out_scal || !out_neon) {
+    if (!raw || !out_scal || !out_neon) {
         fprintf(stderr, "allocation failed for es=%zu size=%zu\n", es, size);
         exit(2);
     }
-    uint8_t *in_buf = in_raw + ((16 - ((uintptr_t)in_raw & 15)) & 15);
 
     for (size_t i = 0; i < nb; i++) {
         raw[i] = (uint8_t)(rand() & 0xFF);
     }
 
-#ifdef BSHUF_UBSAN
-    /* Master's movemask decode writes alias_uint16_t* (traps on odd out_off). */
-    int decode_movemask =
-        (es % 2 == 0 && es != 2 && es != 4 && es % 8 != 0);
-    memset(in_buf, IN_FILL, in_cap);
-    memcpy(in_buf, raw, nb);
-    for (size_t out_off = 0; out_off <= MAX_OFF; out_off++) {
-        run_case_pair(&KERNELS[0], in_buf, es, size, nb, 0, out_off, out_scal,
-                      out_neon, out_cap, "ubsan_encode", st);
-        if (!decode_movemask || out_off % 2 == 0) {
-            run_case_pair(&KERNELS[1], in_buf, es, size, nb, 0, out_off,
-                          out_scal, out_neon, out_cap, "ubsan_decode", st);
-        }
-    }
-    if (nb % 16 == 0) {
-        run_ubsan_unaligned_in(&KERNELS[0], raw, in_cap, es, size, nb, in_buf,
-                               out_scal, out_neon, out_cap,
-                               "ubsan_encode_unaligned", st);
-    }
-    if ((es == 1 && nb % 16 == 0) || es == 2 || es == 4 || es == 8 ||
-        es % 8 == 0) {
-        run_ubsan_unaligned_in(&KERNELS[1], raw, in_cap, es, size, nb, in_buf,
-                               out_scal, out_neon, out_cap,
-                               "ubsan_decode_unaligned", st);
-    }
-#else
     for (size_t in_off = 0; in_off <= MAX_OFF; in_off++) {
-        memset(in_buf, IN_FILL, in_cap);
+        uint8_t *in_buf = malloc(in_off + nb);
+        if (!in_buf) {
+            fprintf(stderr, "allocation failed for in_buf es=%zu size=%zu\n",
+                    es, size);
+            exit(2);
+        }
+        memset(in_buf, IN_FILL, in_off);
         memcpy(in_buf + in_off, raw, nb);
         for (size_t out_off = 0; out_off <= MAX_OFF; out_off++) {
             run_case_all_kernels(in_buf + in_off, es, size, nb, in_off, out_off,
                                  out_scal, out_neon, out_cap, "random", st);
         }
+        free(in_buf);
     }
-#endif
 
     free(raw);
-    free(in_raw);
     free(out_scal);
     free(out_neon);
 }
 
 static void test_basis_vectors(run_stats *st) {
+    static const size_t BASIS_SIZES[] = {8, 16, 24, 64};
+    size_t nsizes = sizeof(BASIS_SIZES) / sizeof(BASIS_SIZES[0]);
+
     for (size_t es = 1; es <= 17; es++) {
-        for (size_t size = 8; size <= 24; size += 8) {
+        for (size_t si = 0; si < nsizes; si++) {
+            size_t size = BASIS_SIZES[si];
+            if (size == 64 && es > 2) {
+                continue;
+            }
             size_t nb = es * size;
             size_t out_cap = GUARD_BYTES + nb + GUARD_BYTES;
             uint8_t *in_buf = malloc(nb);

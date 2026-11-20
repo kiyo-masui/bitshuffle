@@ -202,7 +202,7 @@ int64_t bshuf_trans_byte_elem_scal(const void* in, void* out, const size_t size,
 int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t size,
          const size_t elem_size, const size_t start_byte) {
 
-    const uint64_t* in_b = (const uint64_t*) in;
+    const uint8_t* in_b = (const uint8_t*) in;
     uint8_t* out_b = (uint8_t*) out;
 
     uint64_t x, t;
@@ -220,14 +220,14 @@ int64_t bshuf_trans_bit_byte_remainder(const void* in, void* out, const size_t s
     CHECK_MULT_EIGHT(start_byte);
 
     for (ii = start_byte / 8; ii < nbyte_bitrow; ii ++) {
-        x = in_b[ii];
+        memcpy(&x, &in_b[ii * 8], sizeof(x));
         if (little_endian) {
             TRANS_BIT_8X8(x, t);
         } else {
             TRANS_BIT_8X8_BE(x, t);
         }
         for (kk = 0; kk < 8; kk ++) {
-            out_b[bit_row_offset + kk * bit_row_skip + ii] = x;
+            out_b[bit_row_offset + kk * bit_row_skip + ii] = (uint8_t) x;
             x = x >> 8;
         }
     }
@@ -348,7 +348,7 @@ int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out,
 
     for (jj = 0; jj < 8 * elem_size; jj += 8) {
         for (ii = 0; ii + 8 * elem_size - 1 < nbyte; ii += 8 * elem_size) {
-            x = *((uint64_t*) &in_b[ii + jj]);
+            memcpy(&x, &in_b[ii + jj], sizeof(x));
             if (little_endian) {
                 TRANS_BIT_8X8(x, t);
             } else {
@@ -356,7 +356,7 @@ int64_t bshuf_shuffle_bit_eightelem_scal(const void* in, void* out,
             }
             for (kk = 0; kk < 8; kk++) {
                 out_index = ii + jj / 8 + elem_offset + kk * elem_skip;
-                *((uint8_t*) &out_b[out_index]) = x;
+                *((uint8_t*) &out_b[out_index]) = (uint8_t) x;
                 x = x >> 8;
             }
         }
@@ -963,7 +963,6 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
     } else {
         // With a bit of care, this could be written such that such that it is
         // in_buf = out_buf safe.
-        alias_uint16_t* out_ui16 = (alias_uint16_t*) out;
         size_t kk;
         const uint8x16_t a0 = vdupq_n_u8(0x80);
         const uint8x16_t a1 = vdupq_n_u8(0x40);
@@ -976,7 +975,7 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
         for (ii = 0; ii + 8 * elem_size - 1 < nbyte;
                 ii += 8 * elem_size) {
             for (jj = 0; jj + 15 < 8 * elem_size; jj += 16) {
-                uint8x16_t x = vld1q_u8((uint8_t *) &in_b[ii + jj]);
+                uint8x16_t x = vld1q_u8(&in_b[ii + jj]);
                 uint8x16_t x0 = vceqq_u8(a0, vandq_u8(x, a0));
                 uint8x16_t x1 = vceqq_u8(a1, vandq_u8(x, a1));
                 uint8x16_t x2 = vceqq_u8(a2, vandq_u8(x, a2));
@@ -986,18 +985,18 @@ int64_t bshuf_shuffle_bit_eightelem_NEON(const void* in, void* out, const size_t
                 uint8x16_t x6 = vceqq_u8(a6, vandq_u8(x, a6));
                 uint8x16_t x7 = vceqq_u8(a7, vandq_u8(x, a7));
 
-                uint64_t out[2];
-                out[0] = neonmovemask_bulk(x0, x1, x2, x3);
-                out[1] = neonmovemask_bulk(x4, x5, x6, x7);
+                uint64_t mask_out[2];
+                mask_out[0] = neonmovemask_bulk(x0, x1, x2, x3);
+                mask_out[1] = neonmovemask_bulk(x4, x5, x6, x7);
 
                 for (kk = 0; kk < 8; kk++) {
                     size_t ind = (ii + jj / 8 + (7 - kk) * elem_size);
-                    out_ui16[ind / 2] = ((alias_uint16_t *)out)[kk];
+                    memcpy(&out_b[ind], (const uint8_t *)mask_out + 2 * kk, sizeof(uint16_t));
                 }
             }
         }
     }
-    return size * elem_size;
+    return (int64_t) nbyte;
 #else
     CHECK_MULT_EIGHT(size);
 
