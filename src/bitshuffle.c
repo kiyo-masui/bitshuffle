@@ -42,38 +42,63 @@ int64_t bshuf_compress_lz4_block(ioc_chain *C_ptr,
     size_t this_iter;
     const void *in;
     void *out;
+    size_t nbytes_uncomp = size * elem_size;
+    int dst_capacity = LZ4_compressBound((int)nbytes_uncomp);
+    uint64_t stack_bshuf[BSHUF_TARGET_BLOCK_SIZE_B / sizeof(uint64_t)];
+    uint64_t stack_lz4[(LZ4_COMPRESSBOUND(BSHUF_TARGET_BLOCK_SIZE_B) +
+                        sizeof(uint64_t) - 1) / sizeof(uint64_t)];
+    int need_free = 0;
 
-    tmp_buf_bshuf = malloc(size * elem_size);
-    if (tmp_buf_bshuf == NULL) return -1;
+    (void)option;
 
-    int dst_capacity = LZ4_compressBound(size * elem_size);
-    tmp_buf_lz4 = malloc(dst_capacity);
-    if (tmp_buf_lz4 == NULL){
-        free(tmp_buf_bshuf);
-        return -1;
+    if (dst_capacity <= 0) return -1;
+
+    if (nbytes_uncomp <= BSHUF_TARGET_BLOCK_SIZE_B) {
+        tmp_buf_bshuf = stack_bshuf;
+        tmp_buf_lz4 = stack_lz4;
+        dst_capacity = (int)sizeof(stack_lz4);
+    } else {
+        tmp_buf_bshuf = malloc(nbytes_uncomp);
+        if (tmp_buf_bshuf == NULL) return -1;
+        tmp_buf_lz4 = malloc((size_t)dst_capacity);
+        if (tmp_buf_lz4 == NULL) {
+            free(tmp_buf_bshuf);
+            return -1;
+        }
+        need_free = 1;
     }
-
 
     in = ioc_get_in(C_ptr, &this_iter);
-    ioc_set_next_in(C_ptr, &this_iter, (void*) ((char*) in + size * elem_size));
+    ioc_set_next_in(C_ptr, &this_iter, (void*) ((char*) in + nbytes_uncomp));
 
-    count = bshuf_trans_bit_elem(in, tmp_buf_bshuf, size, elem_size);
+    count = bshuf_trans_bit_elem_with_buf(in, tmp_buf_bshuf, size, elem_size,
+            tmp_buf_lz4);
     if (count < 0) {
-        free(tmp_buf_lz4);
-        free(tmp_buf_bshuf);
+        if (need_free) {
+            free(tmp_buf_lz4);
+            free(tmp_buf_bshuf);
+        }
         return count;
     }
-    nbytes = LZ4_compress_default((const char*) tmp_buf_bshuf, (char*) tmp_buf_lz4, size * elem_size, dst_capacity);
-    free(tmp_buf_bshuf);
-    CHECK_ERR_FREE_LZ(nbytes, tmp_buf_lz4);
+    nbytes = LZ4_compress_default((const char*) tmp_buf_bshuf,
+            (char*) tmp_buf_lz4, (int)nbytes_uncomp, dst_capacity);
+    if (need_free) {
+        free(tmp_buf_bshuf);
+    }
+    if (nbytes < 0) {
+        if (need_free) free(tmp_buf_lz4);
+        return nbytes - 1000;
+    }
 
     out = ioc_get_out(C_ptr, &this_iter);
     ioc_set_next_out(C_ptr, &this_iter, (void *) ((char *) out + nbytes + 4));
 
-    bshuf_write_uint32_BE(out, nbytes);
-    memcpy((char *) out + 4, tmp_buf_lz4, nbytes);
+    bshuf_write_uint32_BE(out, (uint32_t)nbytes);
+    memcpy((char *) out + 4, tmp_buf_lz4, (size_t)nbytes);
 
-    free(tmp_buf_lz4);
+    if (need_free) {
+        free(tmp_buf_lz4);
+    }
 
     return nbytes + 4;
 }
@@ -123,45 +148,68 @@ int64_t bshuf_decompress_lz4_block(ioc_chain *C_ptr,
 int64_t bshuf_compress_zstd_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size, const int comp_lvl) {
 
-    int64_t nbytes, count;
+    int64_t count;
+    size_t zstd_ret;
     void *tmp_buf_bshuf;
     void *tmp_buf_zstd;
     size_t this_iter;
     const void *in;
     void *out;
+    size_t nbytes_uncomp = size * elem_size;
+    size_t tmp_buf_zstd_size = ZSTD_compressBound(nbytes_uncomp);
+    uint64_t stack_bshuf[BSHUF_TARGET_BLOCK_SIZE_B / sizeof(uint64_t)];
+    uint64_t stack_zstd[(ZSTD_COMPRESSBOUND(BSHUF_TARGET_BLOCK_SIZE_B) +
+                         sizeof(uint64_t) - 1) / sizeof(uint64_t)];
+    int need_free = 0;
 
-    tmp_buf_bshuf = malloc(size * elem_size);
-    if (tmp_buf_bshuf == NULL) return -1;
-
-    size_t tmp_buf_zstd_size = ZSTD_compressBound(size * elem_size);
-    tmp_buf_zstd = malloc(tmp_buf_zstd_size);
-    if (tmp_buf_zstd == NULL){
-        free(tmp_buf_bshuf);
-        return -1;
+    if (nbytes_uncomp <= BSHUF_TARGET_BLOCK_SIZE_B) {
+        tmp_buf_bshuf = stack_bshuf;
+        tmp_buf_zstd = stack_zstd;
+        tmp_buf_zstd_size = sizeof(stack_zstd);
+    } else {
+        tmp_buf_bshuf = malloc(nbytes_uncomp);
+        if (tmp_buf_bshuf == NULL) return -1;
+        tmp_buf_zstd = malloc(tmp_buf_zstd_size);
+        if (tmp_buf_zstd == NULL) {
+            free(tmp_buf_bshuf);
+            return -1;
+        }
+        need_free = 1;
     }
 
     in = ioc_get_in(C_ptr, &this_iter);
-    ioc_set_next_in(C_ptr, &this_iter, (void*) ((char*) in + size * elem_size));
+    ioc_set_next_in(C_ptr, &this_iter, (void*) ((char*) in + nbytes_uncomp));
 
-    count = bshuf_trans_bit_elem(in, tmp_buf_bshuf, size, elem_size);
+    count = bshuf_trans_bit_elem_with_buf(in, tmp_buf_bshuf, size, elem_size,
+            tmp_buf_zstd);
     if (count < 0) {
-        free(tmp_buf_zstd);
-        free(tmp_buf_bshuf);
+        if (need_free) {
+            free(tmp_buf_zstd);
+            free(tmp_buf_bshuf);
+        }
         return count;
     }
-    nbytes = ZSTD_compress(tmp_buf_zstd, tmp_buf_zstd_size, (const void*)tmp_buf_bshuf,  size * elem_size, comp_lvl);
-    free(tmp_buf_bshuf);
-    CHECK_ERR_FREE_LZ(nbytes, tmp_buf_zstd);
+    zstd_ret = ZSTD_compress(tmp_buf_zstd, tmp_buf_zstd_size,
+            (const void*)tmp_buf_bshuf, nbytes_uncomp, comp_lvl);
+    if (need_free) {
+        free(tmp_buf_bshuf);
+    }
+    if (ZSTD_isError(zstd_ret)) {
+        if (need_free) free(tmp_buf_zstd);
+        return (int64_t)(intptr_t)zstd_ret - 1000;
+    }
 
     out = ioc_get_out(C_ptr, &this_iter);
-    ioc_set_next_out(C_ptr, &this_iter, (void *) ((char *) out + nbytes + 4));
+    ioc_set_next_out(C_ptr, &this_iter, (void *) ((char *) out + zstd_ret + 4));
 
-    bshuf_write_uint32_BE(out, nbytes);
-    memcpy((char *) out + 4, tmp_buf_zstd, nbytes);
+    bshuf_write_uint32_BE(out, (uint32_t)zstd_ret);
+    memcpy((char *) out + 4, tmp_buf_zstd, zstd_ret);
 
-    free(tmp_buf_zstd);
+    if (need_free) {
+        free(tmp_buf_zstd);
+    }
 
-    return nbytes + 4;
+    return (int64_t)zstd_ret + 4;
 }
 
 
