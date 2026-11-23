@@ -665,6 +665,64 @@ class TestBitShuffleCircle(unittest.TestCase):
                 self.assertTrue(np.all(data.view(np.uint8) == out.view(np.uint8)))
 
 
+@unittest.skipUnless(__zstd__, "ZSTD support not included")
+class TestZstdCompression(unittest.TestCase):
+    """Focused tests for ZSTD compression/decompression across block shapes,
+    compression levels, error handling, and concurrent callers."""
+
+    def test_single_multi_and_partial_blocks(self):
+        rng = np.random.default_rng(12345)
+        for dtype in [np.uint8, np.int32, np.uint64, np.float64]:
+            # 0, <8 (leftover only), single partial block, exact block,
+            # multi-block, multi-block + partial + leftover
+            for n in [0, 1, 7, 8, 16, 23, 128, 1024, 1029, 4096, 4123]:
+                data = rng.integers(
+                    0, 255, size=n * np.dtype(dtype).itemsize, dtype=np.uint8
+                ).view(dtype)
+                comp = ext.compress_zstd(data)
+                out = ext.decompress_zstd(comp, data.shape, data.dtype)
+                self.assertEqual(out.dtype, data.dtype)
+                self.assertTrue(np.array_equal(data.view(np.uint8), out.view(np.uint8)))
+
+    def test_compression_levels(self):
+        rng = np.random.default_rng(67890)
+        data = rng.integers(0, 1000, size=10000, dtype=np.int64)
+        for level in [-2, 0, 1, 3, 9]:
+            comp = ext.compress_zstd(data, comp_lvl=level)
+            out = ext.decompress_zstd(comp, data.shape, data.dtype)
+            self.assertTrue(np.array_equal(data, out))
+
+    def test_corrupted_zstd_payload_raises(self):
+        data = np.arange(4096, dtype=np.uint64)
+        comp = ext.compress_zstd(data)
+        bad = comp.copy()
+        # Corrupt the ZSTD frame magic inside block 0 (after 4-byte BE length header).
+        bad[4] ^= 0xFF
+        bad[5] ^= 0xFF
+        with self.assertRaises(RuntimeError) as ctx:
+            ext.decompress_zstd(bad, data.shape, data.dtype)
+        self.assertLess(ctx.exception.args[1], -1000)
+
+    def test_concurrent_threads(self):
+        from concurrent.futures import ThreadPoolExecutor
+
+        def worker(tid):
+            rng = np.random.default_rng(1000 + tid)
+            n = 8192 + tid * 37
+            data = rng.integers(0, 10000, size=n, dtype=np.int64)
+            level = [-1, 1, 2, 3, 1, 3, 5, 1][tid % 8]
+            for _ in range(10):
+                comp = ext.compress_zstd(data, comp_lvl=level)
+                out = ext.decompress_zstd(comp, data.shape, data.dtype)
+                if not np.array_equal(data, out):
+                    raise AssertionError("mismatch in thread %d" % tid)
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = [pool.submit(worker, tid) for tid in range(8)]
+            for fut in futures:
+                fut.result()
+
+
 # Python implementations for checking results.
 
 
