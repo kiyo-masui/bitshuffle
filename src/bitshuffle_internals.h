@@ -69,10 +69,26 @@ int64_t bshuf_untrans_bit_elem(const void* in, void* out, const size_t size,
 typedef int64_t (*bshufBlockFunDef)(ioc_chain* C_ptr,
         const size_t size, const size_t elem_size, const int option);
 
+/* Context lifecycle callbacks for bshuf_blocked_wrap_fun_ctx. */
+typedef void* (*bshufCtxCreateFunDef)(void);
+typedef void  (*bshufCtxDestroyFunDef)(void* ctx);
+
+/* Function definition for worker functions that process a single block with
+ * a reusable per-thread context. */
+typedef int64_t (*bshufBlockCtxFunDef)(ioc_chain* C_ptr,
+        const size_t size, const size_t elem_size, const int option, void* ctx);
+
 /* Wrap a function for processing a single block to process an entire buffer in
  * parallel. */
 int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out,
         const size_t size, const size_t elem_size, size_t block_size, const int option);
+
+/* Wrap a function for processing a single block with a reusable per-thread
+ * context to process an entire buffer in parallel. */
+int64_t bshuf_blocked_wrap_fun_ctx(bshufBlockCtxFunDef fun,
+        bshufCtxCreateFunDef create_ctx, bshufCtxDestroyFunDef destroy_ctx,
+        const void* in, void* out, const size_t size, const size_t elem_size,
+        size_t block_size, const int option);
 
 #ifdef __cplusplus
 } // extern "C"

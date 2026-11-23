@@ -1931,6 +1931,137 @@ int64_t bshuf_blocked_wrap_fun(bshufBlockFunDef fun, const void* in, void* out,
 }
 
 
+/* Wrap a function for processing a single block with a reusable per-thread
+ * context to process an entire buffer in parallel. */
+int64_t bshuf_blocked_wrap_fun_ctx(bshufBlockCtxFunDef fun,
+        bshufCtxCreateFunDef create_ctx, bshufCtxDestroyFunDef destroy_ctx,
+        const void* in, void* out, const size_t size, const size_t elem_size,
+        size_t block_size, const int option) {
+
+    omp_size_t ii = 0;
+    int64_t err = 0;
+    int64_t cum_count = 0;
+    size_t nblocks;
+    size_t last_block_size;
+    size_t leftover_bytes;
+    size_t this_iter;
+
+    if (block_size == 0) {
+        block_size = bshuf_default_block_size(elem_size);
+    }
+    if (block_size % BSHUF_BLOCKED_MULT) return -81;
+
+    ioc_chain C;
+    ioc_init(&C, in, out);
+
+    nblocks = size / block_size;
+    last_block_size = size % block_size;
+    last_block_size = last_block_size - last_block_size % BSHUF_BLOCKED_MULT;
+
+    if (nblocks > 0) {
+#if defined(_OPENMP)
+        #pragma omp parallel reduction(+ : cum_count)
+#endif
+        {
+            void *ctx = NULL;
+            int ctx_initialized = 0;
+            int64_t local_err = 0;
+
+#if defined(_OPENMP)
+            #pragma omp for schedule(dynamic, 1)
+#endif
+            for (ii = 0; ii < (omp_size_t)nblocks; ii++) {
+                if (local_err < 0) continue;
+                if (create_ctx != NULL && !ctx_initialized) {
+                    ctx = create_ctx();
+                    ctx_initialized = 1;
+                    if (ctx == NULL) {
+                        local_err = -1;
+                        continue;
+                    }
+                }
+                int64_t count = fun(&C, block_size, elem_size, option, ctx);
+                if (count < 0) {
+                    local_err = count;
+                } else {
+                    cum_count += count;
+                }
+            }
+
+            if (local_err < 0) {
+#if defined(_OPENMP)
+                #pragma omp critical
+#endif
+                {
+                    err = local_err;
+                }
+            }
+
+#if defined(_OPENMP)
+            #pragma omp barrier
+            #pragma omp single
+#endif
+            {
+                if (err == 0 && last_block_size > 0) {
+                    if (create_ctx != NULL && !ctx_initialized) {
+                        ctx = create_ctx();
+                        ctx_initialized = 1;
+                        if (ctx == NULL) {
+                            err = -1;
+                        }
+                    }
+                    if (err == 0) {
+                        int64_t count = fun(&C, last_block_size, elem_size, option, ctx);
+                        if (count < 0) {
+                            err = count;
+                        } else {
+                            cum_count += count;
+                        }
+                    }
+                }
+            }
+
+            if (destroy_ctx != NULL && ctx != NULL) {
+                destroy_ctx(ctx);
+            }
+        }
+    } else if (last_block_size > 0) {
+        void *ctx = (create_ctx != NULL) ? create_ctx() : NULL;
+        if (create_ctx != NULL && ctx == NULL) {
+            err = -1;
+        } else {
+            int64_t count = fun(&C, last_block_size, elem_size, option, ctx);
+            if (count < 0) {
+                err = count;
+            } else {
+                cum_count += count;
+            }
+        }
+        if (destroy_ctx != NULL && ctx != NULL) {
+            destroy_ctx(ctx);
+        }
+    }
+
+    if (err < 0) {
+        ioc_destroy(&C);
+        return err;
+    }
+
+    leftover_bytes = (size % BSHUF_BLOCKED_MULT) * elem_size;
+    if (leftover_bytes > 0) {
+        const char *last_in = (const char *)ioc_get_in(&C, &this_iter);
+        ioc_set_next_in(&C, &this_iter, (void *)(uintptr_t)(last_in + leftover_bytes));
+        char *last_out = (char *)ioc_get_out(&C, &this_iter);
+        ioc_set_next_out(&C, &this_iter, (void *)(last_out + leftover_bytes));
+        memcpy(last_out, last_in, leftover_bytes);
+    }
+
+    ioc_destroy(&C);
+
+    return cum_count + (int64_t)leftover_bytes;
+}
+
+
 /* Bitshuffle a single block. */
 int64_t bshuf_bitshuffle_block(ioc_chain *C_ptr,
         const size_t size, const size_t elem_size, const int option) {
