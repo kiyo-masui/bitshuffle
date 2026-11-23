@@ -57,6 +57,8 @@ class TestProfile(unittest.TestCase):
                 return
             if len(err.args) > 1 and (err.args[1] == -12) and not ext.using_AVX2():
                 return
+            if len(err.args) > 1 and (err.args[1] == -13) and not ext.using_NEON():
+                return
             if len(err.args) > 1 and (err.args[1] == -14) and not ext.using_AVX512():
                 return
             else:
@@ -551,6 +553,14 @@ class TestOddLengths(unittest.TestCase):
         self.fun = ext.copy
         self.check = lambda x: x
 
+    def test_trans_bit_elem_NEON(self):
+        self.fun = ext.trans_bit_elem_NEON
+        self.check = trans_bit_elem
+
+    def test_untrans_bit_elem_NEON(self):
+        self.fun = lambda x: ext.untrans_bit_elem_NEON(ext.trans_bit_elem(x))
+        self.check = lambda x: x
+
     def test_trans_bit_elem_SSE(self):
         self.fun = ext.trans_bit_elem_SSE
         self.check = trans_bit_elem
@@ -605,10 +615,84 @@ class TestOddLengths(unittest.TestCase):
                 return
             if len(err.args) > 1 and (err.args[1] == -12) and not ext.using_AVX2():
                 return
+            if len(err.args) > 1 and (err.args[1] == -13) and not ext.using_NEON():
+                return
             if len(err.args) > 1 and (err.args[1] == -14) and not ext.using_AVX512():
                 return
             else:
                 raise
+
+
+class TestTransBitElemEquivalence(unittest.TestCase):
+    """Verify trans_bit_elem_* matches both the Python reference and the
+    explicit 3-pass pipeline across element sizes and remainder lengths."""
+
+    SIZES = [8, 16, 24, 32, 40, 48, 56, 64, 72, 120, 128, 136]
+    DTYPES = [
+        np.uint8,
+        np.uint16,
+        np.dtype(b"S3"),
+        np.uint32,
+        np.uint64,
+        np.dtype(b"S12"),
+        np.complex128,
+    ]
+
+    def _check_isa(self, trans_fn, untrans_fn, available):
+        if not available:
+            return
+        rng = np.random.RandomState(42)
+        for dtype in self.DTYPES:
+            itemsize = np.dtype(dtype).itemsize
+            for n in self.SIZES:
+                raw = rng.randint(0, 256, n * itemsize).astype(np.uint8)
+                data = raw.view(dtype)
+                out = trans_fn(data).view(np.uint8)
+                # Wire-format equivalence with explicit 3-pass scalar pipeline
+                p1 = ext.trans_byte_elem_scal(data)
+                p2 = ext.trans_bit_byte_scal(p1)
+                expected_3pass = ext.trans_bitrow_eight(p2).view(np.uint8)
+                self.assertTrue(
+                    np.array_equal(out, expected_3pass),
+                    f"3-pass mismatch for dtype={dtype}, n={n}",
+                )
+                # Equivalence with Python reference
+                expected_py = trans_bit_elem(data).view(np.uint8)
+                self.assertTrue(
+                    np.array_equal(out, expected_py),
+                    f"Python ref mismatch for dtype={dtype}, n={n}",
+                )
+                # Roundtrip with untrans_bit_elem
+                restored = untrans_fn(out.view(dtype)).view(np.uint8)
+                self.assertTrue(
+                    np.array_equal(restored, raw),
+                    f"Roundtrip mismatch for dtype={dtype}, n={n}",
+                )
+
+    def test_scal(self):
+        self._check_isa(ext.trans_bit_elem_scal, ext.untrans_bit_elem_scal, True)
+
+    def test_NEON(self):
+        self._check_isa(
+            ext.trans_bit_elem_NEON, ext.untrans_bit_elem_NEON, ext.using_NEON()
+        )
+
+    def test_SSE(self):
+        self._check_isa(
+            ext.trans_bit_elem_SSE, ext.untrans_bit_elem_SSE, ext.using_SSE2()
+        )
+
+    def test_AVX(self):
+        self._check_isa(
+            ext.trans_bit_elem_AVX, ext.untrans_bit_elem_AVX, ext.using_AVX2()
+        )
+
+    def test_AVX512(self):
+        self._check_isa(
+            ext.trans_bit_elem_AVX512,
+            ext.untrans_bit_elem_AVX512,
+            ext.using_AVX512(),
+        )
 
 
 class TestBitShuffleCircle(unittest.TestCase):
