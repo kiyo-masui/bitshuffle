@@ -56,6 +56,19 @@ extern "C" {
 int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size,
         const size_t elem_size);
 
+int64_t bshuf_trans_bit_elem_with_buf(const void* in, void* out,
+        const size_t size, const size_t elem_size, void* tmp_buf);
+int64_t bshuf_trans_bit_elem_scal_with_buf(const void* in, void* out,
+        const size_t size, const size_t elem_size, void* tmp_buf);
+int64_t bshuf_trans_bit_elem_NEON_with_buf(const void* in, void* out,
+        const size_t size, const size_t elem_size, void* tmp_buf);
+int64_t bshuf_trans_bit_elem_SSE_with_buf(const void* in, void* out,
+        const size_t size, const size_t elem_size, void* tmp_buf);
+int64_t bshuf_trans_bit_elem_AVX_with_buf(const void* in, void* out,
+        const size_t size, const size_t elem_size, void* tmp_buf);
+int64_t bshuf_trans_bit_elem_AVX512_with_buf(const void* in, void* out,
+        const size_t size, const size_t elem_size, void* tmp_buf);
+
 /* Read a 32 bit unsigned integer from a buffer big endian order. */
 uint32_t bshuf_read_uint32_BE(const void* buf);
 

@@ -129,19 +129,22 @@ int bshuf_using_AVX512(void) {
 /* Transpose of an array of arbitrarily typed elements. */
 #define TRANS_ELEM_TYPE(in, out, lda, ldb, type_t) {                        \
         size_t ii, jj, kk;                                                  \
-        const type_t* in_type = (const type_t*) in;                                 \
-        type_t* out_type = (type_t*) out;                                   \
+        const char* in_b = (const char*) (in);                              \
+        char* out_b = (char*) (out);                                        \
         for(ii = 0; ii + 7 < lda; ii += 8) {                                \
             for(jj = 0; jj < ldb; jj++) {                                   \
                 for(kk = 0; kk < 8; kk++) {                                 \
-                    out_type[jj*lda + ii + kk] =                            \
-                        in_type[ii*ldb + kk * ldb + jj];                    \
+                    memcpy(out_b + (jj*lda + ii + kk) * sizeof(type_t),     \
+                           in_b + (ii*ldb + kk * ldb + jj) * sizeof(type_t),\
+                           sizeof(type_t));                                 \
                 }                                                           \
             }                                                               \
         }                                                                   \
         for(ii = lda - lda % 8; ii < lda; ii ++) {                          \
             for(jj = 0; jj < ldb; jj++) {                                   \
-                out_type[jj*lda + ii] = in_type[ii*ldb + jj];                            \
+                memcpy(out_b + (jj*lda + ii) * sizeof(type_t),              \
+                       in_b + (ii*ldb + jj) * sizeof(type_t),               \
+                       sizeof(type_t));                                     \
             }                                                               \
         }                                                                   \
     }
@@ -272,27 +275,50 @@ int64_t bshuf_trans_bitrow_eight(const void* in, void* out, const size_t size,
 }
 
 
+/* Execute a scratch-buffer-taking transform using an 8 KB stack buffer when
+ * size * elem_size <= BSHUF_TARGET_BLOCK_SIZE_B, or heap allocation otherwise. */
+static int64_t bshuf_run_with_scratch(
+        int64_t (*fn)(const void*, void*, const size_t, const size_t, void*),
+        const void* in, void* out, const size_t size, const size_t elem_size) {
+
+    uint64_t stack_buf[BSHUF_TARGET_BLOCK_SIZE_B / sizeof(uint64_t)];
+    size_t nbytes = size * elem_size;
+    if (nbytes <= BSHUF_TARGET_BLOCK_SIZE_B) {
+        return fn(in, out, size, elem_size, stack_buf);
+    }
+    void *tmp_buf = malloc(nbytes);
+    if (tmp_buf == NULL) return -1;
+    int64_t count = fn(in, out, size, elem_size, tmp_buf);
+    free(tmp_buf);
+    return count;
+}
+
+
+/* Transpose bits within elements using caller-provided scratch buffer. */
+int64_t bshuf_trans_bit_elem_scal_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
+
+    int64_t count;
+
+    CHECK_MULT_EIGHT(size);
+
+    count = bshuf_trans_byte_elem_scal(in, out, size, elem_size);
+    if (count < 0) return count;
+    count = bshuf_trans_bit_byte_scal(out, tmp_buf, size, elem_size);
+    if (count < 0) return count;
+    count = bshuf_trans_bitrow_eight(tmp_buf, out, size, elem_size);
+
+    return count;
+}
+
+
 /* Transpose bits within elements. */
 int64_t bshuf_trans_bit_elem_scal(const void* in, void* out, const size_t size,
          const size_t elem_size) {
 
-    int64_t count;
-    void *tmp_buf;
-
     CHECK_MULT_EIGHT(size);
-
-    tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return -1;
-
-    count = bshuf_trans_byte_elem_scal(in, out, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
-    count = bshuf_trans_bit_byte_scal(out, tmp_buf, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
-    count = bshuf_trans_bitrow_eight(tmp_buf, out, size, elem_size);
-
-    free(tmp_buf);
-
-    return count;
+    return bshuf_run_with_scratch(&bshuf_trans_bit_elem_scal_with_buf,
+            in, out, size, elem_size);
 }
 
 
@@ -551,64 +577,87 @@ int64_t bshuf_trans_byte_elem_NEON_64(const void* in, void* out, const size_t si
 
 
 /* Transpose bytes within elements using best NEON algorithm available. */
-int64_t bshuf_trans_byte_elem_NEON(const void* in, void* out, const size_t size,
-         const size_t elem_size) {
+static int64_t bshuf_trans_byte_elem_NEON_hier_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
 
+    size_t nchunk_elem;
     int64_t count;
+
+    if ((elem_size % 8) == 0) {
+        nchunk_elem = elem_size / 8;
+        TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int64_t);
+        count = bshuf_trans_byte_elem_NEON_64(out, tmp_buf,
+                size * nchunk_elem);
+        bshuf_trans_elem(tmp_buf, out, 8, nchunk_elem, size);
+    } else if ((elem_size % 4) == 0) {
+        nchunk_elem = elem_size / 4;
+        TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int32_t);
+        count = bshuf_trans_byte_elem_NEON_32(out, tmp_buf,
+                size * nchunk_elem);
+        bshuf_trans_elem(tmp_buf, out, 4, nchunk_elem, size);
+    } else {
+        // Not used since scalar algorithm is faster.
+        nchunk_elem = elem_size / 2;
+        TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int16_t);
+        count = bshuf_trans_byte_elem_NEON_16(out, tmp_buf,
+                size * nchunk_elem);
+        bshuf_trans_elem(tmp_buf, out, 2, nchunk_elem, size);
+    }
+    return count;
+}
+
+
+static int64_t bshuf_trans_byte_elem_NEON_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
 
     // Trivial cases: power of 2 bytes.
     switch (elem_size) {
         case 1:
-            count = bshuf_copy(in, out, size, elem_size);
-            return count;
+            return bshuf_copy(in, out, size, elem_size);
         case 2:
-            count = bshuf_trans_byte_elem_NEON_16(in, out, size);
-            return count;
+            return bshuf_trans_byte_elem_NEON_16(in, out, size);
         case 4:
-            count = bshuf_trans_byte_elem_NEON_32(in, out, size);
-            return count;
+            return bshuf_trans_byte_elem_NEON_32(in, out, size);
         case 8:
-            count = bshuf_trans_byte_elem_NEON_64(in, out, size);
-            return count;
+            return bshuf_trans_byte_elem_NEON_64(in, out, size);
     }
 
     // Worst case: odd number of bytes. Turns out that this is faster for
     // (odd * 2) byte elements as well (hence % 4).
     if (elem_size % 4) {
-        count = bshuf_trans_byte_elem_scal(in, out, size, elem_size);
-        return count;
+        return bshuf_trans_byte_elem_scal(in, out, size, elem_size);
+    }
+
+    // Multiple of power of 2: transpose hierarchically using caller scratch.
+    return bshuf_trans_byte_elem_NEON_hier_with_buf(in, out, size, elem_size,
+            tmp_buf);
+}
+
+
+int64_t bshuf_trans_byte_elem_NEON(const void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    // Trivial cases: power of 2 bytes.
+    switch (elem_size) {
+        case 1:
+            return bshuf_copy(in, out, size, elem_size);
+        case 2:
+            return bshuf_trans_byte_elem_NEON_16(in, out, size);
+        case 4:
+            return bshuf_trans_byte_elem_NEON_32(in, out, size);
+        case 8:
+            return bshuf_trans_byte_elem_NEON_64(in, out, size);
+    }
+
+    // Worst case: odd number of bytes. Turns out that this is faster for
+    // (odd * 2) byte elements as well (hence % 4).
+    if (elem_size % 4) {
+        return bshuf_trans_byte_elem_scal(in, out, size, elem_size);
     }
 
     // Multiple of power of 2: transpose hierarchically.
-    {
-        size_t nchunk_elem;
-        void* tmp_buf = malloc(size * elem_size);
-        if (tmp_buf == NULL) return -1;
-
-        if ((elem_size % 8) == 0) {
-            nchunk_elem = elem_size / 8;
-            TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int64_t);
-            count = bshuf_trans_byte_elem_NEON_64(out, tmp_buf,
-                    size * nchunk_elem);
-            bshuf_trans_elem(tmp_buf, out, 8, nchunk_elem, size);
-        } else if ((elem_size % 4) == 0) {
-            nchunk_elem = elem_size / 4;
-            TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int32_t);
-            count = bshuf_trans_byte_elem_NEON_32(out, tmp_buf,
-                    size * nchunk_elem);
-            bshuf_trans_elem(tmp_buf, out, 4, nchunk_elem, size);
-        } else {
-            // Not used since scalar algorithm is faster.
-            nchunk_elem = elem_size / 2;
-            TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int16_t);
-            count = bshuf_trans_byte_elem_NEON_16(out, tmp_buf,
-                    size * nchunk_elem);
-            bshuf_trans_elem(tmp_buf, out, 2, nchunk_elem, size);
-        }
-
-        free(tmp_buf);
-        return count;
-    }
+    return bshuf_run_with_scratch(&bshuf_trans_byte_elem_NEON_hier_with_buf,
+            in, out, size, elem_size);
 }
 
 uint64_t neonmovemask_bulk(uint8x16_t p0, uint8x16_t p1, uint8x16_t p2, uint8x16_t p3) {
@@ -662,8 +711,8 @@ int64_t bshuf_trans_bit_byte_NEON(const void* in, void* out, const size_t size,
         out[1] = neonmovemask_bulk(x4, x5, x6, x7);
         int kk;
         for (kk = 0; kk < 8; kk++) {
-            alias_uint16_t *out_ui16 = (uint16_t*) &out_b[((7 - kk) * nbyte + ii) / 8];
-            *out_ui16 = ((alias_uint16_t*)out)[kk];
+            uint16_t val = (uint16_t)(out[kk / 4] >> ((kk % 4) * 16));
+            memcpy(&out_b[((7 - kk) * nbyte + ii) / 8], &val, sizeof(val));
         }
     }
     count = bshuf_trans_bit_byte_remainder(in, out, size, elem_size,
@@ -673,25 +722,30 @@ int64_t bshuf_trans_bit_byte_NEON(const void* in, void* out, const size_t size,
 
 
 /* Transpose bits within elements. */
-int64_t bshuf_trans_bit_elem_NEON(const void* in, void* out, const size_t size,
-         const size_t elem_size) {
+int64_t bshuf_trans_bit_elem_NEON_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
 
     int64_t count;
 
     CHECK_MULT_EIGHT(size);
 
-    void* tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return -1;
-
-    count = bshuf_trans_byte_elem_NEON(in, out, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
+    count = bshuf_trans_byte_elem_NEON_with_buf(in, out, size, elem_size,
+            tmp_buf);
+    if (count < 0) return count;
     count = bshuf_trans_bit_byte_NEON(out, tmp_buf, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
+    if (count < 0) return count;
     count = bshuf_trans_bitrow_eight(tmp_buf, out, size, elem_size);
 
-    free(tmp_buf);
-
     return count;
+}
+
+
+int64_t bshuf_trans_bit_elem_NEON(const void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    CHECK_MULT_EIGHT(size);
+    return bshuf_run_with_scratch(&bshuf_trans_bit_elem_NEON_with_buf,
+            in, out, size, elem_size);
 }
 
 
@@ -869,6 +923,13 @@ int64_t bshuf_untrans_bit_elem_NEON(const void* in, void* out, const size_t size
 
 int64_t bshuf_untrans_bit_elem_NEON(const void* in, void* out, const size_t size,
          const size_t elem_size) {
+    return -13;
+}
+
+
+int64_t bshuf_trans_bit_elem_NEON_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
+    (void)in; (void)out; (void)size; (void)elem_size; (void)tmp_buf;
     return -13;
 }
 
@@ -1083,64 +1144,87 @@ int64_t bshuf_trans_byte_elem_SSE_64(const void* in, void* out, const size_t siz
 
 
 /* Transpose bytes within elements using best SSE algorithm available. */
-int64_t bshuf_trans_byte_elem_SSE(const void* in, void* out, const size_t size,
-         const size_t elem_size) {
+static int64_t bshuf_trans_byte_elem_SSE_hier_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
 
+    size_t nchunk_elem;
     int64_t count;
+
+    if ((elem_size % 8) == 0) {
+        nchunk_elem = elem_size / 8;
+        TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int64_t);
+        count = bshuf_trans_byte_elem_SSE_64(out, tmp_buf,
+                size * nchunk_elem);
+        bshuf_trans_elem(tmp_buf, out, 8, nchunk_elem, size);
+    } else if ((elem_size % 4) == 0) {
+        nchunk_elem = elem_size / 4;
+        TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int32_t);
+        count = bshuf_trans_byte_elem_SSE_32(out, tmp_buf,
+                size * nchunk_elem);
+        bshuf_trans_elem(tmp_buf, out, 4, nchunk_elem, size);
+    } else {
+        // Not used since scalar algorithm is faster.
+        nchunk_elem = elem_size / 2;
+        TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int16_t);
+        count = bshuf_trans_byte_elem_SSE_16(out, tmp_buf,
+                size * nchunk_elem);
+        bshuf_trans_elem(tmp_buf, out, 2, nchunk_elem, size);
+    }
+    return count;
+}
+
+
+static int64_t bshuf_trans_byte_elem_SSE_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
 
     // Trivial cases: power of 2 bytes.
     switch (elem_size) {
         case 1:
-            count = bshuf_copy(in, out, size, elem_size);
-            return count;
+            return bshuf_copy(in, out, size, elem_size);
         case 2:
-            count = bshuf_trans_byte_elem_SSE_16(in, out, size);
-            return count;
+            return bshuf_trans_byte_elem_SSE_16(in, out, size);
         case 4:
-            count = bshuf_trans_byte_elem_SSE_32(in, out, size);
-            return count;
+            return bshuf_trans_byte_elem_SSE_32(in, out, size);
         case 8:
-            count = bshuf_trans_byte_elem_SSE_64(in, out, size);
-            return count;
+            return bshuf_trans_byte_elem_SSE_64(in, out, size);
     }
 
     // Worst case: odd number of bytes. Turns out that this is faster for
     // (odd * 2) byte elements as well (hence % 4).
     if (elem_size % 4) {
-        count = bshuf_trans_byte_elem_scal(in, out, size, elem_size);
-        return count;
+        return bshuf_trans_byte_elem_scal(in, out, size, elem_size);
+    }
+
+    // Multiple of power of 2: transpose hierarchically using caller scratch.
+    return bshuf_trans_byte_elem_SSE_hier_with_buf(in, out, size, elem_size,
+            tmp_buf);
+}
+
+
+int64_t bshuf_trans_byte_elem_SSE(const void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    // Trivial cases: power of 2 bytes.
+    switch (elem_size) {
+        case 1:
+            return bshuf_copy(in, out, size, elem_size);
+        case 2:
+            return bshuf_trans_byte_elem_SSE_16(in, out, size);
+        case 4:
+            return bshuf_trans_byte_elem_SSE_32(in, out, size);
+        case 8:
+            return bshuf_trans_byte_elem_SSE_64(in, out, size);
+    }
+
+    // Worst case: odd number of bytes. Turns out that this is faster for
+    // (odd * 2) byte elements as well (hence % 4).
+    if (elem_size % 4) {
+        return bshuf_trans_byte_elem_scal(in, out, size, elem_size);
     }
 
     // Multiple of power of 2: transpose hierarchically.
-    {
-        size_t nchunk_elem;
-        void* tmp_buf = malloc(size * elem_size);
-        if (tmp_buf == NULL) return -1;
-
-        if ((elem_size % 8) == 0) {
-            nchunk_elem = elem_size / 8;
-            TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int64_t);
-            count = bshuf_trans_byte_elem_SSE_64(out, tmp_buf,
-                    size * nchunk_elem);
-            bshuf_trans_elem(tmp_buf, out, 8, nchunk_elem, size);
-        } else if ((elem_size % 4) == 0) {
-            nchunk_elem = elem_size / 4;
-            TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int32_t);
-            count = bshuf_trans_byte_elem_SSE_32(out, tmp_buf,
-                    size * nchunk_elem);
-            bshuf_trans_elem(tmp_buf, out, 4, nchunk_elem, size);
-        } else {
-            // Not used since scalar algorithm is faster.
-            nchunk_elem = elem_size / 2;
-            TRANS_ELEM_TYPE(in, out, size, nchunk_elem, int16_t);
-            count = bshuf_trans_byte_elem_SSE_16(out, tmp_buf,
-                    size * nchunk_elem);
-            bshuf_trans_elem(tmp_buf, out, 2, nchunk_elem, size);
-        }
-
-        free(tmp_buf);
-        return count;
-    }
+    return bshuf_run_with_scratch(&bshuf_trans_byte_elem_SSE_hier_with_buf,
+            in, out, size, elem_size);
 }
 
 
@@ -1178,25 +1262,30 @@ int64_t bshuf_trans_bit_byte_SSE(const void* in, void* out, const size_t size,
 
 
 /* Transpose bits within elements. */
-int64_t bshuf_trans_bit_elem_SSE(const void* in, void* out, const size_t size,
-         const size_t elem_size) {
+int64_t bshuf_trans_bit_elem_SSE_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
 
     int64_t count;
 
     CHECK_MULT_EIGHT(size);
 
-    void* tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return -1;
-
-    count = bshuf_trans_byte_elem_SSE(in, out, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
+    count = bshuf_trans_byte_elem_SSE_with_buf(in, out, size, elem_size,
+            tmp_buf);
+    if (count < 0) return count;
     count = bshuf_trans_bit_byte_SSE(out, tmp_buf, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
+    if (count < 0) return count;
     count = bshuf_trans_bitrow_eight(tmp_buf, out, size, elem_size);
 
-    free(tmp_buf);
-
     return count;
+}
+
+
+int64_t bshuf_trans_bit_elem_SSE(const void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    CHECK_MULT_EIGHT(size);
+    return bshuf_run_with_scratch(&bshuf_trans_bit_elem_SSE_with_buf,
+            in, out, size, elem_size);
 }
 
 
@@ -1373,6 +1462,13 @@ int64_t bshuf_untrans_bit_elem_SSE(const void* in, void* out, const size_t size,
 }
 
 
+int64_t bshuf_trans_bit_elem_SSE_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
+    (void)in; (void)out; (void)size; (void)elem_size; (void)tmp_buf;
+    return -11;
+}
+
+
 int64_t bshuf_trans_bit_elem_SSE(const void* in, void* out, const size_t size,
          const size_t elem_size) {
     return -11;
@@ -1465,25 +1561,30 @@ int64_t bshuf_trans_bit_byte_AVX(const void* in, void* out, const size_t size,
 
 
 /* Transpose bits within elements. */
-int64_t bshuf_trans_bit_elem_AVX(const void* in, void* out, const size_t size,
-         const size_t elem_size) {
+int64_t bshuf_trans_bit_elem_AVX_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
 
     int64_t count;
 
     CHECK_MULT_EIGHT(size);
 
-    void* tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return -1;
-
-    count = bshuf_trans_byte_elem_SSE(in, out, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
+    count = bshuf_trans_byte_elem_SSE_with_buf(in, out, size, elem_size,
+            tmp_buf);
+    if (count < 0) return count;
     count = bshuf_trans_bit_byte_AVX(out, tmp_buf, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
+    if (count < 0) return count;
     count = bshuf_trans_bitrow_eight(tmp_buf, out, size, elem_size);
 
-    free(tmp_buf);
-
     return count;
+}
+
+
+int64_t bshuf_trans_bit_elem_AVX(const void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    CHECK_MULT_EIGHT(size);
+    return bshuf_run_with_scratch(&bshuf_trans_bit_elem_AVX_with_buf,
+            in, out, size, elem_size);
 }
 
 
@@ -1648,6 +1749,13 @@ int64_t bshuf_trans_bit_byte_AVX(const void* in, void* out, const size_t size,
 }
 
 
+int64_t bshuf_trans_bit_elem_AVX_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
+    (void)in; (void)out; (void)size; (void)elem_size; (void)tmp_buf;
+    return -12;
+}
+
+
 int64_t bshuf_trans_bit_elem_AVX(const void* in, void* out, const size_t size,
          const size_t elem_size) {
     return -12;
@@ -1725,26 +1833,30 @@ int64_t bshuf_trans_bit_byte_AVX512(const void* in, void* out, const size_t size
 
 
 /* Transpose bits within elements. */
-int64_t bshuf_trans_bit_elem_AVX512(const void* in, void* out, const size_t size,
-         const size_t elem_size) {
+int64_t bshuf_trans_bit_elem_AVX512_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
 
     int64_t count;
 
     CHECK_MULT_EIGHT(size);
 
-    void* tmp_buf = malloc(size * elem_size);
-    if (tmp_buf == NULL) return -1;
-
-    count = bshuf_trans_byte_elem_SSE(in, out, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
+    count = bshuf_trans_byte_elem_SSE_with_buf(in, out, size, elem_size,
+            tmp_buf);
+    if (count < 0) return count;
     count = bshuf_trans_bit_byte_AVX512(out, tmp_buf, size, elem_size);
-    CHECK_ERR_FREE(count, tmp_buf);
+    if (count < 0) return count;
     count = bshuf_trans_bitrow_eight(tmp_buf, out, size, elem_size);
 
-    free(tmp_buf);
-
     return count;
+}
 
+
+int64_t bshuf_trans_bit_elem_AVX512(const void* in, void* out, const size_t size,
+         const size_t elem_size) {
+
+    CHECK_MULT_EIGHT(size);
+    return bshuf_run_with_scratch(&bshuf_trans_bit_elem_AVX512_with_buf,
+            in, out, size, elem_size);
 }
 
 /* Shuffle bits within the bytes of eight element blocks. */
@@ -1812,6 +1924,12 @@ int64_t bshuf_trans_bit_byte_AVX512(const void* in, void* out, const size_t size
     return -14;
 }
 
+int64_t bshuf_trans_bit_elem_AVX512_with_buf(const void* in, void* out,
+         const size_t size, const size_t elem_size, void* tmp_buf) {
+    (void)in; (void)out; (void)size; (void)elem_size; (void)tmp_buf;
+    return -14;
+}
+
 int64_t bshuf_trans_bit_elem_AVX512(const void* in, void* out, const size_t size,
          const size_t elem_size) {
     return -14;
@@ -1832,22 +1950,36 @@ int64_t bshuf_untrans_bit_elem_AVX512(const void* in, void* out, const size_t si
 
 /* ---- Drivers selecting best instruction set at compile time. ---- */
 
-int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size,
-        const size_t elem_size) {
+int64_t bshuf_trans_bit_elem_with_buf(const void* in, void* out,
+        const size_t size, const size_t elem_size, void* tmp_buf) {
 
     int64_t count;
 #ifdef USEAVX512
-    count = bshuf_trans_bit_elem_AVX512(in, out, size, elem_size);
+    count = bshuf_trans_bit_elem_AVX512_with_buf(in, out, size, elem_size,
+            tmp_buf);
 #elif defined USEAVX2
-    count = bshuf_trans_bit_elem_AVX(in, out, size, elem_size);
+    count = bshuf_trans_bit_elem_AVX_with_buf(in, out, size, elem_size,
+            tmp_buf);
 #elif defined(USESSE2)
-    count = bshuf_trans_bit_elem_SSE(in, out, size, elem_size);
+    count = bshuf_trans_bit_elem_SSE_with_buf(in, out, size, elem_size,
+            tmp_buf);
 #elif defined(USEARMNEON)
-    count = bshuf_trans_bit_elem_NEON(in, out, size, elem_size);
+    count = bshuf_trans_bit_elem_NEON_with_buf(in, out, size, elem_size,
+            tmp_buf);
 #else
-    count = bshuf_trans_bit_elem_scal(in, out, size, elem_size);
+    count = bshuf_trans_bit_elem_scal_with_buf(in, out, size, elem_size,
+            tmp_buf);
 #endif
     return count;
+}
+
+
+int64_t bshuf_trans_bit_elem(const void* in, void* out, const size_t size,
+        const size_t elem_size) {
+
+    CHECK_MULT_EIGHT(size);
+    return bshuf_run_with_scratch(&bshuf_trans_bit_elem_with_buf,
+            in, out, size, elem_size);
 }
 
 

@@ -715,5 +715,142 @@ def trans_bit_elem(arr):
     return arr_bt.view(dtype)
 
 
+class TestEncodeBufferReuse(unittest.TestCase):
+    def _make_data(self, nelem, elem_size):
+        rng = np.random.default_rng(42 + nelem + elem_size)
+        raw = rng.integers(0, 256, size=nelem * elem_size, dtype=np.uint8)
+        return raw.view(np.dtype((np.void, elem_size)))
+
+    def test_trans_bit_elem_with_buf_sizes_and_elem_sizes(self):
+        # Small (< 8192 B), exact 8 KB boundary (8192 B), large (> 8192 B)
+        cases = [
+            (8, 1),
+            (64, 3),
+            (64, 5),
+            (64, 6),
+            (64, 7),
+            (1024, 8),   # exact 8192 B
+            (2048, 4),   # exact 8192 B
+            (512, 16),   # exact 8192 B, hierarchical byte transpose
+            (680, 12),   # 8160 B, elem_size > 8 && elem_size % 4 == 0
+            (344, 24),   # 8256 B (> 8192 B), elem_size > 8 && elem_size % 4 == 0
+            (2048, 8),   # 16384 B (> 8192 B)
+        ]
+        for nelem, elem_size in cases:
+            arr = self._make_data(nelem, elem_size)
+            expected = ext.trans_bit_elem(arr)
+
+            # Default out and tmp_buf
+            out_default = ext.trans_bit_elem_with_buf(arr)
+            self.assertTrue(
+                np.array_equal(
+                    out_default.view(np.uint8), expected.view(np.uint8)
+                ),
+                f"mismatch for nelem={nelem}, elem_size={elem_size}",
+            )
+
+            # Reused out and tmp_buf
+            out = np.empty_like(arr)
+            tmp_buf = np.empty(arr.nbytes + 64, dtype=np.uint8)
+            res = ext.trans_bit_elem_with_buf(arr, out=out, tmp_buf=tmp_buf)
+            self.assertIs(res, out)
+            self.assertTrue(
+                np.array_equal(out.view(np.uint8), expected.view(np.uint8)),
+                f"reused buf mismatch for nelem={nelem}, elem_size={elem_size}",
+            )
+
+    def test_trans_bit_elem_with_buf_zero_size(self):
+        arr = np.empty(0, dtype=np.uint64)
+        out = np.empty(0, dtype=np.uint64)
+        tmp_buf = np.empty(0, dtype=np.uint8)
+        res = ext.trans_bit_elem_with_buf(arr, out=out, tmp_buf=tmp_buf)
+        self.assertIs(res, out)
+        self.assertEqual(res.size, 0)
+
+    def test_trans_bit_elem_with_buf_aliasing_and_alignment_constraints(self):
+        arr = self._make_data(128, 8)
+        out = np.empty_like(arr)
+        tmp_buf = np.empty(arr.nbytes, dtype=np.uint8)
+
+        # in == out must be rejected
+        with self.assertRaises(ValueError):
+            ext.trans_bit_elem_with_buf(arr, out=arr, tmp_buf=tmp_buf)
+
+        # Partial overlap between arr and out must be rejected
+        backing = np.zeros(arr.nbytes + 16, dtype=np.uint8)
+        arr_ov = backing[: arr.nbytes].view(arr.dtype)
+        out_ov = backing[8 : 8 + arr.nbytes].view(arr.dtype)
+        with self.assertRaises(ValueError):
+            ext.trans_bit_elem_with_buf(arr_ov, out=out_ov, tmp_buf=tmp_buf)
+
+        # tmp_buf overlapping arr or out must be rejected
+        with self.assertRaises(ValueError):
+            ext.trans_bit_elem_with_buf(
+                arr, out=out, tmp_buf=arr.view(np.uint8)
+            )
+        with self.assertRaises(ValueError):
+            ext.trans_bit_elem_with_buf(
+                arr, out=out, tmp_buf=out.view(np.uint8)
+            )
+
+        # Misaligned out or tmp_buf (non-8-byte aligned) must be rejected
+        unaligned_raw = np.zeros(arr.nbytes + 16, dtype=np.uint8)
+        offset = 1 if (unaligned_raw.ctypes.data % 8 == 0) else 0
+        misaligned_u8 = unaligned_raw[offset : offset + arr.nbytes]
+        self.assertNotEqual(misaligned_u8.ctypes.data % 8, 0)
+
+        with self.assertRaises(ValueError):
+            ext.trans_bit_elem_with_buf(
+                arr, out=misaligned_u8.view(arr.dtype), tmp_buf=tmp_buf
+            )
+        with self.assertRaises(ValueError):
+            ext.trans_bit_elem_with_buf(arr, out=out, tmp_buf=misaligned_u8)
+
+    def test_compress_lz4_and_bitshuffle_misaligned_and_boundary_roundtrip(self):
+        cases = [
+            (0, 8, 0),
+            (13, 8, 0),      # < 8192 B, includes leftover < 8
+            (67, 3, 0),      # odd elem_size
+            (1024, 8, 0),    # exact 8192 B
+            (512, 16, 0),    # exact 8192 B, elem_size > 8
+            (680, 12, 0),    # 8160 B, elem_size=12
+            (2048, 8, 2048), # > 8192 B single block (16384 B)
+            (50000, 8, 0),   # multi-block
+            (10000, 12, 0),  # multi-block odd elem_size > 8
+        ]
+        for nelem, elem_size, block_size in cases:
+            arr = self._make_data(nelem, elem_size)
+            shuf = ext.bitshuffle(arr, block_size=block_size)
+            unshuf = ext.bitunshuffle(shuf, block_size=block_size)
+            self.assertTrue(
+                np.array_equal(unshuf.view(np.uint8), arr.view(np.uint8))
+            )
+
+            comp = ext.compress_lz4(arr, block_size=block_size)
+            decomp = ext.decompress_lz4(
+                comp, arr.shape, arr.dtype, block_size=block_size
+            )
+            self.assertTrue(
+                np.array_equal(decomp.view(np.uint8), arr.view(np.uint8))
+            )
+
+            if hasattr(ext, "compress_zstd"):
+                zcomp = ext.compress_zstd(arr, block_size=block_size)
+                zdecomp = ext.decompress_zstd(
+                    zcomp, arr.shape, arr.dtype, block_size=block_size
+                )
+                self.assertTrue(
+                    np.array_equal(zdecomp.view(np.uint8), arr.view(np.uint8))
+                )
+
+        # Misaligned input buffer for bitshuffle / compress_lz4
+        raw = np.arange(8256 + 15, dtype=np.uint8)
+        for off in (1, 3, 7):
+            mis_arr = raw[off : off + 8256].view(np.uint64)
+            comp = ext.compress_lz4(mis_arr)
+            decomp = ext.decompress_lz4(comp, mis_arr.shape, mis_arr.dtype)
+            self.assertTrue(np.array_equal(decomp, mis_arr))
+
+
 if __name__ == "__main__":
     unittest.main()

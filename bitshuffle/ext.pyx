@@ -9,6 +9,7 @@ import numpy as np
 
 cimport numpy as np
 cimport cython
+from libc.stdint cimport int64_t, uintptr_t
 
 
 np.import_array()
@@ -83,6 +84,7 @@ cdef extern int bshuf_untrans_bit_elem_AVX(void *A, void *B, int size, int elem_
 cdef extern int bshuf_untrans_bit_elem_AVX512(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_untrans_bit_elem_scal(void *A, void *B, int size, int elem_size)
 cdef extern int bshuf_trans_bit_elem(void *A, void *B, int size, int elem_size)
+cdef extern int64_t bshuf_trans_bit_elem_with_buf(const void *A, void *B, size_t size, size_t elem_size, void *tmp_buf)
 cdef extern int bshuf_untrans_bit_elem(void *A, void *B, int size, int elem_size)
 
 
@@ -304,6 +306,96 @@ def trans_bit_elem(np.ndarray arr not None):
 
 def untrans_bit_elem(np.ndarray arr not None):
     return _wrap_C_fun(&bshuf_untrans_bit_elem, arr)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def trans_bit_elem_with_buf(np.ndarray arr not None, np.ndarray out=None, np.ndarray tmp_buf=None):
+    """Transpose bits within elements using a caller-provided scratch buffer.
+
+    Parameters
+    ----------
+    arr : numpy array
+        Data to be processed. Must be C-contiguous.
+    out : numpy array, optional
+        Pre-allocated output array. If None, a new array is allocated.
+        Must be C-contiguous, writeable, 8-byte aligned, match ``arr``'s
+        shape and dtype, and must not overlap ``arr`` (in-place is not supported).
+    tmp_buf : numpy array, optional
+        Pre-allocated temporary scratch buffer. If None, a new buffer is
+        allocated. Must be C-contiguous, writeable, 8-byte aligned, at least
+        ``arr.nbytes`` bytes in size, and must not overlap ``arr`` or ``out``.
+
+    Returns
+    -------
+    out : numpy array
+        Transposed array.
+    """
+    if not arr.flags["C_CONTIGUOUS"]:
+        raise ValueError("Input array must be C-contiguous.")
+
+    cdef size_t size = <size_t> arr.size
+    cdef size_t itemsize = <size_t> arr.dtype.itemsize
+    cdef size_t nbytes = size * itemsize
+
+    if out is None:
+        out = np.empty_like(arr)
+    else:
+        if not out.flags["C_CONTIGUOUS"]:
+            raise ValueError("Output array must be C-contiguous.")
+        if not out.flags["WRITEABLE"]:
+            raise ValueError("Output array must be writeable.")
+        if out.dtype != arr.dtype or (<object>out).shape != (<object>arr).shape:
+            raise ValueError("Output array must match input shape and dtype.")
+        if <size_t> out.nbytes < nbytes:
+            raise ValueError("Output array too small.")
+
+    if tmp_buf is None:
+        tmp_buf = np.empty(nbytes, dtype=np.uint8)
+    else:
+        if not tmp_buf.flags["C_CONTIGUOUS"]:
+            raise ValueError("Temporary buffer must be C-contiguous.")
+        if not tmp_buf.flags["WRITEABLE"]:
+            raise ValueError("Temporary buffer must be writeable.")
+        if <size_t> tmp_buf.nbytes < nbytes:
+            raise ValueError("Temporary buffer too small.")
+
+    if size == 0:
+        return out
+
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] arr_flat
+    arr_flat = arr.view(np.uint8).ravel()
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] out_flat
+    out_flat = out.view(np.uint8).ravel()
+    cdef np.ndarray[dtype=np.uint8_t, ndim=1, mode="c"] tmp_flat
+    tmp_flat = tmp_buf.view(np.uint8).ravel()
+    cdef void* arr_ptr = <void*> &arr_flat[0]
+    cdef void* out_ptr = <void*> &out_flat[0]
+    cdef void* tmp_ptr = <void*> &tmp_flat[0]
+    cdef uintptr_t arr_addr = <uintptr_t> arr_ptr
+    cdef uintptr_t out_addr = <uintptr_t> out_ptr
+    cdef uintptr_t tmp_addr = <uintptr_t> tmp_ptr
+
+    if out_addr % 8 != 0:
+        raise ValueError("Output array must be 8-byte aligned.")
+    if tmp_addr % 8 != 0:
+        raise ValueError("Temporary buffer must be 8-byte aligned.")
+    if tmp_addr < arr_addr + nbytes and arr_addr < tmp_addr + nbytes:
+        raise ValueError("tmp_buf must not overlap arr or out")
+    if tmp_addr < out_addr + nbytes and out_addr < tmp_addr + nbytes:
+        raise ValueError("tmp_buf must not overlap arr or out")
+    if arr_addr < out_addr + nbytes and out_addr < arr_addr + nbytes:
+        raise ValueError("out must not overlap arr")
+
+    cdef int64_t count = 0
+    cdef int ii
+    for ii in range(REPEATC):
+        count = bshuf_trans_bit_elem_with_buf(arr_ptr, out_ptr, size, itemsize, tmp_ptr)
+
+    if count < 0:
+        raise RuntimeError("Failed. Error code %d." % count, count)
+
+    return out
 
 
 @cython.boundscheck(False)
